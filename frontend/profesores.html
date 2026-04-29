@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profesores — New Face Padel Club</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/premium.css">
+</head>
+<body class="premium-body">
+
+  <!-- NAV -->
+  <nav class="nav-premium" id="nav-premium">
+    <div class="nav-premium-inner">
+      <a href="index.html" class="nav-prem-logo">
+        <div class="logo-icon-prem">NF</div>
+        <div class="logo-text-prem">
+          <span>New Face</span>
+          <span>Padel Club</span>
+        </div>
+      </a>
+      <div class="nav-prem-links">
+        <a href="index.html">Inicio</a>
+        <a href="reservar.html">Reservar</a>
+        <a href="torneos.html">Torneos</a>
+        <a href="profesores.html" class="activo">Profesores</a>
+      </div>
+      <a href="reservar.html" class="btn-nav-cta">Reservar cancha →</a>
+      <button class="nav-hamburger" onclick="toggleNavMobile()">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+    <div class="nav-mobile-prem" id="nav-mobile-prem">
+      <a href="index.html">Inicio</a>
+      <a href="reservar.html">Reservar</a>
+      <a href="torneos.html">Torneos</a>
+      <a href="profesores.html">Profesores</a>
+      <a href="reservar.html" class="btn-nav-cta" style="text-align:center;margin-top:8px">Reservar cancha →</a>
+    </div>
+  </nav>
+
+  <!-- HERO INTERNO -->
+  <section class="page-hero-prem">
+    <div class="page-hero-content">
+      <span class="sec-eyebrow">Instructores certificados</span>
+      <h1 class="page-hero-title">
+        Los mejores<br>
+        <em>profes del club</em>
+      </h1>
+      <p class="page-hero-desc">
+        De principiante a competitivo. Encontrá el instructor ideal para tu nivel y escribile directo por WhatsApp.
+      </p>
+    </div>
+  </section>
+
+  <!-- BANDA DE STATS -->
+  <div class="stats-prem-band">
+    <div class="stats-prem-inner" id="profesores-stats">
+      <div class="stat-prem-item visible"><span class="spn">—</span><span class="spl">Instructores</span></div>
+      <div class="stat-prem-item visible"><span class="spn">—</span><span class="spl">Alumnos activos</span></div>
+      <div class="stat-prem-item visible"><span class="spn">—</span><span class="spl">Rating promedio</span></div>
+      <div class="stat-prem-item visible"><span class="spn">—</span><span class="spl">Niveles disponibles</span></div>
+    </div>
+  </div>
+
+  <!-- GRID DE PROFESORES -->
+  <section class="profs-page-section">
+    <div class="profs-page-inner" id="profesores-contenido">
+      <div style="grid-column:1/-1;padding:80px 0;text-align:center">
+        <div class="spinner"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA FINAL -->
+  <section class="cta-prem-final">
+    <div class="cta-prem-glow"></div>
+    <div class="cta-prem-content">
+      <span class="sec-eyebrow">¿Querés tomar clases?</span>
+      <h2 class="cta-prem-title">
+        Escribile directo
+        <span class="cta-outline">a tu profe</span>
+      </h2>
+      <p class="cta-prem-sub">O si preferís, reservá tu cancha y te asesoramos nosotros.</p>
+      <div class="cta-prem-btns">
+        <a href="reservar.html" class="btn-prem-primary btn-xl">
+          Reservar cancha ahora
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+        <a href="torneos.html" class="btn-prem-ghost">Ver torneos</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer-prem">
+    <div class="footer-prem-inner">
+      <div class="footer-prem-top">
+        <div class="footer-brand">
+          <div class="footer-logo-wrap">
+            <div class="logo-icon-prem">NF</div>
+            <span class="footer-brand-name">New Face Padel Club</span>
+          </div>
+          <p class="footer-brand-desc">Tu club de pádel de confianza en Buenos Aires. Canchas de primer nivel, torneos y los mejores instructores.</p>
+        </div>
+        <div class="footer-col">
+          <span class="footer-col-title">Páginas</span>
+          <a href="index.html"       class="footer-link">Inicio</a>
+          <a href="reservar.html"    class="footer-link">Reservar cancha</a>
+          <a href="torneos.html"     class="footer-link">Torneos</a>
+          <a href="profesores.html"  class="footer-link">Profesores</a>
+        </div>
+        <div class="footer-col">
+          <span class="footer-col-title">Horarios</span>
+          <span class="footer-info">Lunes a Domingo</span>
+          <span class="footer-info">15:00 — 23:00 hs</span>
+        </div>
+        <div class="footer-col">
+          <span class="footer-col-title">Acceso rápido</span>
+          <a href="admin.html"  class="footer-link">Panel Admin (clásico)</a>
+          <a href="admin2.html" class="footer-link">Panel Admin 2.0</a>
+        </div>
+      </div>
+      <div class="footer-prem-bottom">
+        <span>© 2025 New Face Padel Club — Todos los derechos reservados</span>
+        <span style="color:rgba(255,255,255,0.15)">Diseñado con pasión 🎾</span>
+      </div>
+    </div>
+  </footer>
+
+  <div id="toast-container"></div>
+
+  <script src="js/api.js"></script>
+  <script src="js/profesores.js"></script>
+  <script>
+    window.addEventListener('scroll', () => {
+      const nav = document.getElementById('nav-premium');
+      if (window.scrollY > 60) nav.classList.add('scrolled');
+      else nav.classList.remove('scrolled');
+    });
+    function toggleNavMobile() {
+      document.getElementById('nav-mobile-prem').classList.toggle('open');
+    }
+  </script>
+</body>
+</html>

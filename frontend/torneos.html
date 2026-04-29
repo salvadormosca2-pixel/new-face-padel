@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Torneos — New Face Padel Club</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/premium.css">
+</head>
+<body class="premium-body">
+
+  <!-- NAV -->
+  <nav class="nav-premium" id="nav-premium">
+    <div class="nav-premium-inner">
+      <a href="index.html" class="nav-prem-logo">
+        <div class="logo-icon-prem">NF</div>
+        <div class="logo-text-prem">
+          <span>New Face</span>
+          <span>Padel Club</span>
+        </div>
+      </a>
+      <div class="nav-prem-links">
+        <a href="index.html">Inicio</a>
+        <a href="reservar.html">Reservar</a>
+        <a href="torneos.html" class="activo">Torneos</a>
+        <a href="profesores.html">Profesores</a>
+      </div>
+      <a href="reservar.html" class="btn-nav-cta">Reservar cancha →</a>
+      <button class="nav-hamburger" onclick="toggleNavMobile()">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+    <div class="nav-mobile-prem" id="nav-mobile-prem">
+      <a href="index.html">Inicio</a>
+      <a href="reservar.html">Reservar</a>
+      <a href="torneos.html">Torneos</a>
+      <a href="profesores.html">Profesores</a>
+    </div>
+  </nav>
+
+  <main class="torneos-prem-page">
+
+    <!-- HEADER -->
+    <div class="torneos-prem-header">
+      <div class="torneos-prem-header-inner">
+        <span class="sec-eyebrow">Resultados en tiempo real</span>
+        <h1 class="torneos-prem-titulo">Torneos</h1>
+        <p class="torneos-prem-sub">Posiciones, grupos y cuadro eliminatorio. Se actualiza automáticamente cada 30 segundos.</p>
+      </div>
+    </div>
+
+    <!-- CONTENIDO -->
+    <div class="torneos-prem-body">
+      <div class="torneos-prem-inner">
+
+        <!-- SELECTOR DE TORNEOS -->
+        <div class="torneo-tabs-prem" id="torneos-selector"></div>
+
+        <!-- CONTENIDO DEL TORNEO -->
+        <div id="torneo-contenido">
+          <div class="loading-overlay" style="padding:80px 0">
+            <div class="spinner"></div>
+            <p style="color:rgba(255,255,255,0.4);margin-top:12px">Cargando torneos...</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <div id="toast-container"></div>
+
+  <script src="js/api.js"></script>
+  <script src="js/torneos.js"></script>
+  <script>
+    window.addEventListener('scroll', () => {
+      document.getElementById('nav-premium').classList.toggle('scrolled', window.scrollY > 40);
+    });
+    function toggleNavMobile() {
+      document.getElementById('nav-mobile-prem').classList.toggle('open');
+    }
+  </script>
+</body>
+</html>

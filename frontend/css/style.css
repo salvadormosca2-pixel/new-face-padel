@@ -1,0 +1,1392 @@
+/* ═══════════════════════════════════════════════════════════════
+   NEW FACE PADEL CLUB — CSS COMPLETO
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─── 1. VARIABLES ─────────────────────────────────────────────── */
+:root {
+  --verde:          #1D9E75;
+  --verde-dk:       #178A64;
+  --verde-lt:       #E8F8F3;
+  --amarillo:       #EF9F27;
+  --amarillo-lt:    #FEF3E2;
+  --rojo:           #E24B4A;
+  --rojo-lt:        #FDEDED;
+  --gris:           #9CA3AF;
+  --gris-lt:        #F3F4F6;
+  --gris-borde:     #E5E7EB;
+  --negro:          #0F1117;
+  --sidebar-bg:     #111827;
+  --sidebar-hover:  #1F2937;
+  --sidebar-active: #1D9E75;
+  --blanco:         #FFFFFF;
+  --fondo:          #F9FAFB;
+  --texto:          #111827;
+  --texto-suave:    #6B7280;
+  --texto-xs:       #9CA3AF;
+  --radio:          12px;
+  --radio-sm:       8px;
+  --radio-lg:       16px;
+  --sombra-sm:      0 1px 3px rgba(0,0,0,.08);
+  --sombra:         0 4px 12px rgba(0,0,0,.08);
+  --sombra-lg:      0 8px 24px rgba(0,0,0,.12);
+  --trans:          .18s ease;
+}
+
+/* ─── 2. RESET & BASE ──────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--fondo);
+  color: var(--texto);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+img { max-width: 100%; display: block; }
+a  { color: inherit; text-decoration: none; }
+ul, ol { list-style: none; }
+button { cursor: pointer; font-family: inherit; border: none; background: none; }
+input, select, textarea { font-family: inherit; font-size: 15px; }
+
+/* ─── 3. TIPOGRAFÍA UTILITARIA ─────────────────────────────────── */
+.text-verde  { color: var(--verde);   }
+.text-amarillo { color: var(--amarillo); }
+.text-rojo   { color: var(--rojo);    }
+.text-suave  { color: var(--texto-suave); }
+.text-xs     { color: var(--texto-xs); }
+.fw-600      { font-weight: 600; }
+.fw-700      { font-weight: 700; }
+.text-sm     { font-size: 13px; }
+.text-lg     { font-size: 18px; }
+
+/* ─── 4. BOTONES ───────────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 12px 22px; border-radius: var(--radio-sm);
+  font-size: 15px; font-weight: 600;
+  transition: background var(--trans), transform var(--trans), box-shadow var(--trans);
+  white-space: nowrap;
+}
+.btn:active { transform: scale(.97); }
+
+.btn-verde {
+  background: var(--verde); color: var(--blanco);
+}
+.btn-verde:hover { background: var(--verde-dk); box-shadow: 0 4px 12px rgba(29,158,117,.35); }
+
+.btn-outline {
+  background: transparent; color: var(--verde);
+  border: 2px solid var(--verde);
+}
+.btn-outline:hover { background: var(--verde-lt); }
+
+.btn-gris {
+  background: var(--gris-lt); color: var(--texto);
+}
+.btn-gris:hover { background: var(--gris-borde); }
+
+.btn-rojo {
+  background: var(--rojo); color: var(--blanco);
+}
+.btn-rojo:hover { background: #c73c3b; }
+
+.btn-sm { padding: 8px 14px; font-size: 13px; }
+.btn-lg { padding: 16px 32px; font-size: 17px; }
+.btn-bloque { width: 100%; justify-content: center; }
+
+/* ─── 5. BADGES ────────────────────────────────────────────────── */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 20px;
+  font-size: 12px; font-weight: 600;
+}
+.badge-verde      { background: var(--verde-lt); color: var(--verde-dk); }
+.badge-amarillo   { background: var(--amarillo-lt); color: #B8760D; }
+.badge-rojo       { background: var(--rojo-lt); color: #B03B3A; }
+.badge-gris       { background: var(--gris-lt); color: var(--texto-suave); }
+.badge-azul       { background: #EFF6FF; color: #1D4ED8; }
+.badge-violeta    { background: #F5F3FF; color: #6D28D9; }
+.badge-count {
+  background: var(--rojo); color: var(--blanco);
+  font-size: 11px; font-weight: 700; min-width: 20px; height: 20px;
+  padding: 0 6px; border-radius: 10px;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+
+/* ─── 6. TOAST NOTIFICACIONES ──────────────────────────────────── */
+#toast-container {
+  position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+  display: flex; flex-direction: column; gap: 10px; pointer-events: none;
+}
+.toast {
+  background: var(--negro); color: var(--blanco);
+  padding: 14px 20px; border-radius: var(--radio-sm);
+  font-size: 14px; font-weight: 500;
+  box-shadow: var(--sombra-lg);
+  animation: slideInToast .25s ease;
+  display: flex; align-items: center; gap: 10px;
+  pointer-events: all;
+}
+.toast.toast-verde  { background: var(--verde); }
+.toast.toast-rojo   { background: var(--rojo);  }
+.toast.toast-amarillo { background: var(--amarillo); color: var(--negro); }
+@keyframes slideInToast {
+  from { opacity: 0; transform: translateX(30px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ─── 7. SPINNER ───────────────────────────────────────────────── */
+.spinner {
+  width: 36px; height: 36px;
+  border: 3px solid var(--gris-borde);
+  border-top-color: var(--verde);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  margin: 24px auto;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-overlay {
+  display: flex; align-items: center; justify-content: center;
+  padding: 40px; flex-direction: column; gap: 12px;
+  color: var(--texto-suave);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PÁGINAS PÚBLICAS
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─── 8. NAV PÚBLICA ───────────────────────────────────────────── */
+.nav-publica {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(255,255,255,.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--gris-borde);
+  height: 68px;
+  display: flex; align-items: center;
+}
+.nav-inner {
+  max-width: 1200px; margin: 0 auto; width: 100%;
+  padding: 0 24px;
+  display: flex; align-items: center; justify-content: space-between; gap: 24px;
+}
+.nav-logo {
+  display: flex; align-items: center; gap: 10px;
+  text-decoration: none;
+}
+.nav-logo-icon {
+  width: 40px; height: 40px; border-radius: 10px;
+  background: var(--verde);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; color: white; font-weight: 800;
+  flex-shrink: 0;
+}
+.nav-logo-text {
+  display: flex; flex-direction: column; line-height: 1.2;
+}
+.nav-logo-text .nombre { font-size: 14px; font-weight: 700; color: var(--texto); }
+.nav-logo-text .club   { font-size: 11px; font-weight: 500; color: var(--texto-suave); }
+
+.nav-links {
+  display: flex; align-items: center; gap: 4px;
+}
+.nav-links a {
+  padding: 8px 14px; border-radius: var(--radio-sm);
+  font-size: 14px; font-weight: 500; color: var(--texto-suave);
+  transition: color var(--trans), background var(--trans);
+}
+.nav-links a:hover, .nav-links a.activo {
+  color: var(--verde); background: var(--verde-lt);
+}
+
+.nav-cta .btn { padding: 10px 20px; font-size: 14px; }
+
+.nav-mobile-toggle {
+  display: none;
+  flex-direction: column; gap: 5px; padding: 8px;
+  cursor: pointer;
+}
+.nav-mobile-toggle span {
+  display: block; width: 22px; height: 2px;
+  background: var(--texto); border-radius: 2px;
+  transition: all var(--trans);
+}
+.nav-mobile-menu {
+  display: none; position: fixed; top: 68px; left: 0; right: 0;
+  background: white; border-bottom: 1px solid var(--gris-borde);
+  padding: 16px 24px; z-index: 99;
+  flex-direction: column; gap: 4px;
+}
+.nav-mobile-menu.abierto { display: flex; }
+.nav-mobile-menu a {
+  padding: 12px 16px; border-radius: var(--radio-sm);
+  font-size: 15px; font-weight: 500; color: var(--texto);
+  transition: background var(--trans);
+}
+.nav-mobile-menu a:hover { background: var(--gris-lt); }
+
+/* ─── 9. HERO ──────────────────────────────────────────────────── */
+.hero {
+  margin-top: 68px;
+  min-height: calc(100vh - 68px);
+  background: linear-gradient(135deg, #0c2940 0%, #0d3b2e 60%, #1D9E75 100%);
+  display: flex; align-items: center; justify-content: center;
+  text-align: center; padding: 60px 24px;
+  position: relative; overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 70% 50%, rgba(29,158,117,.25) 0%, transparent 70%);
+}
+.hero-content {
+  position: relative; z-index: 1;
+  max-width: 700px; margin: 0 auto;
+}
+.hero-tag {
+  display: inline-block;
+  background: rgba(29,158,117,.25); color: #6DFFCB;
+  border: 1px solid rgba(29,158,117,.4);
+  padding: 6px 16px; border-radius: 20px;
+  font-size: 13px; font-weight: 600; letter-spacing: .5px;
+  margin-bottom: 24px;
+  text-transform: uppercase;
+}
+.hero h1 {
+  font-size: clamp(36px, 6vw, 72px);
+  font-weight: 800; color: white; line-height: 1.1;
+  letter-spacing: -1px; margin-bottom: 20px;
+}
+.hero h1 span { color: #6DFFCB; }
+.hero p {
+  font-size: clamp(16px, 2.5vw, 20px);
+  color: rgba(255,255,255,.8); margin-bottom: 40px; max-width: 500px; margin-left: auto; margin-right: auto;
+}
+.hero-btns {
+  display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;
+}
+.hero-btns .btn-verde { font-size: 17px; padding: 16px 36px; box-shadow: 0 4px 24px rgba(29,158,117,.5); }
+.hero-btns .btn-outline { border-color: rgba(255,255,255,.4); color: white; }
+.hero-btns .btn-outline:hover { background: rgba(255,255,255,.1); }
+
+.hero-stats {
+  display: flex; gap: 40px; justify-content: center; flex-wrap: wrap;
+  margin-top: 60px; padding-top: 40px;
+  border-top: 1px solid rgba(255,255,255,.1);
+}
+.hero-stat .num {
+  font-size: 36px; font-weight: 800; color: white; display: block;
+}
+.hero-stat .lbl {
+  font-size: 13px; color: rgba(255,255,255,.6);
+}
+
+/* ─── 10. SECCIÓN GENÉRICA ─────────────────────────────────────── */
+.seccion {
+  padding: 80px 24px;
+}
+.seccion-alt { background: white; }
+.contenedor { max-width: 1200px; margin: 0 auto; }
+
+.seccion-header { text-align: center; margin-bottom: 56px; }
+.seccion-header .etiqueta {
+  display: inline-block;
+  font-size: 12px; font-weight: 700; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--verde);
+  margin-bottom: 12px;
+}
+.seccion-header h2 {
+  font-size: clamp(26px, 4vw, 40px); font-weight: 800;
+  color: var(--texto); margin-bottom: 14px; letter-spacing: -.5px;
+}
+.seccion-header p { font-size: 17px; color: var(--texto-suave); max-width: 560px; margin: 0 auto; }
+
+/* ─── 11. GRID DE CANCHAS ──────────────────────────────────────── */
+.canchas-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px;
+}
+.cancha-card {
+  background: white; border-radius: var(--radio-lg);
+  border: 1px solid var(--gris-borde);
+  overflow: hidden;
+  transition: transform var(--trans), box-shadow var(--trans);
+}
+.cancha-card:hover { transform: translateY(-4px); box-shadow: var(--sombra-lg); }
+.cancha-card-header {
+  height: 140px; display: flex; align-items: center; justify-content: center;
+  font-size: 52px;
+}
+.cancha-cubierta .cancha-card-header { background: linear-gradient(135deg, #0d3b2e, #1D9E75); }
+.cancha-libre    .cancha-card-header { background: linear-gradient(135deg, #14532d, #4ade80); }
+.cancha-card-body { padding: 20px; }
+.cancha-num { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
+.cancha-tipo { font-size: 13px; color: var(--texto-suave); display: flex; align-items: center; gap: 6px; }
+
+/* ─── 12. FEATURES ─────────────────────────────────────────────── */
+.features-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px;
+}
+.feature-card {
+  background: white; border: 1px solid var(--gris-borde);
+  border-radius: var(--radio-lg); padding: 28px 24px;
+  transition: box-shadow var(--trans), transform var(--trans);
+}
+.feature-card:hover { box-shadow: var(--sombra); transform: translateY(-2px); }
+.feature-icon {
+  width: 52px; height: 52px; border-radius: var(--radio);
+  background: var(--verde-lt);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; margin-bottom: 16px;
+}
+.feature-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+.feature-card p  { font-size: 14px; color: var(--texto-suave); line-height: 1.5; }
+
+/* ─── 13. FOOTER ───────────────────────────────────────────────── */
+footer {
+  background: var(--negro); color: rgba(255,255,255,.7);
+  padding: 60px 24px 32px;
+}
+.footer-grid {
+  max-width: 1200px; margin: 0 auto;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 40px;
+  padding-bottom: 40px; border-bottom: 1px solid rgba(255,255,255,.1);
+  margin-bottom: 32px;
+}
+.footer-col h4 { color: white; font-size: 15px; font-weight: 700; margin-bottom: 16px; }
+.footer-col a, .footer-col p { font-size: 14px; display: block; padding: 4px 0; color: rgba(255,255,255,.6); }
+.footer-col a:hover { color: var(--verde); }
+.footer-bottom {
+  max-width: 1200px; margin: 0 auto;
+  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+  font-size: 13px; color: rgba(255,255,255,.4);
+}
+.footer-logo { color: white; font-weight: 700; font-size: 16px; }
+
+/* ═══════════════════════════════════════════════════════════════
+   SISTEMA DE RESERVAS
+   ═══════════════════════════════════════════════════════════════ */
+
+.reserva-page {
+  margin-top: 68px; padding: 40px 24px; min-height: calc(100vh - 68px);
+  background: var(--fondo);
+}
+.reserva-contenedor { max-width: 720px; margin: 0 auto; }
+
+/* ─── 14. INDICADOR DE PASOS ───────────────────────────────────── */
+.steps {
+  display: flex; align-items: center; margin-bottom: 40px;
+}
+.step {
+  display: flex; align-items: center; flex: 1;
+}
+.step:last-child { flex: none; }
+.step-circle {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--gris-lt); border: 2px solid var(--gris-borde);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; color: var(--texto-suave);
+  transition: all .3s ease; flex-shrink: 0;
+}
+.step.activo   .step-circle { background: var(--verde); border-color: var(--verde); color: white; }
+.step.completo .step-circle { background: var(--verde-lt); border-color: var(--verde); color: var(--verde); }
+.step-line {
+  flex: 1; height: 2px; background: var(--gris-borde); margin: 0 8px;
+  transition: background .3s ease;
+}
+.step.completo + .step .step-line,
+.step-line.completo { background: var(--verde); }
+.step-label {
+  font-size: 11px; font-weight: 600; color: var(--texto-suave);
+  text-align: center; margin-top: 6px;
+  white-space: nowrap;
+}
+.step.activo   .step-label { color: var(--verde); }
+.step.completo .step-label { color: var(--verde); }
+
+.steps-wrapper { margin-bottom: 40px; }
+.steps-wrapper .step-num-label {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+
+/* ─── 15. SELECTOR DE DÍA ──────────────────────────────────────── */
+.dias-scroll {
+  display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px;
+  scrollbar-width: none;
+}
+.dias-scroll::-webkit-scrollbar { display: none; }
+.dia-btn {
+  flex-shrink: 0;
+  min-width: 72px; padding: 12px 8px; border-radius: var(--radio);
+  border: 2px solid var(--gris-borde); background: white;
+  text-align: center; cursor: pointer;
+  transition: all var(--trans);
+}
+.dia-btn:hover { border-color: var(--verde); color: var(--verde); }
+.dia-btn.seleccionado { background: var(--verde); border-color: var(--verde); color: white; }
+.dia-btn .dia-nombre { font-size: 12px; font-weight: 600; display: block; }
+.dia-btn .dia-num    { font-size: 22px; font-weight: 800; display: block; line-height: 1.2; }
+.dia-btn .dia-mes    { font-size: 11px; display: block; opacity: .7; }
+
+/* ─── 16. GRILLA DE HORARIOS ───────────────────────────────────── */
+.horarios-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px;
+}
+.horario-btn {
+  padding: 16px; border-radius: var(--radio);
+  border: 2px solid var(--gris-borde); background: white;
+  cursor: pointer; transition: all var(--trans);
+  text-align: left;
+}
+.horario-btn:hover:not(:disabled) { border-color: var(--verde); background: var(--verde-lt); }
+.horario-btn.seleccionado { background: var(--verde); border-color: var(--verde); color: white; }
+.horario-btn:disabled {
+  background: var(--gris-lt); border-color: var(--gris-borde);
+  color: var(--gris); cursor: not-allowed; opacity: .65;
+}
+.horario-hora { font-size: 22px; font-weight: 800; display: block; }
+.horario-disponibilidad {
+  font-size: 12px; font-weight: 600; margin-top: 4px; display: block;
+}
+.horario-btn .disponible  { color: var(--verde); }
+.horario-btn.seleccionado .disponible { color: rgba(255,255,255,.9); }
+.horario-btn .ultimo      { color: var(--amarillo); font-weight: 700; }
+.horario-btn.seleccionado .ultimo     { color: #ffe08a; }
+.horario-btn .ocupado     { color: var(--gris); }
+
+/* ─── 16b. SISTEMA DE PASOS (show/hide) ───────────────────────── */
+.paso { display: none; }
+.paso.activo { display: block; }
+
+/* ─── 17. FORMULARIO PASO 3 ────────────────────────────────────── */
+.reserva-form { background: white; border-radius: var(--radio-lg); padding: 32px; box-shadow: var(--sombra-sm); }
+.form-group { margin-bottom: 20px; }
+.form-group label {
+  display: block; font-size: 14px; font-weight: 600;
+  color: var(--texto); margin-bottom: 8px;
+}
+.form-group input, .form-group select {
+  width: 100%; padding: 13px 16px;
+  border: 2px solid var(--gris-borde); border-radius: var(--radio-sm);
+  font-size: 15px; color: var(--texto); background: white;
+  transition: border-color var(--trans);
+  outline: none;
+}
+.form-group input:focus, .form-group select:focus { border-color: var(--verde); }
+.form-group input.error  { border-color: var(--rojo); }
+.form-error { font-size: 12px; color: var(--rojo); margin-top: 4px; font-weight: 500; }
+
+.pago-opciones { display: flex; flex-direction: column; gap: 12px; }
+.pago-opcion {
+  display: flex; align-items: flex-start; gap: 14px;
+  padding: 16px; border-radius: var(--radio);
+  border: 2px solid var(--gris-borde); cursor: pointer;
+  transition: border-color var(--trans), background var(--trans);
+}
+.pago-opcion:hover { border-color: var(--verde); background: var(--verde-lt); }
+.pago-opcion.seleccionada { border-color: var(--verde); background: var(--verde-lt); }
+.pago-opcion input[type="radio"] { margin-top: 2px; accent-color: var(--verde); }
+.pago-opcion .pago-titulo { font-weight: 600; font-size: 15px; display: block; }
+.pago-opcion .pago-desc   { font-size: 13px; color: var(--texto-suave); }
+
+.aviso-pago-online {
+  background: #EFF6FF; border: 1px solid #93C5FD;
+  border-radius: var(--radio); padding: 16px;
+  font-size: 14px; color: #1D4ED8;
+  display: none; margin-top: 12px; line-height: 1.5;
+}
+.aviso-pago-online.visible { display: block; }
+.aviso-pago-online strong { color: #1E40AF; }
+
+/* ─── 18. CONFIRMACIÓN ─────────────────────────────────────────── */
+.confirmacion {
+  text-align: center; padding: 40px 0;
+}
+.confirmacion-check {
+  width: 80px; height: 80px; border-radius: 50%;
+  background: var(--verde-lt);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 24px;
+  animation: popIn .4s cubic-bezier(.175,.885,.32,1.275);
+}
+.confirmacion-check svg { width: 40px; height: 40px; }
+@keyframes popIn {
+  from { transform: scale(0); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+.confirmacion h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+.confirmacion > p { color: var(--texto-suave); margin-bottom: 32px; }
+
+.cancha-asignada {
+  border: 2px solid var(--verde); border-radius: var(--radio-lg);
+  padding: 28px; margin: 0 auto 28px; max-width: 360px;
+  background: var(--verde-lt);
+}
+.cancha-asignada .label { font-size: 13px; font-weight: 600; color: var(--verde-dk); text-transform: uppercase; letter-spacing: .5px; }
+.cancha-num-grande { font-size: 72px; font-weight: 900; color: var(--verde); line-height: 1; }
+.cancha-tipo-conf  { font-size: 18px; font-weight: 600; color: var(--verde-dk); margin-top: 4px; }
+
+.resumen-reserva {
+  background: white; border-radius: var(--radio-lg);
+  border: 1px solid var(--gris-borde); padding: 24px;
+  text-align: left; margin-bottom: 24px;
+}
+.resumen-fila {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 0; border-bottom: 1px solid var(--gris-borde);
+  font-size: 14px;
+}
+.resumen-fila:last-child { border-bottom: none; padding-bottom: 0; }
+.resumen-fila .clave   { color: var(--texto-suave); }
+.resumen-fila .valor   { font-weight: 600; color: var(--texto); }
+.resumen-fila .valor.verde { color: var(--verde); }
+
+/* ═══════════════════════════════════════════════════════════════
+   TORNEOS PÚBLICOS
+   ═══════════════════════════════════════════════════════════════ */
+
+.torneos-page { margin-top: 68px; padding: 40px 24px; }
+.torneos-contenedor { max-width: 1100px; margin: 0 auto; }
+
+.torneo-selector { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 40px; }
+.torneo-tab {
+  padding: 10px 20px; border-radius: 20px;
+  border: 2px solid var(--gris-borde); background: white;
+  font-size: 14px; font-weight: 600; color: var(--texto-suave);
+  cursor: pointer; transition: all var(--trans);
+}
+.torneo-tab:hover    { border-color: var(--verde); color: var(--verde); }
+.torneo-tab.activo   { background: var(--verde); border-color: var(--verde); color: white; }
+
+.grupos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-bottom: 40px; }
+.grupo-card {
+  background: white; border-radius: var(--radio-lg);
+  border: 1px solid var(--gris-borde); overflow: hidden; box-shadow: var(--sombra-sm);
+}
+.grupo-header {
+  background: var(--negro); color: white;
+  padding: 14px 20px; font-size: 16px; font-weight: 800;
+  display: flex; align-items: center; gap: 10px;
+}
+.grupo-header .letra {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: var(--verde); display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: 900;
+}
+.grupo-tabla { width: 100%; border-collapse: collapse; }
+.grupo-tabla th {
+  padding: 10px 16px; font-size: 11px; font-weight: 700;
+  color: var(--texto-suave); text-transform: uppercase; letter-spacing: .5px;
+  border-bottom: 1px solid var(--gris-borde); text-align: center;
+}
+.grupo-tabla th:first-child { text-align: left; }
+.grupo-tabla td {
+  padding: 12px 16px; font-size: 14px; border-bottom: 1px solid var(--gris-borde);
+  text-align: center;
+}
+.grupo-tabla td:first-child { text-align: left; font-weight: 600; }
+.grupo-tabla tr:last-child td { border-bottom: none; }
+.grupo-tabla tr.clasifica { background: var(--verde-lt); }
+.grupo-tabla tr:first-child td:first-child::before { content: '🥇 '; }
+.grupo-tabla tr:nth-child(2) td:first-child::before { content: '🥈 '; }
+.grupo-tabla tr:nth-child(3) td:first-child::before { content: '🥉 '; }
+
+.clasifica-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 4px;
+  background: var(--verde); color: white; font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .3px; margin-left: 6px;
+}
+
+/* Bracket eliminatorio */
+.bracket-section { margin-top: 40px; }
+.bracket-title { font-size: 22px; font-weight: 800; margin-bottom: 24px; }
+.bracket {
+  display: flex; gap: 0; overflow-x: auto; padding-bottom: 16px;
+}
+.bracket-ronda {
+  display: flex; flex-direction: column; justify-content: space-around;
+  min-width: 180px; padding: 0 12px;
+  border-right: 1px solid var(--gris-borde);
+}
+.bracket-ronda:last-child { border-right: none; }
+.bracket-ronda-titulo {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .5px; color: var(--texto-suave); text-align: center;
+  margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--gris-borde);
+}
+.bracket-partido {
+  background: white; border: 1px solid var(--gris-borde);
+  border-radius: var(--radio); overflow: hidden; margin: 6px 0;
+  box-shadow: var(--sombra-sm);
+}
+.bracket-jugador {
+  padding: 10px 14px; font-size: 13px; font-weight: 600;
+  border-bottom: 1px solid var(--gris-borde); display: flex;
+  align-items: center; justify-content: space-between;
+}
+.bracket-jugador:last-child { border-bottom: none; }
+.bracket-jugador.ganador { background: var(--verde-lt); color: var(--verde-dk); }
+.bracket-jugador.ganador::after { content: '✓'; font-weight: 900; }
+
+/* Campeón */
+.campeon-display {
+  text-align: center; padding: 48px 24px;
+  background: linear-gradient(135deg, var(--negro), #0d3b2e);
+  border-radius: var(--radio-lg); margin-top: 40px; color: white;
+}
+.campeon-trofeo { font-size: 64px; margin-bottom: 16px; }
+.campeon-titulo { font-size: 14px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: #6DFFCB; margin-bottom: 8px; }
+.campeon-nombre { font-size: 42px; font-weight: 900; }
+
+/* ═══════════════════════════════════════════════════════════════
+   PROFESORES PÚBLICOS
+   ═══════════════════════════════════════════════════════════════ */
+
+.profesores-page { margin-top: 68px; padding: 40px 24px; }
+.profesores-contenedor { max-width: 1200px; margin: 0 auto; }
+
+.profesores-stats {
+  display: flex; gap: 24px; flex-wrap: wrap;
+  background: white; border-radius: var(--radio-lg);
+  border: 1px solid var(--gris-borde); padding: 24px;
+  margin-bottom: 40px; box-shadow: var(--sombra-sm);
+}
+.prof-stat {
+  flex: 1; min-width: 120px; text-align: center;
+}
+.prof-stat .num { font-size: 32px; font-weight: 800; color: var(--verde); display: block; }
+.prof-stat .lbl { font-size: 13px; color: var(--texto-suave); }
+
+.profesores-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px;
+}
+.prof-card {
+  background: white; border-radius: var(--radio-lg);
+  border: 1px solid var(--gris-borde); overflow: hidden;
+  box-shadow: var(--sombra-sm);
+  transition: transform var(--trans), box-shadow var(--trans);
+}
+.prof-card:hover { transform: translateY(-4px); box-shadow: var(--sombra-lg); }
+.prof-card-header {
+  padding: 28px 24px 20px;
+  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+  display: flex; align-items: center; gap: 16px;
+}
+.prof-avatar {
+  width: 68px; height: 68px; border-radius: 50%;
+  background: var(--verde); display: flex; align-items: center; justify-content: center;
+  font-size: 26px; font-weight: 800; color: white; flex-shrink: 0;
+  overflow: hidden;
+}
+.prof-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.prof-info-head .nombre { font-size: 18px; font-weight: 800; }
+.prof-info-head .especialidad {
+  font-size: 13px; color: var(--verde-dk); font-weight: 600;
+  background: var(--verde-lt); padding: 3px 10px; border-radius: 20px;
+  display: inline-block; margin-top: 4px;
+}
+.prof-card-body { padding: 20px 24px; }
+.prof-dato {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 8px 0; border-bottom: 1px solid var(--gris-borde);
+  font-size: 14px;
+}
+.prof-dato:last-child { border-bottom: none; }
+.prof-dato .icono { font-size: 16px; flex-shrink: 0; width: 20px; }
+.prof-dato .valor { color: var(--texto); }
+.prof-dato .label { font-weight: 600; margin-right: 4px; }
+.prof-card-footer { padding: 16px 24px; border-top: 1px solid var(--gris-borde); }
+.btn-whatsapp {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; padding: 12px;
+  background: #25D366; color: white; border-radius: var(--radio-sm);
+  font-size: 14px; font-weight: 700;
+  transition: background var(--trans), transform var(--trans);
+}
+.btn-whatsapp:hover { background: #22c55e; transform: scale(.98); }
+
+/* ═══════════════════════════════════════════════════════════════
+   PANEL DE ADMINISTRACIÓN
+   ═══════════════════════════════════════════════════════════════ */
+
+.admin-body {
+  display: flex; min-height: 100vh;
+  background: var(--fondo);
+}
+
+/* ─── 19. SIDEBAR ──────────────────────────────────────────────── */
+.admin-sidebar {
+  width: 240px; flex-shrink: 0;
+  background: var(--sidebar-bg); color: white;
+  display: flex; flex-direction: column;
+  position: fixed; top: 0; left: 0; bottom: 0; z-index: 200;
+  overflow-y: auto; overflow-x: hidden;
+  transition: transform var(--trans);
+}
+.sidebar-logo {
+  padding: 24px 20px; border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.sidebar-logo-inner {
+  display: flex; align-items: center; gap: 10px;
+}
+.sidebar-logo-icon {
+  width: 38px; height: 38px; border-radius: 10px;
+  background: var(--verde);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: 900; color: white; flex-shrink: 0;
+}
+.sidebar-club-name { font-size: 13px; font-weight: 700; line-height: 1.3; }
+.sidebar-club-sub  { font-size: 11px; color: rgba(255,255,255,.4); }
+.sidebar-status {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 20px; font-size: 11px; font-weight: 600;
+  color: rgba(255,255,255,.4); margin-top: 4px;
+}
+.sidebar-status .dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--verde); box-shadow: 0 0 0 3px rgba(29,158,117,.3);
+}
+.sidebar-status.activo { color: #6DFFCB; }
+
+.sidebar-nav { flex: 1; padding: 16px 12px; }
+.sidebar-section-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; color: rgba(255,255,255,.3);
+  padding: 8px 8px 4px; margin-top: 8px;
+}
+.sidebar-nav-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 12px; border-radius: var(--radio-sm);
+  font-size: 14px; font-weight: 500; color: rgba(255,255,255,.65);
+  cursor: pointer; transition: all var(--trans);
+  margin-bottom: 2px; position: relative;
+}
+.sidebar-nav-item:hover { background: var(--sidebar-hover); color: white; }
+.sidebar-nav-item.activo {
+  background: rgba(29,158,117,.2); color: var(--verde);
+}
+.sidebar-nav-item.activo::before {
+  content: ''; position: absolute; left: 0; top: 4px; bottom: 4px;
+  width: 3px; border-radius: 0 3px 3px 0;
+  background: var(--verde);
+}
+.sidebar-nav-item .nav-icon { font-size: 17px; width: 20px; text-align: center; flex-shrink: 0; }
+.sidebar-nav-item .nav-label { flex: 1; }
+
+/* ─── 20. ADMIN MAIN ───────────────────────────────────────────── */
+.admin-main {
+  margin-left: 240px; flex: 1;
+  display: flex; flex-direction: column;
+  min-height: 100vh;
+}
+.admin-topbar {
+  height: 64px; background: white;
+  border-bottom: 1px solid var(--gris-borde);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 28px; position: sticky; top: 0; z-index: 100;
+}
+.admin-topbar-title { font-size: 18px; font-weight: 700; }
+.admin-topbar-right { display: flex; align-items: center; gap: 12px; }
+
+.admin-content { padding: 28px; flex: 1; }
+
+/* ─── 21. SECCIONES ADMIN (show/hide) ──────────────────────────── */
+.admin-section { display: none; }
+.admin-section.activa { display: block; }
+
+/* ─── 22. MÉTRICAS DASHBOARD ───────────────────────────────────── */
+.metricas-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;
+  margin-bottom: 24px;
+}
+.metrica-card {
+  background: white; border-radius: var(--radio-lg);
+  border: 1px solid var(--gris-borde); padding: 22px;
+  box-shadow: var(--sombra-sm);
+  transition: box-shadow var(--trans);
+}
+.metrica-card:hover { box-shadow: var(--sombra); }
+.metrica-label {
+  font-size: 12px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .5px; color: var(--texto-suave); margin-bottom: 10px;
+}
+.metrica-valor {
+  font-size: 32px; font-weight: 800; color: var(--texto); line-height: 1;
+  margin-bottom: 8px;
+}
+.metrica-sub { font-size: 13px; color: var(--texto-suave); }
+.metrica-variacion {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 6px;
+}
+.metrica-variacion.pos { background: var(--verde-lt); color: var(--verde-dk); }
+.metrica-variacion.neg { background: var(--rojo-lt); color: var(--rojo); }
+
+/* ─── 23. CANCHAS EN TIEMPO REAL (dashboard) ───────────────────── */
+.canchas-realtime {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;
+  margin-bottom: 24px;
+}
+.cancha-rt-card {
+  background: white; border-radius: var(--radio-lg);
+  border: 1px solid var(--gris-borde); padding: 20px;
+  box-shadow: var(--sombra-sm);
+}
+.cancha-rt-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 12px;
+}
+.cancha-rt-num { font-size: 16px; font-weight: 800; }
+.cancha-rt-tipo { font-size: 12px; color: var(--texto-suave); }
+.cancha-rt-estado {
+  font-size: 13px; font-weight: 600; padding: 10px 0;
+}
+.cancha-rt-estado .jugando { color: var(--verde); }
+.cancha-rt-estado .libre   { color: var(--gris);  }
+.cancha-rt-prox { font-size: 12px; color: var(--texto-suave); margin-top: 4px; border-top: 1px solid var(--gris-borde); padding-top: 8px; }
+
+/* ─── 24. ALERTAS ──────────────────────────────────────────────── */
+.alertas-section { margin-bottom: 24px; }
+.alertas-lista { display: flex; flex-direction: column; gap: 8px; }
+.alerta-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 18px; border-radius: var(--radio);
+  background: white; border: 1px solid var(--gris-borde);
+  font-size: 14px;
+}
+.alerta-item.amarillo { background: var(--amarillo-lt); border-color: #FCD34D; }
+.alerta-item.verde    { background: var(--verde-lt); border-color: var(--verde); }
+.alerta-item.rojo     { background: var(--rojo-lt); border-color: var(--rojo); }
+.alerta-icono { font-size: 18px; flex-shrink: 0; }
+.alerta-texto { flex: 1; font-weight: 500; }
+
+/* ─── 25. INGRESOS POR MÉTODO ──────────────────────────────────── */
+.metodo-barras { display: flex; flex-direction: column; gap: 12px; }
+.metodo-fila { display: flex; align-items: center; gap: 12px; }
+.metodo-nombre { font-size: 13px; font-weight: 600; width: 110px; flex-shrink: 0; }
+.metodo-barra-wrap { flex: 1; background: var(--gris-lt); border-radius: 6px; height: 10px; overflow: hidden; }
+.metodo-barra { height: 100%; border-radius: 6px; transition: width .6s ease; }
+.metodo-monto { font-size: 13px; font-weight: 700; min-width: 80px; text-align: right; }
+.metodo-efectivo    .metodo-barra { background: var(--verde); }
+.metodo-mercadopago .metodo-barra { background: #3B82F6; }
+.metodo-transferencia .metodo-barra { background: #8B5CF6; }
+
+/* ─── 26. SECCIÓN RESERVAS ADMIN ───────────────────────────────── */
+.reservas-topbar {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.reservas-fecha-nav {
+  display: flex; align-items: center; gap: 8px;
+}
+.reservas-fecha-nav .fecha-input {
+  padding: 9px 14px; border: 2px solid var(--gris-borde);
+  border-radius: var(--radio-sm); font-size: 14px; font-weight: 600;
+  outline: none; transition: border-color var(--trans);
+}
+.reservas-fecha-nav .fecha-input:focus { border-color: var(--verde); }
+.btn-nav {
+  padding: 9px 14px; border-radius: var(--radio-sm);
+  border: 2px solid var(--gris-borde); background: white;
+  font-size: 16px; cursor: pointer;
+  transition: all var(--trans);
+}
+.btn-nav:hover { border-color: var(--verde); color: var(--verde); }
+.btn-nav:disabled { opacity: 0.35; cursor: default; pointer-events: none; }
+.reservas-fecha-nav .btn-nav {
+  padding: 9px 14px; border-radius: var(--radio-sm);
+  border: 2px solid var(--gris-borde); background: white;
+  font-size: 16px; cursor: pointer;
+  transition: all var(--trans);
+}
+.reservas-fecha-nav .btn-nav:hover { border-color: var(--verde); color: var(--verde); }
+
+.reservas-contadores {
+  display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px;
+}
+.contador-chip {
+  padding: 8px 16px; border-radius: 20px;
+  font-size: 14px; font-weight: 700; border: 2px solid;
+}
+.contador-chip.total     { border-color: var(--gris-borde); color: var(--texto); background: white; }
+.contador-chip.pagados   { border-color: var(--verde); color: var(--verde); background: var(--verde-lt); }
+.contador-chip.pendientes{ border-color: var(--amarillo); color: #B8760D; background: var(--amarillo-lt); }
+.contador-chip.ingresos  { border-color: var(--negro); color: var(--negro); background: white; }
+
+.canchas-columnas {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+  align-items: start;
+}
+.cancha-columna {
+  background: white; border-radius: var(--radio-lg);
+  border: 1px solid var(--gris-borde); overflow: hidden;
+  box-shadow: var(--sombra-sm);
+}
+.cancha-col-header {
+  padding: 14px 16px; background: var(--negro); color: white;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.cancha-col-titulo { font-size: 15px; font-weight: 800; }
+.cancha-col-tipo   { font-size: 11px; color: rgba(255,255,255,.5); }
+.cancha-col-contadores { font-size: 11px; color: rgba(255,255,255,.6); margin-top: 2px; }
+
+.cancha-col-slots { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+
+/* ─── 27. SLOT CARDS ───────────────────────────────────────────── */
+.slot-card {
+  border-radius: var(--radio); border: 2px solid var(--gris-borde);
+  background: white; overflow: hidden; position: relative;
+  transition: border-color var(--trans), box-shadow var(--trans);
+}
+.slot-card.pagado   { border-color: var(--verde); }
+.slot-card.pendiente{ border-color: var(--amarillo); }
+.slot-card.libre    { border-color: var(--gris-borde); }
+.slot-card:hover:not(.libre-agregar) { box-shadow: var(--sombra); }
+
+/* barra lateral de color */
+.slot-card::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+  width: 4px; border-radius: 2px 0 0 2px;
+}
+.slot-card.pagado::before    { background: var(--verde); }
+.slot-card.pendiente::before { background: var(--amarillo); }
+.slot-card.libre::before     { background: var(--gris-borde); }
+
+.slot-body { padding: 10px 12px 10px 16px; }
+.slot-hora {
+  font-size: 20px; font-weight: 900; line-height: 1;
+  margin-bottom: 4px; color: var(--texto);
+}
+.slot-nombre { font-size: 13px; font-weight: 600; color: var(--texto); }
+.slot-telefono { font-size: 11px; color: var(--texto-suave); }
+
+.slot-footer {
+  padding: 8px 12px 10px 16px;
+  border-top: 1px solid var(--gris-borde);
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+}
+.slot-accion {
+  display: flex; align-items: center; gap: 6px; width: 100%;
+}
+.slot-select {
+  flex: 1; padding: 6px 10px; border-radius: var(--radio-sm);
+  border: 1px solid var(--gris-borde); font-size: 12px;
+  background: white; cursor: pointer; outline: none;
+}
+.slot-select:focus { border-color: var(--verde); }
+.btn-cobrar {
+  padding: 6px 12px; border-radius: var(--radio-sm);
+  background: var(--verde); color: white; font-size: 12px; font-weight: 700;
+  cursor: pointer; transition: background var(--trans);
+  border: none;
+}
+.btn-cobrar:hover { background: var(--verde-dk); }
+.btn-quitar {
+  padding: 6px 10px; border-radius: var(--radio-sm);
+  background: var(--rojo-lt); color: var(--rojo); font-size: 12px; font-weight: 700;
+  cursor: pointer; transition: background var(--trans);
+  border: none;
+}
+.btn-quitar:hover { background: var(--rojo); color: white; }
+
+/* slot libre en modo agregar */
+.slot-card.libre-agregar {
+  border: 2px dashed var(--verde); background: var(--verde-lt);
+  cursor: pointer; transition: all var(--trans);
+}
+.slot-card.libre-agregar:hover {
+  background: #d1fae5; box-shadow: 0 0 0 3px rgba(29,158,117,.15);
+}
+.slot-agregar-label {
+  padding: 14px 16px; text-align: center;
+  font-size: 13px; font-weight: 600; color: var(--verde-dk);
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.slot-agregar-plus { font-size: 18px; font-weight: 900; }
+
+/* formulario inline dentro de la tarjeta */
+.slot-inline-form { padding: 12px 14px; border-top: 1px solid var(--verde); display: none; }
+.slot-inline-form.visible { display: block; }
+.slot-inline-form input,
+.slot-inline-form select {
+  width: 100%; padding: 8px 10px; margin-bottom: 8px;
+  border: 1px solid var(--gris-borde); border-radius: var(--radio-sm);
+  font-size: 13px; outline: none;
+  transition: border-color var(--trans);
+}
+.slot-inline-form input:focus,
+.slot-inline-form select:focus { border-color: var(--verde); }
+.slot-inline-form .form-btns { display: flex; gap: 6px; }
+.slot-inline-form .btn-ok {
+  flex: 1; padding: 8px; border-radius: var(--radio-sm);
+  background: var(--verde); color: white; font-size: 13px; font-weight: 700;
+  border: none; cursor: pointer;
+}
+.slot-inline-form .btn-ok:hover { background: var(--verde-dk); }
+.slot-inline-form .btn-cancelar {
+  padding: 8px 12px; border-radius: var(--radio-sm);
+  background: var(--gris-lt); color: var(--texto-suave); font-size: 13px; font-weight: 600;
+  border: none; cursor: pointer;
+}
+
+/* ─── 28. TABLAS ADMIN ─────────────────────────────────────────── */
+.admin-tabla-wrap {
+  background: white; border-radius: var(--radio-lg);
+  border: 1px solid var(--gris-borde); overflow: hidden; box-shadow: var(--sombra-sm);
+}
+.admin-tabla-header {
+  padding: 16px 20px; border-bottom: 1px solid var(--gris-borde);
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+}
+.admin-tabla-header h3 { font-size: 16px; font-weight: 700; }
+.admin-tabla {
+  width: 100%; border-collapse: collapse;
+}
+.admin-tabla th {
+  padding: 12px 16px; font-size: 12px; font-weight: 700;
+  color: var(--texto-suave); text-transform: uppercase; letter-spacing: .5px;
+  border-bottom: 1px solid var(--gris-borde); text-align: left;
+  background: var(--gris-lt);
+}
+.admin-tabla td {
+  padding: 14px 16px; font-size: 14px;
+  border-bottom: 1px solid var(--gris-borde); vertical-align: middle;
+}
+.admin-tabla tr:last-child td { border-bottom: none; }
+.admin-tabla tr:hover td { background: var(--gris-lt); }
+.admin-tabla .puntos-badge {
+  background: var(--amarillo-lt); color: #B8760D;
+  padding: 4px 10px; border-radius: 20px; font-size: 13px; font-weight: 700;
+}
+
+/* ─── 29. SECCIÓN TORNEOS ADMIN ─────────────────────────────────── */
+.btn-azul {
+  background: #2563EB; color: white; padding: 8px 16px;
+  border-radius: var(--radio-sm); font-size: 13px; font-weight: 700;
+  transition: background var(--trans);
+}
+.btn-azul:hover { background: #1D4ED8; }
+
+.torneos-admin-header {
+  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+  margin-bottom: 24px;
+}
+.torneo-admin-card {
+  background: white; border-radius: var(--radio-lg);
+  border: 1px solid var(--gris-borde); padding: 20px;
+  box-shadow: var(--sombra-sm); margin-bottom: 16px;
+}
+.torneo-admin-card-header {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+  margin-bottom: 0; padding-bottom: 16px; border-bottom: 1px solid var(--gris-borde);
+}
+.torneo-admin-nombre { font-size: 18px; font-weight: 800; }
+.torneo-admin-meta   { font-size: 13px; color: var(--texto-suave); margin-top: 4px; }
+
+/* Bloques de fase */
+.torneo-fase-bloque {
+  padding: 16px 0; border-top: 1px solid var(--gris-borde);
+}
+.torneo-fase-bloque + .torneo-fase-bloque { border-top: 1px solid var(--gris-borde); }
+.torneo-fase-header {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 10px; margin-bottom: 16px;
+}
+.torneo-fase-titulo { font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: var(--texto-suave); }
+
+/* Inscripciones */
+.inscripcion-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 12px; border-radius: var(--radio-sm);
+  margin-bottom: 6px; flex-wrap: wrap;
+}
+.inscripcion-row.pendiente { background: #FFFBEB; border: 1px solid #FDE68A; }
+.inscripcion-row.aceptada  { background: var(--gris-lt); border: 1px solid var(--gris-borde); }
+.inscripcion-pareja-info { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+.inscripcion-num { width: 24px; height: 24px; border-radius: 50%; background: var(--verde); color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; flex-shrink: 0; }
+.inscripcion-nombre { display: block; font-weight: 700; font-size: 14px; }
+.inscripcion-jugadores { display: block; font-size: 12px; color: var(--texto-suave); }
+.inscripcion-acciones { display: flex; gap: 6px; }
+
+/* Grupos admin */
+.grupos-admin-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 16px;
+}
+.grupo-admin-card {
+  background: var(--gris-lt); border: 1px solid var(--gris-borde);
+  border-radius: var(--radio); overflow: hidden;
+}
+.grupo-admin-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px; background: var(--negro); color: white;
+}
+.grupo-admin-letra {
+  width: 36px; height: 36px; border-radius: 8px;
+  background: var(--verde); display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: 900;
+}
+.grupo-admin-titulo { font-size: 15px; font-weight: 700; flex: 1; }
+
+.admin-tabla-grupo {
+  width: 100%; border-collapse: collapse;
+  background: white; font-size: 13px;
+}
+.admin-tabla-grupo th {
+  background: var(--gris-lt); padding: 8px 10px;
+  text-align: left; font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .4px; color: var(--texto-suave);
+  border-bottom: 1px solid var(--gris-borde);
+}
+.admin-tabla-grupo td {
+  padding: 8px 10px; border-bottom: 1px solid var(--gris-borde); color: var(--texto);
+}
+.admin-tabla-grupo tr:last-child td { border-bottom: none; }
+.admin-tabla-grupo tr.clasifica-row td { background: #F0FDF4; }
+.clasifica-tag {
+  background: var(--verde); color: white; font-size: 10px; font-weight: 800;
+  padding: 2px 6px; border-radius: 20px; margin-left: 6px; text-transform: uppercase; letter-spacing: .3px;
+}
+
+.admin-partidos-lista { border-top: 1px solid var(--gris-borde); }
+.admin-partido-row {
+  display: grid; grid-template-columns: 56px 1fr auto auto;
+  gap: 8px; align-items: center; padding: 8px 12px;
+  border-bottom: 1px solid var(--gris-borde); background: white; font-size: 13px;
+}
+.admin-partido-row:last-child { border-bottom: none; }
+.admin-partido-row.terminado { background: #F0FDF4; }
+.partido-hora-col { font-weight: 700; color: var(--texto-suave); font-size: 12px; }
+.partido-parejas-col { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.partido-vs { font-size: 11px; color: var(--texto-xs); font-weight: 700; }
+.ganador-txt { font-weight: 800; color: var(--verde-dk); }
+.resultado-badge {
+  background: var(--verde-lt); color: var(--verde-dk);
+  font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 20px; white-space: nowrap;
+}
+.partido-resultado-col { min-width: 80px; text-align: center; }
+.partido-acciones-col {}
+
+/* Bracket admin */
+.bracket-admin-wrap {
+  display: flex; gap: 0; overflow-x: auto; padding-bottom: 8px;
+}
+.bracket-admin-columna {
+  min-width: 220px; flex: 1; padding: 0 12px;
+  border-right: 1px dashed var(--gris-borde);
+}
+.bracket-admin-columna:first-child { padding-left: 0; }
+.bracket-admin-columna:last-child  { border-right: none; }
+.bracket-col-titulo {
+  font-size: 11px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: .6px; color: var(--texto-suave); margin-bottom: 12px; padding-bottom: 8px;
+  border-bottom: 1px solid var(--gris-borde);
+}
+.bracket-admin-match {
+  border: 1px solid var(--gris-borde); border-radius: var(--radio);
+  padding: 10px; margin-bottom: 12px; background: white;
+  transition: border-color var(--trans);
+}
+.bracket-admin-match.terminado { border-color: var(--verde); background: #F0FDF4; }
+.bracket-admin-match.listo     { border-color: #FBBF24; }
+.bracket-admin-match.esperando { opacity: .6; }
+.bracket-admin-match-parejas { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
+.bracket-admin-pareja {
+  font-size: 13px; font-weight: 600; padding: 4px 8px;
+  border-radius: 6px; background: var(--gris-lt);
+}
+.bracket-admin-pareja.ganador { background: var(--verde); color: white; }
+.bracket-admin-match-info {
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  font-size: 12px; color: var(--texto-suave); margin-top: 4px;
+}
+
+/* Campeón admin */
+.campeon-admin-display {
+  text-align: center; padding: 24px; background: linear-gradient(135deg, #065F46, #059669);
+  border-radius: var(--radio-lg); color: white; margin-bottom: 16px;
+}
+
+/* Detalles de grupos en estado bracket/finalizado */
+details summary { display: flex; align-items: center; }
+details summary::-webkit-details-marker { display: none; }
+
+/* ─── 30. PROFESORES ADMIN ──────────────────────────────────────── */
+.prof-admin-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;
+}
+.prof-admin-card {
+  background: white; border-radius: var(--radio-lg);
+  border: 1px solid var(--gris-borde); padding: 20px;
+  box-shadow: var(--sombra-sm);
+}
+.prof-admin-header {
+  display: flex; align-items: center; gap: 14px; margin-bottom: 14px;
+  padding-bottom: 14px; border-bottom: 1px solid var(--gris-borde);
+}
+.prof-admin-avatar {
+  width: 52px; height: 52px; border-radius: 50%;
+  background: var(--verde); display: flex; align-items: center; justify-content: center;
+  font-size: 20px; font-weight: 800; color: white; flex-shrink: 0;
+  overflow: hidden;
+}
+.prof-admin-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.prof-admin-nombre { font-size: 16px; font-weight: 700; }
+.prof-admin-esp    { font-size: 12px; color: var(--texto-suave); }
+.prof-admin-acciones { display: flex; gap: 6px; margin-top: 12px; }
+
+/* Modal formulario profesor */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(0,0,0,.5); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px; opacity: 0; pointer-events: none;
+  transition: opacity .2s ease;
+}
+.modal-overlay.visible { opacity: 1; pointer-events: all; }
+.modal {
+  background: white; border-radius: var(--radio-lg);
+  padding: 28px; width: 100%; max-width: 540px;
+  max-height: 90vh; overflow-y: auto;
+  transform: scale(.95); transition: transform .2s ease;
+  box-shadow: var(--sombra-lg);
+}
+.modal-overlay.visible .modal { transform: scale(1); }
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 24px;
+}
+.modal-header h3 { font-size: 18px; font-weight: 700; }
+.modal-close {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: var(--gris-lt); display: flex; align-items: center; justify-content: center;
+  font-size: 18px; cursor: pointer; color: var(--texto-suave);
+  transition: background var(--trans);
+}
+.modal-close:hover { background: var(--rojo-lt); color: var(--rojo); }
+.modal .form-group { margin-bottom: 16px; }
+.modal .form-group label { font-size: 13px; font-weight: 600; margin-bottom: 6px; display: block; }
+.modal .form-group input,
+.modal .form-group textarea,
+.modal .form-group select {
+  width: 100%; padding: 10px 14px;
+  border: 2px solid var(--gris-borde); border-radius: var(--radio-sm);
+  font-size: 14px; outline: none; transition: border-color var(--trans);
+}
+.modal .form-group input:focus,
+.modal .form-group textarea:focus,
+.modal .form-group select:focus { border-color: var(--verde); }
+.modal .form-group textarea { resize: vertical; min-height: 80px; }
+.modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
+
+/* ─── 31. INGRESOS ──────────────────────────────────────────────── */
+.ingresos-calendario {
+  display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px;
+  background: white; border-radius: var(--radio-lg);
+  border: 1px solid var(--gris-borde); padding: 20px;
+  box-shadow: var(--sombra-sm); margin-bottom: 24px;
+}
+.cal-dia {
+  aspect-ratio: 1; border-radius: var(--radio-sm);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  font-size: 12px; cursor: pointer;
+  transition: all var(--trans); border: 2px solid transparent;
+}
+.cal-dia .cal-num { font-size: 16px; font-weight: 700; }
+.cal-dia .cal-total { font-size: 10px; color: var(--texto-suave); font-weight: 600; }
+.cal-dia:hover { background: var(--verde-lt); border-color: var(--verde); }
+.cal-dia.hoy { background: var(--verde); color: white; border-color: var(--verde); }
+.cal-dia.hoy .cal-total { color: rgba(255,255,255,.8); }
+
+.reporte-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;
+  margin-bottom: 24px;
+}
+.reporte-card {
+  background: white; border-radius: var(--radio-lg);
+  border: 1px solid var(--gris-borde); padding: 20px; box-shadow: var(--sombra-sm);
+}
+.reporte-card .titulo { font-size: 12px; font-weight: 700; color: var(--texto-suave); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
+.reporte-card .valor  { font-size: 24px; font-weight: 800; color: var(--texto); }
+.reporte-card .sub    { font-size: 12px; color: var(--texto-suave); margin-top: 4px; }
+
+/* ─── 32. CANCHAS ADMIN ─────────────────────────────────────────── */
+.canchas-admin-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px;
+}
+.cancha-admin-card {
+  background: white; border-radius: var(--radio-lg);
+  border: 1px solid var(--gris-borde); overflow: hidden; box-shadow: var(--sombra-sm);
+}
+.cancha-admin-header {
+  background: var(--negro); color: white; padding: 16px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.cancha-admin-body { padding: 16px 20px; }
+.cancha-info-fila {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 0; border-bottom: 1px solid var(--gris-borde); font-size: 14px;
+}
+.cancha-info-fila:last-child { border-bottom: none; }
+.cancha-info-fila .ck { color: var(--texto-suave); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .3px; }
+.cancha-info-fila .cv { font-weight: 600; }
+
+/* ─── 33. SOCIOS PUNTOS ─────────────────────────────────────────── */
+.puntos-col { display: flex; align-items: center; gap: 6px; }
+.puntos-col .estrella { color: var(--amarillo); }
+
+/* ─── 34. MOBILE SIDEBAR ────────────────────────────────────────── */
+.sidebar-overlay {
+  display: none; position: fixed; inset: 0; z-index: 190;
+  background: rgba(0,0,0,.5);
+}
+.sidebar-overlay.visible { display: block; }
+
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 1200px) {
+  .canchas-columnas { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 1024px) {
+  .admin-sidebar { transform: translateX(-240px); }
+  .admin-sidebar.abierta { transform: translateX(0); }
+  .admin-main { margin-left: 0; }
+  .admin-topbar .menu-toggle {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px; border-radius: var(--radio-sm);
+    background: var(--gris-lt); cursor: pointer; font-size: 20px;
+    border: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .nav-links { display: none; }
+  .nav-mobile-toggle { display: flex; }
+  .canchas-columnas { grid-template-columns: 1fr 1fr; }
+  .horarios-grid { grid-template-columns: repeat(3, 1fr); }
+  .grupos-grid { grid-template-columns: 1fr; }
+  .hero h1 { font-size: 36px; }
+  .hero-stats { gap: 24px; }
+  .nav-cta { display: none; }
+  .metricas-grid { grid-template-columns: 1fr 1fr; }
+  .reservas-contadores { gap: 8px; }
+  .contador-chip { font-size: 12px; padding: 6px 12px; }
+  .bracket { flex-direction: column; }
+  .bracket-ronda { min-width: auto; border-right: none; border-bottom: 1px solid var(--gris-borde); padding: 16px 0; }
+}
+
+@media (max-width: 480px) {
+  .canchas-columnas { grid-template-columns: 1fr; }
+  .horarios-grid { grid-template-columns: repeat(2, 1fr); }
+  .metricas-grid { grid-template-columns: 1fr; }
+  .hero h1 { font-size: 30px; }
+  .hero-btns { flex-direction: column; }
+  .hero-btns .btn { width: 100%; justify-content: center; }
+  .dias-scroll { gap: 6px; }
+  .dia-btn { min-width: 60px; }
+  .reserva-form { padding: 20px; }
+  .admin-content { padding: 16px; }
+  .prof-admin-grid { grid-template-columns: 1fr; }
+  .profesores-grid { grid-template-columns: 1fr; }
+}

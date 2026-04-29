@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reservar cancha — New Face Padel Club</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/premium.css">
+</head>
+<body class="premium-body">
+
+  <!-- NAV -->
+  <nav class="nav-premium" id="nav-premium">
+    <div class="nav-premium-inner">
+      <a href="index.html" class="nav-prem-logo">
+        <div class="logo-icon-prem">NF</div>
+        <div class="logo-text-prem">
+          <span>New Face</span>
+          <span>Padel Club</span>
+        </div>
+      </a>
+      <div class="nav-prem-links">
+        <a href="index.html">Inicio</a>
+        <a href="reservar.html" class="activo">Reservar</a>
+        <a href="torneos.html">Torneos</a>
+        <a href="profesores.html">Profesores</a>
+      </div>
+      <a href="reservar.html" class="btn-nav-cta">Reservar cancha →</a>
+      <button class="nav-hamburger" onclick="toggleNavMobile()">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+    <div class="nav-mobile-prem" id="nav-mobile-prem">
+      <a href="index.html">Inicio</a>
+      <a href="reservar.html">Reservar</a>
+      <a href="torneos.html">Torneos</a>
+      <a href="profesores.html">Profesores</a>
+    </div>
+  </nav>
+
+  <main class="reserva-prem-page">
+
+    <!-- HEADER -->
+    <div class="reserva-prem-header">
+      <div class="reserva-prem-header-inner">
+        <span class="sec-eyebrow">Online · Sin esperas</span>
+        <h1 class="reserva-prem-titulo">Reservá tu cancha</h1>
+        <p class="reserva-prem-sub">Elegí día, horario y confirmá en menos de 2 minutos.</p>
+      </div>
+    </div>
+
+    <!-- CONTENIDO -->
+    <div class="reserva-prem-body">
+      <div class="reserva-prem-inner">
+
+        <!-- INDICADOR DE PASOS -->
+        <div class="steps-prem" id="steps-bar"></div>
+
+        <!-- PASO 1: DÍA -->
+        <div class="paso activo" id="paso1">
+          <div class="rprem-card">
+            <div class="rprem-card-title">
+              <span class="rprem-step-num">01</span>
+              Elegí el día
+            </div>
+            <div class="dias-scroll-prem" id="dias-container"></div>
+            <p class="rprem-hint">Tocá un día para ver los horarios disponibles.</p>
+          </div>
+        </div>
+
+        <!-- PASO 2: HORARIO -->
+        <div class="paso" id="paso2">
+          <div class="rprem-card">
+            <div class="rprem-card-title-row">
+              <div class="rprem-card-title">
+                <span class="rprem-step-num">02</span>
+                Elegí el horario
+              </div>
+              <button class="btn-prem-back" onclick="irAPaso(1)">← Cambiar día</button>
+            </div>
+            <div class="horarios-prem-grid" id="horarios-container">
+              <div class="loading-overlay"><div class="spinner"></div><p>Cargando horarios...</p></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PASO 3: DATOS -->
+        <div class="paso" id="paso3">
+          <div class="rprem-card">
+            <div class="rprem-card-title-row">
+              <div class="rprem-card-title">
+                <span class="rprem-step-num">03</span>
+                Tus datos
+              </div>
+              <button class="btn-prem-back" onclick="irAPaso(2)">← Cambiar horario</button>
+            </div>
+
+            <p class="rprem-resumen-sel">
+              Reserva para: <strong id="resumen-seleccion"></strong>
+            </p>
+
+            <div class="rprem-form">
+              <div class="rprem-form-group">
+                <label>Nombre completo</label>
+                <input type="text" id="nombre" placeholder="Ej: Juan García" autocomplete="name">
+              </div>
+              <div class="rprem-form-group">
+                <label>Teléfono (WhatsApp)</label>
+                <input type="tel" id="telefono" placeholder="Ej: 11 1234-5678" autocomplete="tel">
+              </div>
+
+              <div class="rprem-form-group">
+                <label>Forma de pago</label>
+                <div class="pago-prem-opciones" id="metodo-pago-container">
+                  <label class="pago-prem-opcion">
+                    <input type="radio" name="pago" value="efectivo">
+                    <div class="pago-prem-content">
+                      <span class="pago-prem-icon">💵</span>
+                      <div>
+                        <span class="pago-prem-titulo">Efectivo al llegar</span>
+                        <span class="pago-prem-desc">Pagás en el club cuando llegues.</span>
+                      </div>
+                    </div>
+                  </label>
+                  <label class="pago-prem-opcion">
+                    <input type="radio" name="pago" value="mercadopago">
+                    <div class="pago-prem-content">
+                      <span class="pago-prem-icon">💳</span>
+                      <div>
+                        <span class="pago-prem-titulo">MercadoPago</span>
+                        <span class="pago-prem-desc">Recibís un link por WhatsApp para pagar online.</span>
+                      </div>
+                    </div>
+                  </label>
+                  <label class="pago-prem-opcion">
+                    <input type="radio" name="pago" value="transferencia">
+                    <div class="pago-prem-content">
+                      <span class="pago-prem-icon">🏦</span>
+                      <div>
+                        <span class="pago-prem-titulo">Transferencia bancaria</span>
+                        <span class="pago-prem-desc">Te enviamos los datos para transferir.</span>
+                      </div>
+                    </div>
+                  </label>
+                </div>
+                <div class="aviso-pago-online" id="aviso-pago-online">
+                  <strong>⏱️ Recordá:</strong> tenés <strong>30 minutos</strong> para completar el pago o la reserva se cancela.
+                </div>
+              </div>
+
+              <button class="btn-prem-primary btn-bloque-prem" id="btn-confirmar" onclick="validarYEnviar()">
+                Confirmar reserva
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- PASO 4: CONFIRMACIÓN -->
+        <div class="paso" id="paso4">
+          <div id="confirmacion-container"></div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <div id="toast-container"></div>
+
+  <script src="js/api.js"></script>
+  <script src="js/reservar.js"></script>
+  <script>
+    window.addEventListener('scroll', () => {
+      document.getElementById('nav-premium').classList.toggle('scrolled', window.scrollY > 40);
+    });
+    function toggleNavMobile() {
+      document.getElementById('nav-mobile-prem').classList.toggle('open');
+    }
+  </script>
+</body>
+</html>

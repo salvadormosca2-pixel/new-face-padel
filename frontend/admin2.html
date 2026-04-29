@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel Admin — New Face Padel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/admin2.css">
+</head>
+<body class="adm2-body">
+
+  <!-- ══════════════════ HEADER FIJO ══════════════════ -->
+  <header class="adm2-header">
+    <div class="adm2-header-top">
+      <div class="adm2-header-title-block">
+        <span class="adm2-header-title">Panel Admin</span>
+        <span class="adm2-header-sub">Gestión completa de tu negocio de padel</span>
+      </div>
+      <div class="adm2-header-right">
+        <div class="adm2-live-badge">
+          <span class="adm2-live-dot"></span>
+          EN VIVO
+        </div>
+        <div class="adm2-clock" id="adm2-clock">00:00</div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <nav class="adm2-tabs">
+      <button class="adm2-tab active" onclick="adm2SwitchTab('dashboard', this)">Dashboard</button>
+      <button class="adm2-tab"        onclick="adm2SwitchTab('turnos',    this)">Turnos</button>
+      <button class="adm2-tab"        onclick="adm2SwitchTab('reservas',  this)">Reservas</button>
+      <button class="adm2-tab"        onclick="adm2SwitchTab('canchas',   this)">Canchas</button>
+      <button class="adm2-tab"        onclick="adm2SwitchTab('mensajes',  this)">Mensajes</button>
+      <button class="adm2-tab"        onclick="adm2SwitchTab('torneos',   this)">Torneos</button>
+      <button class="adm2-tab"        onclick="adm2SwitchTab('finanzas',  this)">Finanzas</button>
+    </nav>
+  </header>
+
+  <!-- ══════════════════ MAIN ══════════════════════════ -->
+  <main class="adm2-main">
+
+    <!-- ─── VISTA DASHBOARD ─────────────────────────── -->
+    <section class="adm2-view active" id="adm2-view-dashboard">
+
+      <!-- Fila 1: stats del día -->
+      <div class="adm2-stats-row">
+
+        <div class="adm2-card adm2-stat-card adm2-stat-green">
+          <div class="adm2-stat-label"><span class="adm2-stat-icon">💰</span> Cobrado hoy</div>
+          <div class="adm2-stat-value" id="dash-cobrado-hoy">—</div>
+          <div class="adm2-stat-sub" id="dash-cobrado-sub">— turnos cobrados</div>
+          <div class="adm2-card-accent-line"></div>
+        </div>
+
+        <div class="adm2-card adm2-stat-card adm2-stat-yellow">
+          <div class="adm2-stat-label"><span class="adm2-stat-icon">⏳</span> Pendiente</div>
+          <div class="adm2-stat-value" id="dash-pendiente">—</div>
+          <div class="adm2-stat-sub" id="dash-pendiente-sub">— sin cobrar</div>
+          <div class="adm2-card-accent-line"></div>
+        </div>
+
+        <div class="adm2-card adm2-stat-card adm2-stat-blue">
+          <div class="adm2-stat-label"><span class="adm2-stat-icon">📅</span> Turnos hoy</div>
+          <div class="adm2-stat-value" id="dash-turnos-hoy">—</div>
+          <div class="adm2-stat-sub" id="dash-canchas-con-turnos">— / 4 canchas activas</div>
+          <div class="adm2-card-accent-line"></div>
+        </div>
+
+        <div class="adm2-card adm2-stat-card adm2-stat-purple">
+          <div class="adm2-stat-label"><span class="adm2-stat-icon">⚡</span> Hora pico</div>
+          <div class="adm2-stat-value" id="dash-hora-pico">—</div>
+          <div class="adm2-stat-sub">Mayor demanda del día</div>
+          <div class="adm2-card-accent-line"></div>
+        </div>
+
+      </div>
+
+      <!-- Fila 2: cierre de caja + estado canchas -->
+      <div class="adm2-mid-row">
+
+        <div class="adm2-card adm2-cobros-card">
+          <div class="adm2-card-title">Cierre de caja — cobros del día</div>
+          <div class="adm2-metodos-mes" id="dash-metodos"></div>
+        </div>
+
+        <div class="adm2-card adm2-cobrado-card">
+          <div class="adm2-card-title">Estado canchas hoy</div>
+          <div class="adm2-cancha-week-list" id="dash-estado-canchas"></div>
+        </div>
+
+      </div>
+
+      <!-- Grilla de turnos del día -->
+      <div class="adm2-turnos-topbar">
+        <div class="adm2-view-toggle">
+          <button class="adm2-view-btn active" id="btn-vista-dia" onclick="adm2SetVista('dia')">Vista del día</button>
+          <button class="adm2-view-btn" id="btn-vista-sem" onclick="adm2SetVista('semana')">Vista semanal</button>
+        </div>
+        <div class="adm2-date-nav">
+          <button class="adm2-date-nav-btn" onclick="adm2ChangeDate(-1)">◂</button>
+          <span class="adm2-date-label" id="adm2-date-label">📅 —</span>
+          <button class="adm2-date-nav-btn" onclick="adm2ChangeDate(1)">▸</button>
+          <button class="adm2-btn-hoy" onclick="adm2GoToday()">Hoy</button>
+        </div>
+        <div class="adm2-turnos-legend">
+          <div class="adm2-legend-slot">
+            <div class="adm2-legend-slot-dot" style="background:rgba(34,197,94,.4);border:1px solid rgba(34,197,94,.5)"></div>
+            Libre — tocá para reservar
+          </div>
+          <div class="adm2-legend-slot">
+            <div class="adm2-legend-slot-dot" style="background:rgba(234,179,8,.3);border:1px solid rgba(234,179,8,.4)"></div>
+            Ocupado — tocá para gestionar
+          </div>
+        </div>
+      </div>
+
+      <div class="adm2-canchas-grid" id="adm2-canchas-grid"></div>
+
+    </section>
+
+    <!-- ─── VISTA TURNOS (vista semanal — próximamente) ── -->
+    <section class="adm2-view" id="adm2-view-turnos">
+      <div class="adm2-stub">
+        <div class="adm2-stub-icon">📅</div>
+        <h2>Vista semanal</h2>
+        <p>Próximamente: planificación semanal y gestión de fechas futuras.</p>
+        <p style="margin-top:8px">Para gestionar los turnos del día usá el <b style="color:var(--a2-green)">Dashboard</b>.</p>
+      </div>
+    </section>
+
+    <!-- ─── VISTAS STUB ──────────────────────────────── -->
+    <section class="adm2-view" id="adm2-view-reservas">
+      <div class="adm2-stub">
+        <div class="adm2-stub-icon">📅</div>
+        <h2>Reservas</h2>
+        <p>Este módulo conecta con el sistema de reservas existente.</p>
+      </div>
+    </section>
+
+    <section class="adm2-view" id="adm2-view-canchas">
+      <div class="adm2-stub">
+        <div class="adm2-stub-icon">🎾</div>
+        <h2>Canchas</h2>
+        <p>Gestión de canchas y configuración de precios.</p>
+      </div>
+    </section>
+
+    <section class="adm2-view" id="adm2-view-mensajes">
+      <div class="adm2-stub">
+        <div class="adm2-stub-icon">💬</div>
+        <h2>Mensajes</h2>
+        <p>Centro de mensajes y notificaciones del club.</p>
+      </div>
+    </section>
+
+    <!-- ─── VISTA FINANZAS ──────────────────────────── -->
+    <section class="adm2-view" id="adm2-view-finanzas">
+
+      <!-- Header con export -->
+      <div class="adm2-section-header">
+        <div style="display:flex;align-items:center;gap:8px">
+          <button class="adm2-cal-nav-btn" onclick="finChangeMonth(-1)">◂</button>
+          <span class="adm2-section-title" id="fin-mes-label">—</span>
+          <button class="adm2-cal-nav-btn" id="fin-btn-sig" onclick="finChangeMonth(1)">▸</button>
+        </div>
+        <button class="adm2-export-btn" onclick="exportCSV()">📥 Exportar CSV</button>
+      </div>
+
+      <!-- Bloque A: Resumen del mes -->
+      <div class="adm2-fin-section">
+        <div class="adm2-card-title" style="margin-bottom:12px">Resumen del mes</div>
+
+        <div class="adm2-fin-stats" id="fin-stats-cards"></div>
+
+        <div class="adm2-fin-mid">
+          <div class="adm2-card adm2-fin-card">
+            <div class="adm2-fin-label">Semanas del mes</div>
+            <div class="adm2-semanas-list" id="fin-semanas-list"></div>
+            <div class="adm2-proyeccion" id="fin-proyeccion"></div>
+          </div>
+          <div class="adm2-card adm2-fin-card">
+            <div class="adm2-fin-label">Métodos de pago</div>
+            <div class="adm2-metodos-mes" id="fin-metodos"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bloque B: Calendario -->
+      <div class="adm2-fin-section">
+        <div class="adm2-cal-topbar">
+          <span class="adm2-cal-month-label" id="cal-month-label">—</span>
+          <div class="adm2-cal-nav">
+            <div class="adm2-cal-legend">
+              <div class="adm2-cal-legend-item"><div class="adm2-cal-legend-dot" style="background:rgba(255,255,255,.08)"></div>Sin datos</div>
+              <div class="adm2-cal-legend-item"><div class="adm2-cal-legend-dot" style="background:rgba(234,179,8,.4)"></div>Bajo</div>
+              <div class="adm2-cal-legend-item"><div class="adm2-cal-legend-dot" style="background:rgba(34,197,94,.4)"></div>Bien</div>
+              <div class="adm2-cal-legend-item"><div class="adm2-cal-legend-dot" style="background:rgba(34,197,94,.7)"></div>Excelente</div>
+            </div>
+            <button class="adm2-cal-nav-btn" onclick="calChangeMonth(-1)">◂</button>
+            <button class="adm2-cal-nav-btn" onclick="calChangeMonth(1)">▸</button>
+          </div>
+        </div>
+        <div class="adm2-card" style="padding:16px">
+          <div class="adm2-cal-headers" id="cal-headers"></div>
+          <div class="adm2-cal-grid" id="cal-grid"></div>
+          <div id="cal-day-detail"></div>
+        </div>
+      </div>
+
+      <!-- Bloque C: Historial semanas -->
+      <div class="adm2-fin-section">
+        <div class="adm2-card-title" style="margin-bottom:12px">Historial — Últimas 8 semanas</div>
+        <div class="adm2-hist-list" id="fin-hist-list"></div>
+      </div>
+
+    </section>
+
+    <!-- ─── VISTA TORNEOS ────────────────────────────── -->
+    <section class="adm2-view" id="adm2-view-torneos">
+      <div class="torneos-admin-header">
+        <h2 style="font-size:20px;font-weight:800;color:var(--a2-text)">Torneos</h2>
+        <button class="btn btn-verde btn-sm" onclick="abrirModalTorneo()">+ Nuevo torneo</button>
+      </div>
+      <div id="torneos-admin-lista">
+        <div class="loading-overlay"><div class="spinner"></div></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ═══ MODALES TORNEOS ══════════════════════════════ -->
+
+  <!-- Modal: Nuevo torneo -->
+  <div class="modal-overlay" id="modal-torneo">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Nuevo torneo</h3>
+        <button class="modal-close" onclick="cerrarModal('modal-torneo')">✕</button>
+      </div>
+      <div class="form-group">
+        <label>Nombre del torneo</label>
+        <input type="text" id="torneo-nombre" placeholder="Ej: Copa Verano 2025">
+      </div>
+      <div class="form-group">
+        <label>Fecha</label>
+        <input type="date" id="torneo-fecha">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-gris" onclick="cerrarModal('modal-torneo')">Cancelar</button>
+        <button class="btn btn-verde" onclick="crearTorneo()">Crear torneo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Agregar pareja -->
+  <div class="modal-overlay" id="modal-pareja">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Agregar pareja</h3>
+        <button class="modal-close" onclick="cerrarModal('modal-pareja')">✕</button>
+      </div>
+      <input type="hidden" id="pareja-torneo-id">
+      <p style="font-size:13px;color:var(--texto-suave);margin-bottom:16px">La pareja queda confirmada directamente.</p>
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--texto-suave);margin-bottom:8px">Jugador 1</div>
+      <div class="form-group">
+        <label>Nombre completo</label>
+        <input type="text" id="pareja-j1-nombre" placeholder="Ej: Martín Gómez">
+      </div>
+      <div class="form-group">
+        <label>Teléfono</label>
+        <input type="tel" id="pareja-j1-tel" placeholder="11 1234-5678">
+      </div>
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--texto-suave);margin:16px 0 8px">Jugador 2</div>
+      <div class="form-group">
+        <label>Nombre completo</label>
+        <input type="text" id="pareja-j2-nombre" placeholder="Ej: Lucas Herrera">
+      </div>
+      <div class="form-group">
+        <label>Teléfono</label>
+        <input type="tel" id="pareja-j2-tel" placeholder="11 1234-5678">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-gris" onclick="cerrarModal('modal-pareja')">Cancelar</button>
+        <button class="btn btn-verde" onclick="confirmarAgregarPareja()">Agregar pareja</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Resultado partido -->
+  <div class="modal-overlay" id="modal-resultado">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Resultado del partido</h3>
+        <button class="modal-close" onclick="cerrarModal('modal-resultado')">✕</button>
+      </div>
+      <p id="res-partido-titulo" style="font-size:14px;font-weight:700;margin-bottom:16px;color:var(--texto)"></p>
+      <div class="form-group">
+        <label>Hora del partido</label>
+        <input type="time" id="res-hora">
+      </div>
+      <div class="form-group">
+        <label>Resultado (ej: 6-3 / 6-4)</label>
+        <input type="text" id="res-resultado" placeholder="6-3 / 6-4">
+        <span style="font-size:11px;color:var(--texto-suave)">Separar sets con " / ". Super Tiebreak: ej. 10-7</span>
+      </div>
+      <div class="form-group">
+        <label>Pareja ganadora</label>
+        <select id="res-ganador">
+          <option value="">— Seleccioná el ganador —</option>
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-gris" onclick="cerrarModal('modal-resultado')">Cancelar</button>
+        <button class="btn btn-verde" onclick="confirmarResultado()">Guardar resultado</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tooltip gráfico -->
+  <div class="adm2-tooltip" id="adm2-tooltip">
+    <div class="adm2-tooltip-day" id="tt-day"></div>
+    <div class="adm2-tooltip-row"><div class="adm2-tooltip-dot" style="background:#22c55e"></div>Reservas<span class="adm2-tooltip-val" id="tt-res"></span></div>
+    <div class="adm2-tooltip-row"><div class="adm2-tooltip-dot" style="background:#3b82f6"></div>Ingresos<span class="adm2-tooltip-val" id="tt-ing"></span></div>
+  </div>
+
+  <!-- Toast container -->
+  <div id="toast-container"></div>
+  <div id="adm2-toasts"></div>
+
+  <script src="js/api.js"></script>
+  <script src="js/admin2.js"></script>
+</body>
+</html>

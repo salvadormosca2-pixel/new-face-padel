@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel Admin — New Face Padel Club</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="admin-body">
+
+  <!-- SIDEBAR OVERLAY (mobile) -->
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="cerrarSidebar()"></div>
+
+  <!-- SIDEBAR -->
+  <aside class="admin-sidebar" id="admin-sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-inner">
+        <div class="sidebar-logo-icon">NF</div>
+        <div>
+          <div class="sidebar-club-name">New Face Padel</div>
+          <div class="sidebar-club-sub">Panel de administración</div>
+        </div>
+      </div>
+    </div>
+    <div class="sidebar-status activo">
+      <span class="dot"></span> Sistema activo
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-label">Principal</div>
+      <div class="sidebar-nav-item activo" onclick="mostrarSeccion('dashboard', this)">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">Dashboard</span>
+      </div>
+      <div class="sidebar-nav-item" onclick="mostrarSeccion('reservas', this)">
+        <span class="nav-icon">📅</span>
+        <span class="nav-label">Reservas</span>
+      </div>
+      <div class="sidebar-nav-item" onclick="mostrarSeccion('torneos', this)">
+        <span class="nav-icon">🏆</span>
+        <span class="nav-label">Torneos</span>
+      </div>
+
+      <div class="sidebar-section-label">Club</div>
+      <div class="sidebar-nav-item" onclick="mostrarSeccion('profesores', this)">
+        <span class="nav-icon">👨‍🏫</span>
+        <span class="nav-label">Profesores</span>
+      </div>
+      <div class="sidebar-nav-item" onclick="mostrarSeccion('socios', this)">
+        <span class="nav-icon">👥</span>
+        <span class="nav-label">Socios</span>
+      </div>
+      <div class="sidebar-nav-item" onclick="mostrarSeccion('ingresos', this)">
+        <span class="nav-icon">💰</span>
+        <span class="nav-label">Ingresos</span>
+      </div>
+
+      <div class="sidebar-section-label">Sitio</div>
+      <div class="sidebar-nav-item" onclick="window.open('index.html','_blank')">
+        <span class="nav-icon">🌐</span>
+        <span class="nav-label">Ver sitio público</span>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="admin-main">
+
+    <!-- TOPBAR -->
+    <div class="admin-topbar">
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="menu-toggle" onclick="toggleSidebar()" style="display:none">☰</button>
+        <span class="admin-topbar-title" id="topbar-titulo">Dashboard</span>
+      </div>
+      <div class="admin-topbar-right">
+        <span style="font-size:13px;color:var(--texto-suave)" id="topbar-fecha"></span>
+        <a href="index.html" class="btn btn-gris btn-sm">← Sitio público</a>
+      </div>
+    </div>
+
+    <!-- CONTENIDO -->
+    <div class="admin-content">
+
+      <!-- ═══════════════════ DASHBOARD ═══════════════════ -->
+      <section class="admin-section activa" id="sec-dashboard">
+
+        <div class="metricas-grid" id="metricas-grid">
+          <div class="loading-overlay" style="grid-column:1/-1"><div class="spinner"></div></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px" class="dashboard-cols">
+          <!-- Canchas en tiempo real -->
+          <div>
+            <h3 style="font-size:15px;font-weight:700;margin-bottom:14px">Canchas ahora</h3>
+            <div class="canchas-realtime" id="canchas-realtime" style="grid-template-columns:1fr 1fr"></div>
+          </div>
+          <!-- Ingresos por método -->
+          <div>
+            <h3 style="font-size:15px;font-weight:700;margin-bottom:14px">Ingresos de hoy por método</h3>
+            <div style="background:white;border:1px solid var(--gris-borde);border-radius:var(--radio-lg);padding:20px;box-shadow:var(--sombra-sm)">
+              <div class="metodo-barras" id="metodo-barras"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Alertas -->
+        <div class="alertas-section" id="alertas-section"></div>
+
+      </section>
+
+      <!-- ═══════════════════ RESERVAS ═══════════════════ -->
+      <section class="admin-section" id="sec-reservas">
+
+        <div class="reservas-topbar">
+          <div class="reservas-fecha-nav">
+            <button class="btn-nav" onclick="cambiarFecha(-1)">◀</button>
+            <input type="date" class="fecha-input" id="reservas-fecha" onchange="cargarReservasAdmin()">
+            <button class="btn-nav" onclick="cambiarFecha(1)">▶</button>
+          </div>
+          <button class="btn btn-verde btn-sm" onclick="irAHoy()">Hoy</button>
+        </div>
+
+        <div class="reservas-contadores" id="reservas-contadores"></div>
+
+        <div class="canchas-columnas" id="canchas-columnas">
+          <div class="loading-overlay" style="grid-column:1/-1"><div class="spinner"></div></div>
+        </div>
+
+      </section>
+
+      <!-- ═══════════════════ TORNEOS ═══════════════════ -->
+      <section class="admin-section" id="sec-torneos">
+
+        <div class="torneos-admin-header">
+          <h2 style="font-size:20px;font-weight:800">Torneos</h2>
+          <button class="btn btn-verde btn-sm" onclick="abrirModalTorneo()">+ Nuevo torneo</button>
+        </div>
+
+        <div id="torneos-admin-lista">
+          <div class="loading-overlay"><div class="spinner"></div></div>
+        </div>
+
+      </section>
+
+      <!-- ═══════════════════ PROFESORES ═══════════════════ -->
+      <section class="admin-section" id="sec-profesores">
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+          <h2 style="font-size:20px;font-weight:800">Profesores</h2>
+          <button class="btn btn-verde btn-sm" onclick="abrirModalProfesor()">+ Agregar profesor</button>
+        </div>
+
+        <div class="prof-admin-grid" id="prof-admin-grid">
+          <div class="loading-overlay" style="grid-column:1/-1"><div class="spinner"></div></div>
+        </div>
+
+      </section>
+
+      <!-- ═══════════════════ SOCIOS ═══════════════════ -->
+      <section class="admin-section" id="sec-socios">
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+          <h2 style="font-size:20px;font-weight:800">Socios</h2>
+          <input type="search" id="socios-buscar" placeholder="Buscar por nombre o teléfono..."
+            style="padding:10px 16px;border:2px solid var(--gris-borde);border-radius:var(--radio-sm);font-size:14px;outline:none;min-width:240px"
+            oninput="filtrarSocios(this.value)"
+            onfocus="this.style.borderColor='var(--verde)'" onblur="this.style.borderColor='var(--gris-borde)'">
+        </div>
+
+        <div class="admin-tabla-wrap">
+          <table class="admin-tabla">
+            <thead>
+              <tr>
+                <th>Socio</th>
+                <th>Teléfono</th>
+                <th>Puntos</th>
+                <th>Último método</th>
+                <th>Último turno</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="socios-tbody">
+              <tr><td colspan="7" style="text-align:center;padding:40px">
+                <div class="spinner"></div>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+
+      </section>
+
+      <!-- ═══════════════════ INGRESOS ═══════════════════ -->
+      <section class="admin-section" id="sec-ingresos">
+
+        <h2 style="font-size:20px;font-weight:800;margin-bottom:24px">Ingresos</h2>
+
+        <!-- Reporte hoy -->
+        <h3 style="font-size:15px;font-weight:700;margin-bottom:14px">Hoy</h3>
+        <div class="reporte-grid" id="reporte-hoy"></div>
+
+        <!-- Reporte semana -->
+        <h3 style="font-size:15px;font-weight:700;margin:24px 0 14px">Últimos 7 días</h3>
+        <div class="reporte-grid" id="reporte-semana"></div>
+
+        <!-- Por método (semana) -->
+        <h3 style="font-size:15px;font-weight:700;margin:24px 0 14px">Ingresos por método (semana)</h3>
+        <div style="background:white;border:1px solid var(--gris-borde);border-radius:var(--radio-lg);padding:24px;box-shadow:var(--sombra-sm);max-width:560px">
+          <div class="metodo-barras" id="ingresos-metodo-barras"></div>
+        </div>
+
+        <!-- Reporte por mes con navegación -->
+        <div style="display:flex;align-items:center;gap:10px;margin:32px 0 14px">
+          <h3 style="font-size:15px;font-weight:700;margin:0">Ganancia del mes:</h3>
+          <button class="btn-nav" onclick="cambiarMes(-1)">◀</button>
+          <span id="ingresos-mes-label" style="font-size:15px;font-weight:700;min-width:148px;text-align:center">—</span>
+          <button class="btn-nav" id="btn-mes-sig" onclick="cambiarMes(1)">▶</button>
+        </div>
+        <div class="reporte-grid" id="reporte-mes"></div>
+
+        <!-- Por método (mes) -->
+        <h3 style="font-size:15px;font-weight:700;margin:24px 0 14px" id="titulo-metodos-mes">Ingresos por método (mes)</h3>
+        <div style="background:white;border:1px solid var(--gris-borde);border-radius:var(--radio-lg);padding:24px;box-shadow:var(--sombra-sm);max-width:560px">
+          <div class="metodo-barras" id="ingresos-metodo-mes"></div>
+        </div>
+
+      </section>
+
+    </div><!-- /admin-content -->
+  </div><!-- /admin-main -->
+
+  <!-- ═══ MODALES ═══════════════════════════════════════════════════ -->
+
+  <!-- Modal: Nuevo torneo -->
+  <div class="modal-overlay" id="modal-torneo">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Nuevo torneo</h3>
+        <button class="modal-close" onclick="cerrarModal('modal-torneo')">✕</button>
+      </div>
+      <div class="form-group">
+        <label>Nombre del torneo</label>
+        <input type="text" id="torneo-nombre" placeholder="Ej: Copa Verano 2025">
+      </div>
+      <div class="form-group">
+        <label>Fecha</label>
+        <input type="date" id="torneo-fecha">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-gris" onclick="cerrarModal('modal-torneo')">Cancelar</button>
+        <button class="btn btn-verde" onclick="crearTorneo()">Crear torneo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Profesor -->
+  <div class="modal-overlay" id="modal-profesor">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-prof-titulo">Agregar profesor</h3>
+        <button class="modal-close" onclick="cerrarModal('modal-profesor')">✕</button>
+      </div>
+      <input type="hidden" id="prof-id">
+      <div class="form-group">
+        <label>Nombre completo</label>
+        <input type="text" id="prof-nombre" placeholder="Ej: Carlos Rodríguez">
+      </div>
+      <div class="form-group">
+        <label>Especialidad</label>
+        <input type="text" id="prof-especialidad" placeholder="Ej: Entrenamiento competitivo">
+      </div>
+      <div class="form-group">
+        <label>Experiencia</label>
+        <input type="text" id="prof-experiencia" placeholder="Ej: 8 años de trayectoria">
+      </div>
+      <div class="form-group">
+        <label>Horarios disponibles</label>
+        <input type="text" id="prof-horarios" placeholder="Ej: Lunes a Viernes 16:00–22:00">
+      </div>
+      <div class="form-group">
+        <label>WhatsApp</label>
+        <input type="tel" id="prof-whatsapp" placeholder="Ej: 5491112345678">
+      </div>
+      <div class="form-group">
+        <label>Alumnos activos</label>
+        <input type="number" id="prof-alumnos" placeholder="0" min="0">
+      </div>
+      <div class="form-group">
+        <label>Niveles que enseña (separados por coma)</label>
+        <input type="text" id="prof-niveles" placeholder="Ej: Principiante, Intermedio, Avanzado">
+      </div>
+      <div class="form-group">
+        <label>Grupos de edad (separados por coma)</label>
+        <input type="text" id="prof-grupos" placeholder="Ej: Adultos, Seniors">
+      </div>
+      <div class="form-group">
+        <label>Rating (1-5)</label>
+        <input type="number" id="prof-rating" placeholder="5.0" min="1" max="5" step="0.1">
+      </div>
+      <div class="form-group">
+        <label>URL de imagen (opcional)</label>
+        <input type="url" id="prof-imagen" placeholder="https://...">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-gris" onclick="cerrarModal('modal-profesor')">Cancelar</button>
+        <button class="btn btn-verde" id="prof-btn-guardar" onclick="guardarProfesor()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Agregar pareja al torneo -->
+  <div class="modal-overlay" id="modal-pareja">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Agregar pareja</h3>
+        <button class="modal-close" onclick="cerrarModal('modal-pareja')">✕</button>
+      </div>
+      <input type="hidden" id="pareja-torneo-id">
+      <p style="font-size:13px;color:var(--texto-suave);margin-bottom:16px">La pareja queda confirmada directamente.</p>
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--texto-suave);margin-bottom:8px">Jugador 1</div>
+      <div class="form-group">
+        <label>Nombre completo</label>
+        <input type="text" id="pareja-j1-nombre" placeholder="Ej: Martín Gómez">
+      </div>
+      <div class="form-group">
+        <label>Teléfono</label>
+        <input type="tel" id="pareja-j1-tel" placeholder="11 1234-5678">
+      </div>
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--texto-suave);margin:16px 0 8px">Jugador 2</div>
+      <div class="form-group">
+        <label>Nombre completo</label>
+        <input type="text" id="pareja-j2-nombre" placeholder="Ej: Lucas Herrera">
+      </div>
+      <div class="form-group">
+        <label>Teléfono</label>
+        <input type="tel" id="pareja-j2-tel" placeholder="11 1234-5678">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-gris" onclick="cerrarModal('modal-pareja')">Cancelar</button>
+        <button class="btn btn-verde" onclick="confirmarAgregarPareja()">Agregar pareja</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Cargar resultado de partido -->
+  <div class="modal-overlay" id="modal-resultado">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Resultado del partido</h3>
+        <button class="modal-close" onclick="cerrarModal('modal-resultado')">✕</button>
+      </div>
+      <p id="res-partido-titulo" style="font-size:14px;font-weight:700;margin-bottom:16px;color:var(--texto)"></p>
+      <div class="form-group">
+        <label>Hora del partido</label>
+        <input type="time" id="res-hora" placeholder="HH:MM">
+      </div>
+      <div class="form-group">
+        <label>Resultado (formato: 6-3 / 6-4 o 6-3 / 4-6 / 10-7)</label>
+        <input type="text" id="res-resultado" placeholder="6-3 / 6-4">
+        <span style="font-size:11px;color:var(--texto-suave)">Separar sets con " / ". Super Tiebreak: ej. 10-7</span>
+      </div>
+      <div class="form-group">
+        <label>Pareja ganadora</label>
+        <select id="res-ganador">
+          <option value="">— Seleccioná el ganador —</option>
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-gris" onclick="cerrarModal('modal-resultado')">Cancelar</button>
+        <button class="btn btn-verde" onclick="confirmarResultado()">Guardar resultado</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+
+  <script src="js/api.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

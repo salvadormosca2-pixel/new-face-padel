@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pkill -f \"serve\")",
+      "Bash(npx serve *)",
+      "Bash(start http://localhost:4000/reservar.html)",
+      "Bash(start http://localhost:4000/torneos.html)"
+    ]
+  }
+}
