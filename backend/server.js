@@ -21,6 +21,7 @@ app.options('*', cors());
 app.use(express.json());
 
 // ─── RUTAS ─────────────────────────────────────────────────────────────────
+app.use('/', require('./routes/auth'));
 app.use('/', require('./routes/reservas'));
 app.use('/', require('./routes/torneos'));
 app.use('/', require('./routes/profesores'));

@@ -1137,3 +1137,65 @@
   .adm2-input, .adm2-btn-agendar { width: 100%; }
   .adm2-hist-badges { display: none; }
 }
+
+/* ─── LOGIN OVERLAY ──────────────────────────────────── */
+#login-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: #0a0e14;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Outfit', sans-serif;
+}
+#login-overlay.hidden { display: none; }
+
+.login-card {
+  background: #151c27;
+  border: 1px solid #1e2a3a;
+  border-radius: 18px;
+  padding: 48px 40px;
+  width: 100%; max-width: 420px;
+  box-shadow: 0 24px 64px rgba(0,0,0,.5);
+}
+.login-logo {
+  font-size: 36px; font-weight: 800; text-align: center; margin-bottom: 6px;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.login-subtitle {
+  text-align: center; color: #6b7a8f; font-size: 14px;
+  font-weight: 500; margin-bottom: 36px;
+}
+.login-form { display: flex; flex-direction: column; gap: 16px; }
+.login-field { display: flex; flex-direction: column; gap: 8px; }
+.login-field label { font-size: 13px; font-weight: 600; color: #94a3b8; }
+.login-field input {
+  background: #0a0e14; border: 1.5px solid #1e2a3a;
+  border-radius: 10px; padding: 14px 16px;
+  color: #e2e8f0; font-size: 15px; font-family: 'Outfit', sans-serif;
+  outline: none; transition: border-color .2s;
+}
+.login-field input:focus { border-color: #22c55e; }
+.login-error {
+  color: #f87171; font-size: 13px; text-align: center;
+  min-height: 18px;
+}
+.login-btn {
+  background: #22c55e; color: #000; border: none;
+  border-radius: 10px; padding: 14px;
+  font-size: 15px; font-weight: 700; font-family: 'Outfit', sans-serif;
+  cursor: pointer; transition: background .2s, transform .1s;
+}
+.login-btn:hover { background: #16a34a; }
+.login-btn:active { transform: scale(.98); }
+.login-btn:disabled { opacity: .6; cursor: default; }
+
+/* ─── BOTÓN CERRAR SESIÓN ────────────────────────────── */
+.logout-btn {
+  background: transparent; border: 1px solid rgba(255,255,255,.15);
+  color: rgba(255,255,255,.5); border-radius: 8px;
+  padding: 6px 14px; font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: all .2s; white-space: nowrap;
+}
+.logout-btn:hover {
+  border-color: #f87171; color: #f87171; background: rgba(248,113,113,.08);
+}

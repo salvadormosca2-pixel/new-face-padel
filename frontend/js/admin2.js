@@ -2,6 +2,45 @@
    admin2.js — Dashboard + Turnos + Finanzas
    ════════════════════════════════════════════════════ */
 
+/* ─── AUTH ───────────────────────────────────────────── */
+const AUTH_KEY   = 'padelpro_token';
+const AUTH_PASS  = 'newface2026';
+
+function authCheck() {
+  const token = localStorage.getItem(AUTH_KEY);
+  if (token) {
+    document.getElementById('login-overlay').classList.add('hidden');
+  }
+}
+
+function doLogin(e) {
+  e.preventDefault();
+  const pass = document.getElementById('login-pass').value;
+  const errEl = document.getElementById('login-error');
+  const btn   = document.getElementById('login-btn');
+  errEl.textContent = '';
+  if (pass !== AUTH_PASS) {
+    errEl.textContent = 'Contraseña incorrecta. Intentá de nuevo.';
+    document.getElementById('login-pass').value = '';
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = 'Ingresando...';
+  localStorage.setItem(AUTH_KEY, 'token-' + Date.now());
+  setTimeout(() => {
+    document.getElementById('login-overlay').classList.add('hidden');
+    btn.disabled = false;
+    btn.textContent = 'Ingresar';
+  }, 400);
+}
+
+function doLogout() {
+  localStorage.removeItem(AUTH_KEY);
+  document.getElementById('login-pass').value = '';
+  document.getElementById('login-error').textContent = '';
+  document.getElementById('login-overlay').classList.remove('hidden');
+}
+
 /* ─── Config ─────────────────────────────────────────── */
 const CANCHAS = [
   { id:'c1', nombre:'Cancha 1', tipo:'Interior', precio:5000 },
@@ -1184,6 +1223,7 @@ function showToast(msg, tipo='green') {
    ════════════════════════════════════════════════════ */
 
 document.addEventListener('DOMContentLoaded', () => {
+  authCheck();
   loadFromStorage();
   generateSampleHistory();
   tickClock();

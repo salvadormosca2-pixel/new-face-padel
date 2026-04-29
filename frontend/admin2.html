@@ -6,11 +6,27 @@
   <title>Panel Admin — New Face Padel</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/admin2.css">
 </head>
 <body class="adm2-body">
+
+  <!-- ══════════════════ LOGIN OVERLAY ══════════════════ -->
+  <div id="login-overlay">
+    <div class="login-card">
+      <div class="login-logo">PadelPro</div>
+      <div class="login-subtitle">Panel de Administración</div>
+      <form class="login-form" onsubmit="doLogin(event)">
+        <div class="login-field">
+          <label>Contraseña</label>
+          <input type="password" id="login-pass" placeholder="Ingresá tu contraseña" autocomplete="current-password">
+        </div>
+        <div class="login-error" id="login-error"></div>
+        <button type="submit" class="login-btn" id="login-btn">Ingresar</button>
+      </form>
+    </div>
+  </div>
 
   <!-- ══════════════════ HEADER FIJO ══════════════════ -->
   <header class="adm2-header">
@@ -25,6 +41,7 @@
           EN VIVO
         </div>
         <div class="adm2-clock" id="adm2-clock">00:00</div>
+        <button class="logout-btn" onclick="doLogout()" title="Cerrar sesión">Cerrar sesión</button>
       </div>
     </div>
 
