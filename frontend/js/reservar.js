@@ -192,6 +192,7 @@ async function enviarReserva() {
     estado.confirmacion = data;
     irAPaso(4);
     renderConfirmacion(data);
+    _sumarPuntosReserva();
   } catch (e) {
     toast(e.message || 'Error al confirmar la reserva', 'rojo');
     if (btn) { btn.disabled = false; btn.textContent = 'Confirmar reserva'; }
@@ -265,3 +266,21 @@ function reiniciarReserva() {
 }
 
 document.addEventListener('DOMContentLoaded', iniciarReservas);
+
+function _sumarPuntosReserva() {
+  try {
+    const sess  = JSON.parse(localStorage.getItem('padelpro_session'));
+    if (!sess) return;
+    const users = JSON.parse(localStorage.getItem('padelpro_users')) || [];
+    const i = users.findIndex(u => u.id === sess.userId);
+    if (i === -1) return;
+    users[i].puntos   = (users[i].puntos   || 0) + 100;
+    users[i].reservas = (users[i].reservas || 0) + 1;
+    if (!users[i].historial) users[i].historial = [];
+    users[i].historial.unshift({ pts: 100, nota: 'Reserva confirmada', fecha: new Date().toISOString().split('T')[0] });
+    localStorage.setItem('padelpro_users', JSON.stringify(users));
+    sess.puntos   = users[i].puntos;
+    sess.reservas = users[i].reservas;
+    localStorage.setItem('padelpro_session', JSON.stringify(sess));
+  } catch {}
+}

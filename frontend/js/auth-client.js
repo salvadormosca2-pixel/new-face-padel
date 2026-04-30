@@ -102,6 +102,10 @@ const AC = (function () {
               <div class="ac-stat-lbl">Reservas</div>
             </div>
           </div>
+          <!-- Progreso hacia próximo premio -->
+          <div class="ac-progress-wrap" id="ac-progress-wrap"></div>
+          <!-- Premios disponibles -->
+          <div class="ac-premios-lista" id="ac-premios-lista"></div>
           <button class="ac-btn-logout" onclick="AC.doLogout()">Cerrar sesión</button>
         </div>
 
@@ -209,8 +213,22 @@ const AC = (function () {
     });
   }
 
+  /* ── Leer premios del store compartido ────────────── */
+  function getPremiosPublic() {
+    try {
+      const list = JSON.parse(localStorage.getItem('padelpro_premios'));
+      if (list && list.length) return list.filter(p => p.activo);
+    } catch {}
+    return [
+      { id:'p_def1', nombre:'1 hora gratis',  descripcion:'Una hora en cualquier cancha', puntos:1000, icono:'🎾' },
+      { id:'p_def2', nombre:'Descuento 20%',  descripcion:'En tu proxima reserva',        puntos:500,  icono:'💰' },
+      { id:'p_def3', nombre:'Kit de paleta',  descripcion:'Paleta + 3 pelotas',           puntos:1500, icono:'🏆' },
+    ];
+  }
+
   /* ── Rellenar datos del perfil ─────────────────────── */
   function fillPerfil(session) {
+    const pts = session.puntos || 0;
     const av = document.getElementById('ac-perfil-avatar');
     const nm = document.getElementById('ac-perfil-nombre');
     const em = document.getElementById('ac-perfil-email');
@@ -219,8 +237,74 @@ const AC = (function () {
     if (av) av.textContent = initials(session.nombre);
     if (nm) nm.textContent = session.nombre;
     if (em) em.textContent = session.email;
-    if (pt) pt.textContent = session.puntos || 0;
+    if (pt) pt.textContent = pts;
     if (rs) rs.textContent = session.reservas || 0;
+
+    const premios = getPremiosPublic().sort((a,b) => a.puntos - b.puntos);
+
+    // Próximo premio (el más cercano que no alcanzó)
+    const proximo = premios.find(p => p.puntos > pts);
+    const pw = document.getElementById('ac-progress-wrap');
+    if (pw) {
+      if (proximo) {
+        const pct = Math.min(100, Math.round((pts / proximo.puntos) * 100));
+        pw.innerHTML = `
+          <div class="ac-prog-label">
+            <span>Progreso hacia <strong>${proximo.nombre}</strong></span>
+            <span>${pts} / ${proximo.puntos} pts</span>
+          </div>
+          <div class="ac-prog-track"><div class="ac-prog-fill" style="width:${pct}%"></div></div>
+          <div class="ac-prog-faltan">Faltan ${proximo.puntos - pts} puntos</div>`;
+      } else {
+        pw.innerHTML = `<div class="ac-prog-all">Tenes puntos para todos los premios!</div>`;
+      }
+    }
+
+    // Lista de premios
+    const lista = document.getElementById('ac-premios-lista');
+    if (lista && premios.length) {
+      lista.innerHTML = '<div class="ac-premios-titulo">Premios disponibles</div>' +
+        premios.map(p => {
+          const puede = pts >= p.puntos;
+          return `<div class="ac-premio-row ${puede ? 'puede' : 'nopuede'}">
+            <span class="ac-premio-ico">${p.icono || '🎁'}</span>
+            <div class="ac-premio-info">
+              <span class="ac-premio-nom">${p.nombre}</span>
+              <span class="ac-premio-pts">★ ${p.puntos} pts</span>
+            </div>
+            ${puede
+              ? `<button class="ac-canjear-btn" onclick="AC.canjear('${p.id}')">Canjear</button>`
+              : `<span class="ac-faltan-label">Faltan ${p.puntos - pts}</span>`
+            }
+          </div>`;
+        }).join('');
+    }
+  }
+
+  /* ── Canjear premio ────────────────────────────────── */
+  function canjear(premioId) {
+    const session = getSession();
+    if (!session) return;
+    const premios = getPremiosPublic();
+    const premio  = premios.find(p => p.id === premioId);
+    if (!premio) return;
+    if ((session.puntos || 0) < premio.puntos) return;
+
+    if (!confirm('Canjear "' + premio.nombre + '" por ' + premio.puntos + ' puntos?')) return;
+
+    const users = getUsers();
+    const i = users.findIndex(u => u.id === session.userId);
+    if (i === -1) return;
+    users[i].puntos -= premio.puntos;
+    if (!users[i].historial) users[i].historial = [];
+    users[i].historial.unshift({ pts: -premio.puntos, nota: 'Canje: ' + premio.nombre, fecha: new Date().toISOString().split('T')[0] });
+    saveUsers(users);
+
+    session.puntos = users[i].puntos;
+    saveSession(session);
+
+    fillPerfil(session);
+    updateNav();
   }
 
   /* ── Login ─────────────────────────────────────────── */
@@ -311,6 +395,6 @@ const AC = (function () {
     injectNav();
   });
 
-  return { open, close, showTab, doLogin, doRegistro, doLogout };
+  return { open, close, showTab, doLogin, doRegistro, doLogout, canjear };
 
 })();

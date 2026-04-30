@@ -1,4 +1,4 @@
-/* ════════════════════════════════════════════════════
+﻿/* ════════════════════════════════════════════════════
    admin2.js — Dashboard + Turnos + Finanzas
    ════════════════════════════════════════════════════ */
 
@@ -272,6 +272,8 @@ function adm2SwitchTab(nombre, el) {
   if (nombre==='dashboard') renderDashboard();
   if (nombre==='torneos')   cargarTorneosAdmin();
   if (nombre==='finanzas')  renderFinanzas();
+  if (nombre==='usuarios')  renderUsuarios();
+  if (nombre==='premios')   renderPremios();
 }
 
 /* ─── Modales ────────────────────────────────────────── */
@@ -1224,9 +1226,211 @@ function showToast(msg, tipo='green') {
 
 document.addEventListener('DOMContentLoaded', () => {
   authCheck();
+  initPremios();
   loadFromStorage();
   generateSampleHistory();
   tickClock();
   setInterval(tickClock, 10000);
   renderDashboard();
 });
+
+/* ════════════════════════════════════════════════════
+   PREMIOS — STORE COMPARTIDO
+   ════════════════════════════════════════════════════ */
+
+const PREMIOS_KEY   = 'padelpro_premios';
+const ADM_USERS_KEY = 'padelpro_users';
+const ADM_SESS_KEY  = 'padelpro_session';
+
+const DEFAULT_PREMIOS = [
+  { id:'p_def1', nombre:'1 hora gratis',  descripcion:'Una hora en cualquier cancha del club', puntos:1000, activo:true, icono:'🎾' },
+  { id:'p_def2', nombre:'Descuento 20%',  descripcion:'En tu próxima reserva',                 puntos:500,  activo:true, icono:'💰' },
+  { id:'p_def3', nombre:'Kit de paleta',  descripcion:'Paleta + 3 pelotas de regalo',           puntos:1500, activo:true, icono:'🏆' },
+];
+
+function initPremios() {
+  if (!localStorage.getItem(PREMIOS_KEY))
+    localStorage.setItem(PREMIOS_KEY, JSON.stringify(DEFAULT_PREMIOS));
+}
+
+function getPremios()        { try { return JSON.parse(localStorage.getItem(PREMIOS_KEY)) || DEFAULT_PREMIOS; } catch { return DEFAULT_PREMIOS; } }
+function savePremios(list)   { localStorage.setItem(PREMIOS_KEY, JSON.stringify(list)); }
+function getAdmUsers()       { try { return JSON.parse(localStorage.getItem(ADM_USERS_KEY)) || []; } catch { return []; } }
+function saveAdmUsers(list)  { localStorage.setItem(ADM_USERS_KEY, JSON.stringify(list)); }
+
+function addPtsToUser(userId, pts, nota) {
+  const users = getAdmUsers();
+  const i = users.findIndex(u => u.id === userId);
+  if (i === -1) return false;
+  users[i].puntos = Math.max(0, (users[i].puntos || 0) + pts);
+  if (!users[i].historial) users[i].historial = [];
+  users[i].historial.unshift({ pts, nota: nota || 'Ajuste manual', fecha: new Date().toISOString().split('T')[0] });
+  saveAdmUsers(users);
+  try {
+    const sess = JSON.parse(localStorage.getItem(ADM_SESS_KEY));
+    if (sess && sess.userId === userId) {
+      sess.puntos = users[i].puntos;
+      localStorage.setItem(ADM_SESS_KEY, JSON.stringify(sess));
+    }
+  } catch {}
+  return true;
+}
+
+/* ════════════════════════════════════════════════════
+   USUARIOS
+   ════════════════════════════════════════════════════ */
+
+function renderUsuarios() {
+  const users = getAdmUsers();
+  const countEl = document.getElementById('usuarios-count');
+  if (countEl) countEl.textContent = users.length + ' usuario' + (users.length !== 1 ? 's' : '');
+  const searchEl = document.getElementById('usuarios-search');
+  if (searchEl) searchEl.value = '';
+  renderUsuariosTabla(users);
+}
+
+function filtrarUsuarios(q) {
+  const term = q.trim().toLowerCase();
+  const users = getAdmUsers();
+  renderUsuariosTabla(term ? users.filter(u =>
+    u.nombre.toLowerCase().includes(term) || u.email.toLowerCase().includes(term)
+  ) : users);
+}
+
+function renderUsuariosTabla(users) {
+  const tbody = document.getElementById('usuarios-tbody');
+  if (!tbody) return;
+  if (!users.length) {
+    tbody.innerHTML = `<tr><td colspan="6" class="adm-empty-row">No hay usuarios aún${document.getElementById('usuarios-search')?.value ? ' con ese criterio' : ''}</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = users.map(u => `
+    <tr>
+      <td><strong style="color:var(--a2-text)">${u.nombre}</strong></td>
+      <td style="color:var(--a2-text-muted)">${u.email}</td>
+      <td><span class="adm-pts-badge">★ ${u.puntos || 0}</span></td>
+      <td style="color:var(--a2-text-muted)">${u.reservas || 0}</td>
+      <td style="color:var(--a2-text-muted)">${u.fechaRegistro || '—'}</td>
+      <td>
+        <div class="adm-usr-actions">
+          <button class="adm-pts-btn plus"   onclick="admAddPts('${u.id}',  100, 'Suma manual')">+100</button>
+          <button class="adm-pts-btn minus"  onclick="admAddPts('${u.id}', -100, 'Resta manual')">−100</button>
+          <button class="adm-pts-btn custom" onclick="abrirModalPuntos('${u.id}', '${u.nombre.replace(/'/g, "\'")}')">Custom</button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function admAddPts(userId, pts, nota) {
+  if (!addPtsToUser(userId, pts, nota)) return;
+  renderUsuarios();
+  const q = document.getElementById('usuarios-search')?.value || '';
+  if (q) filtrarUsuarios(q);
+  toast((pts > 0 ? '+' : '') + pts + ' puntos aplicados', pts > 0 ? 'verde' : 'rojo');
+}
+
+let _modalPuntosUserId = null;
+
+function abrirModalPuntos(userId, nombre) {
+  _modalPuntosUserId = userId;
+  document.getElementById('mpts-nombre').textContent = nombre;
+  document.getElementById('mpts-cantidad').value = '';
+  document.getElementById('mpts-nota').value = '';
+  document.getElementById('mpts-error').textContent = '';
+  abrirModal('modal-puntos');
+}
+
+function guardarPuntosCustom() {
+  const cantidad = parseInt(document.getElementById('mpts-cantidad').value);
+  const nota     = document.getElementById('mpts-nota').value.trim() || 'Ajuste manual';
+  const errEl    = document.getElementById('mpts-error');
+  if (isNaN(cantidad) || cantidad === 0) { errEl.textContent = 'Ingresá una cantidad válida (puede ser negativa)'; return; }
+  if (!addPtsToUser(_modalPuntosUserId, cantidad, nota)) { errEl.textContent = 'Usuario no encontrado'; return; }
+  cerrarModal('modal-puntos');
+  renderUsuarios();
+  toast((cantidad > 0 ? '+' : '') + cantidad + ' puntos aplicados', cantidad > 0 ? 'verde' : 'rojo');
+}
+
+/* ════════════════════════════════════════════════════
+   PREMIOS — CRUD
+   ════════════════════════════════════════════════════ */
+
+function renderPremios() {
+  const premios = getPremios();
+  const grid = document.getElementById('premios-grid');
+  if (!grid) return;
+  if (!premios.length) {
+    grid.innerHTML = '<p style="color:var(--a2-text-muted);text-align:center;padding:40px">No hay premios. Agregá uno con el botón de arriba.</p>';
+    return;
+  }
+  grid.innerHTML = `<div class="premios-admin-grid">${premios.map(p => `
+    <div class="premio-admin-card${p.activo ? '' : ' inactivo'}">
+      <div class="premio-admin-top">
+        <span class="premio-admin-icono">${p.icono || '🎁'}</span>
+        <span class="premio-admin-estado ${p.activo ? 'activo' : 'inac'}">${p.activo ? 'Activo' : 'Inactivo'}</span>
+      </div>
+      <div class="premio-admin-nombre">${p.nombre}</div>
+      <div class="premio-admin-desc">${p.descripcion}</div>
+      <div class="premio-admin-pts">★ ${p.puntos} puntos</div>
+      <div class="premio-admin-acciones">
+        <button class="adm-pts-btn custom" onclick="editarPremio('${p.id}')">Editar</button>
+        <button class="adm-pts-btn ${p.activo ? 'minus' : 'plus'}" onclick="togglePremio('${p.id}')">${p.activo ? 'Desactivar' : 'Activar'}</button>
+        <button class="adm-pts-btn danger" onclick="eliminarPremio('${p.id}')">Eliminar</button>
+      </div>
+    </div>`).join('')}</div>`;
+}
+
+
+let _editingPremioId = null;
+
+function abrirModalPremio(id) {
+  _editingPremioId = id || null;
+  const p = id ? getPremios().find(x => x.id === id) : null;
+  document.getElementById('modal-premio-titulo').textContent = id ? 'Editar premio' : 'Nuevo premio';
+  document.getElementById('mp-nombre').value = p ? p.nombre : '';
+  document.getElementById('mp-desc').value   = p ? p.descripcion : '';
+  document.getElementById('mp-puntos').value = p ? p.puntos : '';
+  document.getElementById('mp-icono').value  = p ? p.icono : '';
+  document.getElementById('mp-error').textContent = '';
+  abrirModal('modal-premio');
+}
+
+function editarPremio(id) { abrirModalPremio(id); }
+
+function guardarPremio() {
+  const nombre      = document.getElementById('mp-nombre').value.trim();
+  const descripcion = document.getElementById('mp-desc').value.trim();
+  const puntos      = parseInt(document.getElementById('mp-puntos').value);
+  const icono       = document.getElementById('mp-icono').value.trim() || '';
+  const errEl       = document.getElementById('mp-error');
+
+  if (!nombre)               { errEl.textContent = 'El nombre es obligatorio'; return; }
+  if (!puntos || puntos < 1) { errEl.textContent = 'Ingresa una cantidad de puntos valida'; return; }
+
+  const premios = getPremios();
+  if (_editingPremioId) {
+    const i = premios.findIndex(p => p.id === _editingPremioId);
+    if (i !== -1) premios[i] = Object.assign({}, premios[i], { nombre, descripcion, puntos, icono });
+  } else {
+    premios.push({ id: 'p_' + Date.now(), nombre, descripcion, puntos, activo: true, icono });
+  }
+  savePremios(premios);
+  cerrarModal('modal-premio');
+  renderPremios();
+  toast(_editingPremioId ? 'Premio actualizado' : 'Premio creado', 'verde');
+}
+
+function togglePremio(id) {
+  const premios = getPremios();
+  const i = premios.findIndex(p => p.id === id);
+  if (i !== -1) premios[i].activo = !premios[i].activo;
+  savePremios(premios);
+  renderPremios();
+}
+
+function eliminarPremio(id) {
+  if (!confirm('Eliminar este premio?')) return;
+  savePremios(getPremios().filter(p => p.id !== id));
+  renderPremios();
+  toast('Premio eliminado', 'rojo');
+}

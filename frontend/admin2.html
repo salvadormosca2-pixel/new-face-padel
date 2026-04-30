@@ -54,6 +54,8 @@
       <button class="adm2-tab"        onclick="adm2SwitchTab('mensajes',  this)">Mensajes</button>
       <button class="adm2-tab"        onclick="adm2SwitchTab('torneos',   this)">Torneos</button>
       <button class="adm2-tab"        onclick="adm2SwitchTab('finanzas',  this)">Finanzas</button>
+      <button class="adm2-tab"        onclick="adm2SwitchTab('usuarios',  this)">Usuarios</button>
+      <button class="adm2-tab"        onclick="adm2SwitchTab('premios',   this)">Premios</button>
     </nav>
   </header>
 
@@ -247,6 +249,44 @@
       </div>
     </section>
 
+    <!-- ─── VISTA USUARIOS ──────────────────────────── -->
+    <section class="adm2-view" id="adm2-view-usuarios">
+      <div class="adm2-section-header" style="margin-bottom:20px">
+        <span class="adm2-section-title">Usuarios registrados</span>
+        <span class="adm2-usuarios-badge" id="usuarios-count">0 usuarios</span>
+      </div>
+
+      <div class="adm2-search-bar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="search" id="usuarios-search" placeholder="Buscar por nombre o email..." oninput="filtrarUsuarios(this.value)">
+      </div>
+
+      <div class="adm2-tabla-wrap">
+        <table class="adm2-usuarios-tabla">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Email</th>
+              <th>Puntos</th>
+              <th>Reservas</th>
+              <th>Registrado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="usuarios-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ─── VISTA PREMIOS ────────────────────────────── -->
+    <section class="adm2-view" id="adm2-view-premios">
+      <div class="adm2-section-header" style="margin-bottom:20px">
+        <span class="adm2-section-title">Programa de puntos</span>
+        <button class="adm2-btn-nuevo" onclick="abrirModalPremio(null)">+ Nuevo premio</button>
+      </div>
+      <div id="premios-grid"></div>
+    </section>
+
   </main>
 
   <!-- ═══ MODALES TORNEOS ══════════════════════════════ -->
@@ -333,6 +373,63 @@
       <div class="modal-footer">
         <button class="btn btn-gris" onclick="cerrarModal('modal-resultado')">Cancelar</button>
         <button class="btn btn-verde" onclick="confirmarResultado()">Guardar resultado</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Crear / editar premio -->
+  <div class="modal-overlay" id="modal-premio">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-premio-titulo">Nuevo premio</h3>
+        <button class="modal-close" onclick="cerrarModal('modal-premio')">✕</button>
+      </div>
+      <div class="form-group">
+        <label>Nombre del premio</label>
+        <input type="text" id="mp-nombre" placeholder="Ej: 1 hora gratis">
+      </div>
+      <div class="form-group">
+        <label>Descripción</label>
+        <input type="text" id="mp-desc" placeholder="Ej: Una hora en cualquier cancha del club">
+      </div>
+      <div class="form-group">
+        <label>Puntos necesarios</label>
+        <input type="number" id="mp-puntos" placeholder="Ej: 1000" min="1">
+      </div>
+      <div class="form-group">
+        <label>Ícono (emoji)</label>
+        <input type="text" id="mp-icono" placeholder="🎁" maxlength="4">
+      </div>
+      <div style="color:#ef4444;font-size:13px;min-height:18px;margin-bottom:8px" id="mp-error"></div>
+      <div class="modal-footer">
+        <button class="btn btn-gris" onclick="cerrarModal('modal-premio')">Cancelar</button>
+        <button class="btn btn-verde" onclick="guardarPremio()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Ajuste manual de puntos -->
+  <div class="modal-overlay" id="modal-puntos">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Ajustar puntos</h3>
+        <button class="modal-close" onclick="cerrarModal('modal-puntos')">✕</button>
+      </div>
+      <p style="font-size:14px;color:var(--texto-suave);margin-bottom:16px">
+        Usuario: <strong id="mpts-nombre" style="color:var(--texto)"></strong>
+      </p>
+      <div class="form-group">
+        <label>Cantidad (positivo para sumar, negativo para restar)</label>
+        <input type="number" id="mpts-cantidad" placeholder="Ej: 100 o -50">
+      </div>
+      <div class="form-group">
+        <label>Nota (opcional)</label>
+        <input type="text" id="mpts-nota" placeholder="Ej: Reserva WhatsApp 15/05">
+      </div>
+      <div style="color:#ef4444;font-size:13px;min-height:18px;margin-bottom:8px" id="mpts-error"></div>
+      <div class="modal-footer">
+        <button class="btn btn-gris" onclick="cerrarModal('modal-puntos')">Cancelar</button>
+        <button class="btn btn-verde" onclick="guardarPuntosCustom()">Aplicar</button>
       </div>
     </div>
   </div>

@@ -317,6 +317,43 @@
   </section>
 
   <!-- ══════════════════════════════════════════════ -->
+  <!-- PROGRAMA DE PUNTOS                             -->
+  <!-- ══════════════════════════════════════════════ -->
+  <section class="puntos-prem">
+    <div class="puntos-prem-inner">
+      <div class="puntos-prem-header">
+        <span class="sec-eyebrow">Programa de lealtad</span>
+        <h2 class="puntos-prem-title">Jugá y <span class="puntos-green">acumulá puntos</span></h2>
+        <p class="puntos-prem-sub">Cada reserva suma 100 puntos. Canjeá premios exclusivos cuando quieras.</p>
+      </div>
+      <div class="puntos-como">
+        <div class="puntos-paso">
+          <div class="puntos-paso-num">1</div>
+          <div class="puntos-paso-txt"><strong>Registrate</strong> gratis en el sitio</div>
+        </div>
+        <div class="puntos-flecha">→</div>
+        <div class="puntos-paso">
+          <div class="puntos-paso-num">2</div>
+          <div class="puntos-paso-txt"><strong>Reservá</strong> y ganás 100 pts por hora</div>
+        </div>
+        <div class="puntos-flecha">→</div>
+        <div class="puntos-paso">
+          <div class="puntos-paso-num">3</div>
+          <div class="puntos-paso-txt"><strong>Canjea</strong> premios desde tu perfil</div>
+        </div>
+      </div>
+      <div class="puntos-premios-grid" id="public-premios-grid">
+        <!-- Renderizado por JS -->
+      </div>
+      <div style="text-align:center;margin-top:32px">
+        <button class="btn-prem-primary" onclick="AC.open('registro')" style="display:inline-flex">
+          Registrate y empezá a acumular
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════ -->
   <!-- CTA FINAL                                      -->
   <!-- ══════════════════════════════════════════════ -->
   <section class="cta-prem-final">
@@ -400,5 +437,29 @@
     });
   </script>
   <script src="js/auth-client.js"></script>
+  <script>
+    (function renderPublicPremios() {
+      const defaults = [
+        { nombre:'1 hora gratis', descripcion:'Una hora en cualquier cancha del club', puntos:1000, icono:'🎾' },
+        { nombre:'Descuento 20%', descripcion:'En tu proxima reserva',                 puntos:500,  icono:'💰' },
+        { nombre:'Kit de paleta', descripcion:'Paleta + 3 pelotas de regalo',          puntos:1500, icono:'🏆' },
+      ];
+      let premios = defaults;
+      try {
+        const stored = JSON.parse(localStorage.getItem('padelpro_premios'));
+        if (stored && stored.length) premios = stored.filter(function(p){ return p.activo; });
+      } catch {}
+      const grid = document.getElementById('public-premios-grid');
+      if (!grid) return;
+      grid.innerHTML = premios.map(function(p) {
+        return '<div class="puntos-premio-card">' +
+          '<div class="puntos-premio-ico">' + (p.icono || '') + '</div>' +
+          '<div class="puntos-premio-pts">★ ' + p.puntos + ' pts</div>' +
+          '<div class="puntos-premio-nom">' + p.nombre + '</div>' +
+          '<div class="puntos-premio-desc">' + p.descripcion + '</div>' +
+          '</div>';
+      }).join('');
+    })();
+  </script>
 </body>
 </html>

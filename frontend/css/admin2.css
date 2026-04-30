@@ -1199,3 +1199,90 @@
 .logout-btn:hover {
   border-color: #f87171; color: #f87171; background: rgba(248,113,113,.08);
 }
+
+/* ── USUARIOS ─────────────────────────────────────── */
+.adm2-search-bar {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--a2-card-deep); border: 1px solid var(--a2-border);
+  border-radius: 10px; padding: 10px 16px; margin-bottom: 20px;
+}
+.adm2-search-bar svg { color: var(--a2-text-muted); flex-shrink: 0; }
+.adm2-search-bar input {
+  background: none; border: none; outline: none; width: 100%;
+  color: var(--a2-text); font-size: 14px; font-family: inherit;
+}
+.adm2-search-bar input::placeholder { color: var(--a2-text-muted); }
+
+.adm2-usuarios-badge {
+  background: var(--a2-green-dim); color: var(--a2-green);
+  border: 1px solid var(--a2-green-border); border-radius: 20px;
+  padding: 4px 14px; font-size: 13px; font-weight: 600;
+}
+
+.adm2-tabla-wrap { overflow-x: auto; }
+.adm2-usuarios-tabla {
+  width: 100%; border-collapse: collapse; font-size: 14px;
+}
+.adm2-usuarios-tabla th {
+  text-align: left; padding: 10px 14px; color: var(--a2-text-muted);
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .5px; border-bottom: 1px solid var(--a2-border);
+}
+.adm2-usuarios-tabla td {
+  padding: 13px 14px; border-bottom: 1px solid var(--a2-border);
+  vertical-align: middle;
+}
+.adm2-usuarios-tabla tr:last-child td { border-bottom: none; }
+.adm2-usuarios-tabla tr:hover td { background: var(--a2-card-deep); }
+
+.adm-empty-row { text-align: center; padding: 40px !important; color: var(--a2-text-muted); }
+
+.adm-pts-badge {
+  background: var(--a2-green-dim); color: var(--a2-green);
+  border: 1px solid var(--a2-green-border); border-radius: 20px;
+  padding: 3px 10px; font-size: 13px; font-weight: 700;
+}
+
+.adm-usr-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.adm-pts-btn {
+  border: none; border-radius: 7px; padding: 5px 11px;
+  font-size: 12px; font-weight: 700; cursor: pointer;
+  font-family: inherit; transition: opacity .2s;
+}
+.adm-pts-btn:hover { opacity: .8; }
+.adm-pts-btn.plus   { background: var(--a2-green-dim); color: var(--a2-green); border: 1px solid var(--a2-green-border); }
+.adm-pts-btn.minus  { background: var(--a2-red-dim);   color: var(--a2-red);   border: 1px solid rgba(239,68,68,.3); }
+.adm-pts-btn.custom { background: var(--a2-blue-dim);  color: var(--a2-blue);  border: 1px solid rgba(59,130,246,.3); }
+.adm-pts-btn.danger { background: var(--a2-red-dim);   color: var(--a2-red);   border: 1px solid rgba(239,68,68,.3); }
+
+/* ── PREMIOS ──────────────────────────────────────── */
+.adm2-btn-nuevo {
+  background: var(--a2-green); color: #000; border: none;
+  border-radius: 9px; padding: 9px 18px;
+  font-size: 14px; font-weight: 700; cursor: pointer;
+  font-family: inherit; transition: background .2s;
+}
+.adm2-btn-nuevo:hover { background: #16a34a; }
+
+.premios-admin-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+.premio-admin-card {
+  background: var(--a2-card); border: 1px solid var(--a2-border);
+  border-radius: 14px; padding: 20px;
+  transition: border-color .2s;
+}
+.premio-admin-card.inactivo { opacity: .45; }
+.premio-admin-card:hover { border-color: var(--a2-border-mid); }
+.premio-admin-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.premio-admin-icono { font-size: 28px; }
+.premio-admin-estado {
+  font-size: 11px; font-weight: 700; border-radius: 20px; padding: 3px 10px;
+}
+.premio-admin-estado.activo { background: var(--a2-green-dim); color: var(--a2-green); border: 1px solid var(--a2-green-border); }
+.premio-admin-estado.inac   { background: var(--a2-red-dim);   color: var(--a2-red);   border: 1px solid rgba(239,68,68,.3); }
+.premio-admin-nombre { font-size: 16px; font-weight: 700; color: var(--a2-text); margin-bottom: 4px; }
+.premio-admin-desc   { font-size: 13px; color: var(--a2-text-muted); margin-bottom: 10px; }
+.premio-admin-pts    { font-size: 14px; font-weight: 700; color: var(--a2-yellow); margin-bottom: 14px; }
+.premio-admin-acciones { display: flex; gap: 6px; flex-wrap: wrap; }
