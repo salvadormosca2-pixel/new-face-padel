@@ -5,44 +5,100 @@
 let torneoActualId = null;
 let _torneosPublicos = [];
 
+const IMG_DEFAULT = 'https://images.unsplash.com/photo-1554284126-aa88f22d8b74?w=1200&auto=format&fit=crop&q=80';
+
 /* ── Inicialización ── */
 
 async function iniciarTorneos() {
-  const selectorEl = document.getElementById('torneos-selector');
+  const selectorEl  = document.getElementById('torneos-selector');
   const contenidoEl = document.getElementById('torneo-contenido');
   if (!selectorEl || !contenidoEl) return;
 
-  spinner(contenidoEl);
+  contenidoEl.style.display = 'none';
+  spinner(selectorEl);
 
   try {
     _torneosPublicos = await api.getTorneos();
     if (!_torneosPublicos.length) {
-      contenidoEl.innerHTML = '<div class="loading-overlay"><p style="color:rgba(255,255,255,0.4);font-size:18px">No hay torneos por el momento.</p></div>';
-      selectorEl.innerHTML = '';
+      selectorEl.innerHTML = '<div style="padding:80px 0;text-align:center;color:rgba(255,255,255,0.4);font-size:18px">No hay torneos por el momento.</div>';
       return;
     }
-    selectorEl.innerHTML = _torneosPublicos.map((t, i) =>
-      `<button class="torneo-tab${i === 0 ? ' activo' : ''}" onclick="cargarTorneo('${t._id}', this)">${t.nombre}</button>`
-    ).join('');
-    cargarTorneo(_torneosPublicos[0]._id, selectorEl.querySelector('.torneo-tab'));
+    renderPortadas(_torneosPublicos);
   } catch (e) {
-    contenidoEl.innerHTML = `<p style="color:var(--rojo);padding:20px">Error al cargar torneos.</p>`;
+    selectorEl.innerHTML = `<p style="color:var(--rojo);padding:20px">Error al cargar torneos.</p>`;
   }
 }
 
-async function cargarTorneo(id, tabEl) {
-  document.querySelectorAll('.torneo-tab').forEach(t => t.classList.remove('activo'));
-  if (tabEl) tabEl.classList.add('activo');
+function renderPortadas(torneos) {
+  const selectorEl = document.getElementById('torneos-selector');
+  const ESTADO_LABEL = { inscripcion:'Inscripción abierta', grupos:'Fase de grupos', bracket:'Bracket eliminatorio', finalizado:'Finalizado' };
+  const ESTADO_COLOR = { inscripcion:'badge-azul', grupos:'badge-amarillo', bracket:'badge-verde', finalizado:'badge-gris' };
+
+  selectorEl.innerHTML = `<div class="torneos-portadas-grid">${torneos.map(t => {
+    const img   = t.imagen || IMG_DEFAULT;
+    const label = ESTADO_LABEL[t.estado] || t.estado;
+    const color = ESTADO_COLOR[t.estado] || 'badge-gris';
+    const parejas = (t.inscripciones || []).filter(i => i.estadoInscripcion === 'aceptada').length;
+    const desc  = t.descripcion || '';
+
+    return `
+      <div class="torneo-portada-card" style="background-image:url('${img}')">
+        <div class="torneo-portada-overlay"></div>
+        <div class="torneo-portada-content">
+          <span class="badge ${color} torneo-portada-badge">${label}</span>
+          <h2 class="torneo-portada-nombre">${t.nombre}</h2>
+          <p class="torneo-portada-meta">
+            📅 ${formatFechaLarga(t.fecha)}
+            &nbsp;·&nbsp;
+            🎾 ${parejas} pareja${parejas !== 1 ? 's' : ''} inscripta${parejas !== 1 ? 's' : ''}
+          </p>
+          ${desc ? `<p class="torneo-portada-desc">${desc}</p>` : ''}
+          <button class="torneo-portada-btn" onclick="abrirTorneo('${t._id}')">
+            Ver torneo
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+      </div>`;
+  }).join('')}</div>`;
+}
+
+async function abrirTorneo(id) {
   torneoActualId = id;
+  const selectorEl  = document.getElementById('torneos-selector');
   const contenidoEl = document.getElementById('torneo-contenido');
+
+  selectorEl.style.display  = 'none';
+  contenidoEl.style.display = 'block';
   spinner(contenidoEl);
+
   try {
     const t = await api.getTorneo(id);
     if (!t) throw new Error('Torneo no encontrado');
-    renderTorneo(t, contenidoEl);
+
+    // Botón volver
+    const btnVolver = `
+      <button onclick="volverAPortadas()" style="display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.7);border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:24px;font-family:inherit;transition:background .2s" onmouseover="this.style.background='rgba(255,255,255,.14)'" onmouseout="this.style.background='rgba(255,255,255,.08)'">
+        ← Todos los torneos
+      </button>`;
+
+    contenidoEl.innerHTML = btnVolver;
+    const wrapper = document.createElement('div');
+    contenidoEl.appendChild(wrapper);
+    renderTorneo(t, wrapper);
   } catch (e) {
     contenidoEl.innerHTML = `<p style="color:var(--rojo);padding:20px">Error al cargar el torneo.</p>`;
   }
+}
+
+function volverAPortadas() {
+  const selectorEl  = document.getElementById('torneos-selector');
+  const contenidoEl = document.getElementById('torneo-contenido');
+  contenidoEl.style.display = 'none';
+  selectorEl.style.display  = 'block';
+}
+
+async function cargarTorneo(id, tabEl) {
+  await abrirTorneo(id);
 }
 
 /* ── Render principal ── */

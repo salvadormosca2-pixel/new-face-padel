@@ -2131,7 +2131,96 @@
 .puntos-premio-nom  { font-size: 18px; font-weight: 800; color: #fff; margin-bottom: 6px; }
 .puntos-premio-desc { font-size: 13px; color: rgba(255,255,255,.45); }
 
+/* ── PREMIOS PAGE EXTENSIONS ─────────────────────────── */
+.premios-grid-ext { gap: 24px; margin-bottom: 48px; }
+
+.premios-card-ext {
+  display: flex; flex-direction: column;
+  min-height: 240px;
+}
+.premios-card-ext .puntos-premio-desc { flex: 1; }
+.premios-card-accion {
+  margin-top: 20px; padding-top: 16px;
+  border-top: 1px solid rgba(255,255,255,.07);
+  display: flex; justify-content: center;
+}
+
+.premios-puede {
+  border-color: rgba(34,197,94,.4) !important;
+  background: rgba(34,197,94,.07) !important;
+}
+
+.premios-pts-banner {
+  display: flex; align-items: center; gap: 20px;
+  background: rgba(34,197,94,.08); border: 1px solid rgba(34,197,94,.25);
+  border-radius: 16px; padding: 20px 28px;
+}
+.premios-pts-ico  { font-size: 32px; color: #22c55e; font-weight: 900; }
+.premios-pts-val  { font-size: 36px; font-weight: 900; color: #22c55e; line-height: 1; }
+.premios-pts-lbl  { font-size: 13px; color: rgba(255,255,255,.5); margin-top: 2px; font-family: 'Outfit', sans-serif; }
+
 @media (max-width: 600px) {
   .puntos-flecha { display: none; }
   .puntos-como   { flex-direction: column; }
+  .premios-pts-banner { flex-wrap: wrap; }
+  .premios-pts-banner .ac-btn { width: 100%; justify-content: center; }
+}
+
+/* ── TORNEOS PORTADAS ─────────────────────────────────── */
+.torneos-portadas-grid {
+  display: flex; flex-direction: column; gap: 24px;
+  padding: 0 0 40px;
+}
+
+.torneo-portada-card {
+  position: relative; border-radius: 20px; overflow: hidden;
+  min-height: 340px;
+  background-size: cover; background-position: center;
+  display: flex; align-items: flex-end;
+  transition: transform .3s;
+}
+.torneo-portada-card:hover { transform: translateY(-3px); }
+
+.torneo-portada-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(5,8,18,.95) 0%, rgba(5,8,18,.6) 50%, rgba(5,8,18,.2) 100%);
+}
+
+.torneo-portada-content {
+  position: relative; z-index: 1;
+  padding: 32px 36px; width: 100%;
+}
+
+.torneo-portada-badge { margin-bottom: 12px; display: inline-block; }
+
+.torneo-portada-nombre {
+  font-size: clamp(26px, 4vw, 40px); font-weight: 900;
+  color: #fff; margin: 0 0 10px; line-height: 1.1;
+  text-shadow: 0 2px 12px rgba(0,0,0,.4);
+}
+
+.torneo-portada-meta {
+  font-size: 14px; color: rgba(255,255,255,.6); margin: 0 0 14px;
+}
+
+.torneo-portada-desc {
+  font-size: 14px; color: rgba(255,255,255,.75);
+  max-width: 600px; line-height: 1.6; margin: 0 0 22px;
+  display: -webkit-box; -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical; overflow: hidden;
+}
+
+.torneo-portada-btn {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: var(--prem-verde); color: #000;
+  border: none; border-radius: 10px;
+  padding: 13px 26px; font-size: 15px; font-weight: 700;
+  font-family: inherit; cursor: pointer;
+  transition: background .2s, transform .15s;
+}
+.torneo-portada-btn:hover { background: #00ff87; transform: translateY(-1px); }
+
+@media (max-width: 600px) {
+  .torneo-portada-content { padding: 24px 20px; }
+  .torneo-portada-card    { min-height: 280px; }
 }

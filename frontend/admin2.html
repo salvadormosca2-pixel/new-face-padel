@@ -49,8 +49,6 @@
     <nav class="adm2-tabs">
       <button class="adm2-tab active" onclick="adm2SwitchTab('dashboard', this)">Dashboard</button>
       <button class="adm2-tab"        onclick="adm2SwitchTab('turnos',    this)">Turnos</button>
-      <button class="adm2-tab"        onclick="adm2SwitchTab('reservas',  this)">Reservas</button>
-      <button class="adm2-tab"        onclick="adm2SwitchTab('canchas',   this)">Canchas</button>
       <button class="adm2-tab"        onclick="adm2SwitchTab('mensajes',  this)">Mensajes</button>
       <button class="adm2-tab"        onclick="adm2SwitchTab('torneos',   this)">Torneos</button>
       <button class="adm2-tab"        onclick="adm2SwitchTab('finanzas',  this)">Finanzas</button>
@@ -232,7 +230,7 @@
 
       <!-- Bloque C: Historial semanas -->
       <div class="adm2-fin-section">
-        <div class="adm2-card-title" style="margin-bottom:12px">Historial — Últimas 8 semanas</div>
+        <div class="adm2-card-title" style="margin-bottom:12px">Semanas de <span id="fin-hist-mes-label">—</span></div>
         <div class="adm2-hist-list" id="fin-hist-list"></div>
       </div>
 
@@ -300,11 +298,41 @@
       </div>
       <div class="form-group">
         <label>Nombre del torneo</label>
-        <input type="text" id="torneo-nombre" placeholder="Ej: Copa Verano 2025">
+        <input type="text" id="torneo-nombre" placeholder="Ej: Copa Verano 2026">
       </div>
       <div class="form-group">
         <label>Fecha</label>
         <input type="date" id="torneo-fecha">
+      </div>
+      <div class="form-group">
+        <label>Descripción</label>
+        <textarea id="torneo-desc" placeholder="Ej: Formato grupos + bracket eliminatorio. Categoría mixta abierta. Premiación para los 3 primeros puestos." style="resize:vertical;min-height:72px"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Foto de portada</label>
+        <div class="torneo-img-picker" id="torneo-img-picker">
+          <div class="tip-picker-wrap">
+            <img src="https://images.unsplash.com/photo-1554284126-aa88f22d8b74?w=300&auto=format&fit=crop&q=70" class="tip-img" onclick="seleccionarImgTorneo(this,'https://images.unsplash.com/photo-1554284126-aa88f22d8b74?w=1200&auto=format&fit=crop&q=80')" title="Cancha de pádel">
+            <img src="https://images.unsplash.com/photo-1599474924187-334a4ae5bd3c?w=300&auto=format&fit=crop&q=70" class="tip-img" onclick="seleccionarImgTorneo(this,'https://images.unsplash.com/photo-1599474924187-334a4ae5bd3c?w=1200&auto=format&fit=crop&q=80')" title="Jugadores de pádel">
+            <img src="https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?w=300&auto=format&fit=crop&q=70" class="tip-img" onclick="seleccionarImgTorneo(this,'https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?w=1200&auto=format&fit=crop&q=80')" title="Partido de pádel">
+            <img src="https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?w=300&auto=format&fit=crop&q=70" class="tip-img" onclick="seleccionarImgTorneo(this,'https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?w=1200&auto=format&fit=crop&q=80')" title="Cancha nocturna">
+            <img src="https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=300&auto=format&fit=crop&q=70" class="tip-img" onclick="seleccionarImgTorneo(this,'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=1200&auto=format&fit=crop&q=80')" title="Torneo deportivo">
+            <img src="https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=300&auto=format&fit=crop&q=70" class="tip-img" onclick="seleccionarImgTorneo(this,'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=1200&auto=format&fit=crop&q=80')" title="Competencia de pádel">
+          </div>
+
+          <!-- Subir imagen propia -->
+          <div style="margin-top:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <button type="button" class="btn btn-gris" style="font-size:12px;padding:7px 14px" onclick="document.getElementById('tip-file-input').click()">
+              📁 Subir mi propia foto
+            </button>
+            <span id="tip-file-nombre" style="font-size:12px;color:var(--a2-text-muted)">Ningún archivo seleccionado</span>
+          </div>
+          <input type="file" id="tip-file-input" accept="image/*" style="display:none" onchange="cargarImgPropia(this)">
+          <img id="tip-preview-propia" style="display:none;width:100%;max-height:120px;object-fit:cover;border-radius:8px;margin-top:8px;border:2.5px solid var(--a2-green)">
+
+          <p style="font-size:11px;color:var(--a2-text-muted);margin-top:8px">Elegí una foto de la galería o subí la tuya. Se guarda automáticamente.</p>
+        </div>
+        <input type="hidden" id="torneo-imagen">
       </div>
       <div class="modal-footer">
         <button class="btn btn-gris" onclick="cerrarModal('modal-torneo')">Cancelar</button>
@@ -445,6 +473,7 @@
   <div id="toast-container"></div>
   <div id="adm2-toasts"></div>
 
+  <script src="js/config.js"></script>
   <script src="js/api.js"></script>
   <script src="js/admin2.js"></script>
 </body>

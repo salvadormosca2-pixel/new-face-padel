@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Premios — New Face Padel Club</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/premium.css">
+  <link rel="stylesheet" href="css/auth-client.css">
+</head>
+<body class="premium-body">
+
+  <!-- NAV -->
+  <nav class="nav-premium" id="nav-premium">
+    <div class="nav-premium-inner">
+      <a href="index.html" class="nav-prem-logo">
+        <div class="logo-icon-prem">NF</div>
+        <div class="logo-text-prem">
+          <span>New Face</span>
+          <span>Padel Club</span>
+        </div>
+      </a>
+      <div class="nav-prem-links">
+        <a href="index.html">Inicio</a>
+        <a href="reservar.html">Reservar</a>
+        <a href="torneos.html">Torneos</a>
+        <a href="profesores.html">Profesores</a>
+        <a href="premios.html" class="activo">Premios</a>
+      </div>
+      <a href="reservar.html" class="btn-nav-cta">Reservar cancha →</a>
+      <button class="nav-hamburger" onclick="toggleNavMobile()">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+    <div class="nav-mobile-prem" id="nav-mobile-prem">
+      <a href="index.html">Inicio</a>
+      <a href="reservar.html">Reservar</a>
+      <a href="torneos.html">Torneos</a>
+      <a href="profesores.html">Profesores</a>
+      <a href="premios.html" class="activo">Premios</a>
+      <a href="reservar.html" class="btn-nav-cta" style="text-align:center;margin-top:8px">Reservar cancha →</a>
+    </div>
+  </nav>
+
+  <!-- HEADER -->
+  <div class="torneos-prem-header" style="background:linear-gradient(135deg,#050c10 0%,#0a2e1a 60%,#061a10 100%)">
+    <div class="torneos-prem-header-inner">
+      <span class="sec-eyebrow">Programa de lealtad</span>
+      <h1 class="torneos-prem-titulo">Premios</h1>
+      <p class="torneos-prem-sub">Reservá turnos, acumulá 100 puntos por reserva y canjeá premios exclusivos del club.</p>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <main class="puntos-prem" style="padding-top:60px">
+    <div class="puntos-prem-inner">
+
+      <!-- CÓMO FUNCIONA -->
+      <div class="puntos-prem-header">
+        <span class="sec-eyebrow">Simple y automático</span>
+        <h2 class="puntos-prem-title">¿Cómo <span class="puntos-green">funciona</span>?</h2>
+      </div>
+
+      <div class="puntos-como">
+        <div class="puntos-paso">
+          <div class="puntos-paso-num">1</div>
+          <div class="puntos-paso-txt"><strong>Registrate</strong> gratis en el club</div>
+        </div>
+        <div class="puntos-flecha">→</div>
+        <div class="puntos-paso">
+          <div class="puntos-paso-num">2</div>
+          <div class="puntos-paso-txt"><strong>Reservá</strong> y ganás 100 pts por turno</div>
+        </div>
+        <div class="puntos-flecha">→</div>
+        <div class="puntos-paso">
+          <div class="puntos-paso-num">3</div>
+          <div class="puntos-paso-txt"><strong>Canjeá</strong> premios desde tu perfil</div>
+        </div>
+      </div>
+
+      <!-- MIS PUNTOS (logged in) -->
+      <div id="premios-mis-puntos" style="display:none;margin-bottom:40px">
+        <div class="premios-pts-banner">
+          <div class="premios-pts-ico">★</div>
+          <div>
+            <div class="premios-pts-val" id="premios-pts-numero">0</div>
+            <div class="premios-pts-lbl">puntos acumulados</div>
+          </div>
+          <button class="ac-btn" style="margin-left:auto;padding:10px 22px;font-size:14px" onclick="AC.open('perfil')">Ver mi perfil</button>
+        </div>
+      </div>
+
+      <!-- PREMIOS GRID -->
+      <div class="puntos-prem-header" style="margin-top:0">
+        <h2 class="puntos-prem-title">Premios <span class="puntos-green">disponibles</span></h2>
+        <p class="puntos-prem-sub" id="premios-sub-txt" style="margin-top:10px">Iniciá sesión para ver qué podés canjear.</p>
+      </div>
+
+      <div class="puntos-premios-grid premios-grid-ext" id="premios-grid-publico">
+        <!-- JS -->
+      </div>
+
+      <!-- CTA no logueado -->
+      <div id="premios-cta" style="text-align:center;padding:48px 0 32px">
+        <p style="color:rgba(255,255,255,.4);margin-bottom:20px;font-family:'Outfit',sans-serif;font-size:16px">
+          Creá tu cuenta gratis para empezar a acumular puntos.
+        </p>
+        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+          <button class="btn-prem-primary" onclick="AC.open('registro')" style="display:inline-flex">
+            Crear cuenta gratis
+          </button>
+          <button class="ac-nav-login" style="padding:14px 28px;font-size:15px" onclick="AC.open('login')">
+            Ya tengo cuenta
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer-prem">
+    <div class="footer-prem-inner">
+      <div class="footer-prem-top">
+        <div class="footer-brand">
+          <div class="footer-logo-wrap">
+            <div class="logo-icon-prem">NF</div>
+            <span class="footer-brand-name">New Face Padel Club</span>
+          </div>
+          <p class="footer-brand-desc">Tu club de pádel de confianza en Buenos Aires. Canchas de primer nivel, torneos y los mejores instructores.</p>
+        </div>
+        <div class="footer-col">
+          <span class="footer-col-title">Páginas</span>
+          <a href="index.html" class="footer-link">Inicio</a>
+          <a href="reservar.html" class="footer-link">Reservar cancha</a>
+          <a href="torneos.html" class="footer-link">Torneos</a>
+          <a href="profesores.html" class="footer-link">Profesores</a>
+          <a href="premios.html" class="footer-link">Premios</a>
+        </div>
+        <div class="footer-col">
+          <span class="footer-col-title">Horarios</span>
+          <span class="footer-info">Lunes a Domingo</span>
+          <span class="footer-info">15:00 — 23:00 hs</span>
+        </div>
+      </div>
+      <div class="footer-prem-bottom">
+        <span>© 2025 New Face Padel Club — Todos los derechos reservados</span>
+        <span style="color:rgba(255,255,255,0.15)">Diseñado con pasión</span>
+      </div>
+    </div>
+  </footer>
+
+  <div id="toast-container"></div>
+
+  <script>
+    window.addEventListener('scroll', () => {
+      const nav = document.getElementById('nav-premium');
+      if (window.scrollY > 60) nav.classList.add('scrolled');
+      else nav.classList.remove('scrolled');
+    });
+    function toggleNavMobile() {
+      document.getElementById('nav-mobile-prem').classList.toggle('open');
+    }
+  </script>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+
+  <script>
+    var PREMIOS_KEY_PUB = 'padelpro_premios';
+    var SESSION_KEY_PUB = 'padelpro_session';
+
+    var DEFAULT_PREMIOS_PUB = [
+      { id:'p_def1', nombre:'1 hora gratis',  descripcion:'Una hora en cualquier cancha del club', puntos:1000, activo:true, icono:'🎾' },
+      { id:'p_def2', nombre:'Descuento 20%',  descripcion:'En tu próxima reserva',                 puntos:500,  activo:true, icono:'💰' },
+      { id:'p_def3', nombre:'Kit de paleta',  descripcion:'Paleta + 3 pelotas de regalo',          puntos:1500, activo:true, icono:'🏆' },
+    ];
+
+    function getPremiosPub() {
+      try {
+        var stored = JSON.parse(localStorage.getItem(PREMIOS_KEY_PUB));
+        if (stored && stored.length) return stored.filter(function(p){ return p.activo !== false; });
+      } catch(e) {}
+      return DEFAULT_PREMIOS_PUB;
+    }
+
+    function getSesionPub() {
+      try { return JSON.parse(localStorage.getItem(SESSION_KEY_PUB)); } catch(e) { return null; }
+    }
+
+    function renderPremiosPage() {
+      var premios = getPremiosPub();
+      var sess = getSesionPub();
+      var grid = document.getElementById('premios-grid-publico');
+      var cta  = document.getElementById('premios-cta');
+      var misPtsBanner = document.getElementById('premios-mis-puntos');
+      var subTxt = document.getElementById('premios-sub-txt');
+
+      if (sess) {
+        // Show points banner
+        misPtsBanner.style.display = 'block';
+        document.getElementById('premios-pts-numero').textContent = sess.puntos || 0;
+        subTxt.textContent = 'Estos son los premios que podés canjear con tus puntos.';
+        cta.style.display = 'none';
+      } else {
+        misPtsBanner.style.display = 'none';
+        subTxt.textContent = 'Iniciá sesión para ver qué podés canjear.';
+        cta.style.display = 'block';
+      }
+
+      if (!grid) return;
+
+      if (!premios.length) {
+        grid.innerHTML = '<p style="color:rgba(255,255,255,.3);text-align:center;padding:40px;font-family:\'Outfit\',sans-serif;grid-column:1/-1">No hay premios disponibles por el momento.</p>';
+        return;
+      }
+
+      var userPts = sess ? (sess.puntos || 0) : 0;
+
+      grid.innerHTML = premios.map(function(p) {
+        var puede = sess && userPts >= p.puntos;
+        var accion;
+        if (sess) {
+          if (puede) {
+            accion = '<button class="ac-canjear-btn" style="width:100%;padding:9px" onclick="canjearDesdeGrid(\'' + p.id + '\')">Canjear premio</button>';
+          } else {
+            accion = '<span class="ac-faltan-label" style="font-size:13px;color:rgba(255,255,255,.35)">Faltan ' + (p.puntos - userPts) + ' pts</span>';
+          }
+        } else {
+          accion = '<button class="ac-nav-login" style="width:100%;justify-content:center;text-align:center;display:block;padding:9px 0" onclick="AC.open(\'login\')">Iniciar sesión</button>';
+        }
+
+        return '<div class="puntos-premio-card premios-card-ext' + (puede ? ' premios-puede' : '') + '">' +
+          '<div class="puntos-premio-ico">' + (p.icono || '🎴') + '</div>' +
+          '<div class="puntos-premio-pts">★ ' + p.puntos + ' puntos</div>' +
+          '<div class="puntos-premio-nom">' + p.nombre + '</div>' +
+          '<div class="puntos-premio-desc">' + (p.descripcion || '') + '</div>' +
+          '<div class="premios-card-accion">' + accion + '</div>' +
+          '</div>';
+      }).join('');
+    }
+
+    function canjearDesdeGrid(id) {
+      if (window.AC && typeof AC.canjear === 'function') {
+        AC.canjear(id);
+        setTimeout(renderPremiosPage, 120);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', renderPremiosPage);
+  </script>
+
+  <script src="js/auth-client.js"></script>
+  <script>
+    // Re-render after auth-client updates session
+    (function() {
+      var orig_updateNav = null;
+      var interval = setInterval(function() {
+        if (window.AC) {
+          clearInterval(interval);
+          renderPremiosPage();
+        }
+      }, 80);
+    })();
+  </script>
+
+</body>
+</html>

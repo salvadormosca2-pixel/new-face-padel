@@ -1,8 +1,24 @@
 /* ═══════════════════════════════════════════════════════════
-   api.js — MODO DEMO (sin backend real)
+   api.js — DEMO / PRODUCCIÓN
+   DEMO_MODE = true  → datos locales en memoria
+   DEMO_MODE = false → fetch al backend (Railway)
    ═══════════════════════════════════════════════════════════ */
 
-const DEMO_MODE = true;
+const DEMO_MODE = window.__DEMO_MODE__ !== false;
+
+const API_URL = window.__API_URL__ || '';
+
+async function _fetch(endpoint, opts = {}) {
+  const token = localStorage.getItem('padelpro_token');
+  const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  const res = await fetch(API_URL + endpoint, { ...opts, headers });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || 'Error del servidor');
+  }
+  return res.json();
+}
 
 /* ─── HELPERS DE TORNEOS (lógica WPT) ───────────────────── */
 
@@ -209,6 +225,8 @@ const _demo = {
       _id: 'torneo-1',
       nombre: 'Copa Primavera 2026',
       fecha: '2026-06-01',
+      descripcion: 'Torneo de dobles mixto abierto a todos los niveles. Formato de fase de grupos + bracket eliminatorio. Los mejores 2 de cada grupo avanzan a cuartos de final. Premiación para los 3 primeros puestos. ¡Inscribite y viví la experiencia!',
+      imagen: 'https://images.unsplash.com/photo-1554284126-aa88f22d8b74?w=1200&auto=format&fit=crop&q=80',
       estado: 'inscripcion',
       inscripciones: [
         { id: 't1p1', jugador1: { nombre: 'Martín Gómez', telefono: '1145678901' }, jugador2: { nombre: 'Lucas Herrera', telefono: '1167891234' }, nombrePareja: 'Gómez / Herrera', estadoInscripcion: 'aceptada' },
@@ -226,6 +244,8 @@ const _demo = {
       _id: 'torneo-2',
       nombre: 'Copa Otoño 2025',
       fecha: '2025-10-15',
+      descripcion: 'Torneo ya finalizado. Participaron 8 parejas en dos grupos. Fase de grupos completa y bracket eliminatorio disputado. Revivé todos los resultados y el campeón del torneo.',
+      imagen: 'https://images.unsplash.com/photo-1599474924187-334a4ae5bd3c?w=1200&auto=format&fit=crop&q=80',
       estado: 'finalizado',
       inscripciones: [
         { id: 't2p1', jugador1: { nombre: 'Martín Gómez', telefono: '1145678901' }, jugador2: { nombre: 'Lucas Herrera', telefono: '1167891234' }, nombrePareja: 'Gómez / Herrera', estadoInscripcion: 'aceptada' },
@@ -404,9 +424,9 @@ function _findPartidoEnBracket(torneo, partidoId) {
   return (torneo.bracket || []).find(p => p.id === partidoId) || null;
 }
 
-/* ─── API DEMO ───────────────────────────────────────────── */
+/* ─── API ────────────────────────────────────────────────── */
 
-const api = {
+const _apiDemo = {
 
   /* ── Horarios ── */
   getHorarios: async () => {
@@ -474,11 +494,13 @@ const api = {
     return _getTorneosDemo().find(t => t._id === id) || null;
   },
 
-  crearTorneo: async ({ nombre, fecha }) => {
+  crearTorneo: async ({ nombre, fecha, descripcion, imagen }) => {
     await _delay(400);
     const nuevo = {
       _id: 'torneo-' + Date.now(),
       nombre, fecha,
+      descripcion: descripcion || '',
+      imagen: imagen || '',
       estado: 'inscripcion',
       inscripciones: [],
       grupos: {},
@@ -497,7 +519,6 @@ const api = {
     return { ok: true };
   },
 
-  /* Inscripción pública (desde frontend) — queda pendiente hasta que admin acepte */
   inscribirsePublico: async (torneoId, { jugador1, jugador2 }) => {
     await _delay(500);
     const torneo = _getTorneosDemo().find(t => t._id === torneoId);
@@ -514,7 +535,6 @@ const api = {
     return { ok: true, inscripcion: nueva };
   },
 
-  /* Admin agrega pareja directamente — queda aceptada */
   agregarParejaAdmin: async (torneoId, { jugador1, jugador2 }) => {
     await _delay(400);
     const torneo = _getTorneosDemo().find(t => t._id === torneoId);
@@ -531,7 +551,6 @@ const api = {
     return torneo;
   },
 
-  /* Admin acepta inscripción pendiente */
   aceptarInscripcion: async (torneoId, inscripcionId) => {
     await _delay(300);
     const torneo = _getTorneosDemo().find(t => t._id === torneoId);
@@ -542,7 +561,6 @@ const api = {
     return torneo;
   },
 
-  /* Admin rechaza / elimina inscripción */
   eliminarInscripcion: async (torneoId, inscripcionId) => {
     await _delay(300);
     const torneo = _getTorneosDemo().find(t => t._id === torneoId);
@@ -552,7 +570,6 @@ const api = {
     return torneo;
   },
 
-  /* Genera grupos automáticos (sorteo WPT) */
   generarGrupos: async (torneoId) => {
     await _delay(600);
     const torneo = _getTorneosDemo().find(t => t._id === torneoId);
@@ -561,7 +578,6 @@ const api = {
     const aceptadas = torneo.inscripciones.filter(i => i.estadoInscripcion === 'aceptada');
     if (aceptadas.length < 2) throw new Error('Se necesitan al menos 2 parejas aceptadas');
 
-    // Mezcla aleatoria (Fisher-Yates)
     const shuffled = [...aceptadas];
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -598,7 +614,6 @@ const api = {
     return torneo;
   },
 
-  /* Actualiza hora o resultado de un partido de grupo */
   actualizarPartidoGrupo: async (torneoId, grupoLetra, partidoId, { hora, resultado, ganador }) => {
     await _delay(350);
     const torneo = _getTorneosDemo().find(t => t._id === torneoId);
@@ -619,7 +634,6 @@ const api = {
     return torneo;
   },
 
-  /* Genera el cuadro eliminatorio (WPT) */
   generarBracket: async (torneoId) => {
     await _delay(600);
     const torneo = _getTorneosDemo().find(t => t._id === torneoId);
@@ -636,7 +650,6 @@ const api = {
     return torneo;
   },
 
-  /* Actualiza hora o resultado de un partido del bracket */
   actualizarPartidoBracket: async (torneoId, partidoId, { hora, resultado, ganador }) => {
     await _delay(350);
     const torneo = _getTorneosDemo().find(t => t._id === torneoId);
@@ -756,6 +769,108 @@ const api = {
     return _demo.dashboard;
   },
 };
+
+const _apiReal = {
+  getHorarios:              (fecha) => _fetch('/api/horarios/' + (fecha || hoy())),
+  reservar:                 (datos) => _fetch('/api/reservar', { method: 'POST', body: JSON.stringify(datos) }),
+  getReservasAdmin:         (fecha) => _fetch('/api/admin/reservas/' + (fecha || hoy())),
+  marcarPagado:             (datos) => _fetch('/api/admin/pago', { method: 'PATCH', body: JSON.stringify(datos) }),
+  agregarTurnoAdmin:        (datos) => _fetch('/api/admin/reserva', { method: 'POST', body: JSON.stringify(datos) }),
+  quitarTurno:              (datos) => _fetch('/api/admin/reserva', { method: 'DELETE', body: JSON.stringify(datos) }),
+
+  getTorneos:               () => _fetch('/api/torneos'),
+  getTorneo:                (id) => _fetch('/api/torneos/' + id),
+  crearTorneo:              async (d) => { const t = await _fetch('/api/admin/torneos', { method: 'POST', body: JSON.stringify(d) }); toast('Torneo creado ✓', 'verde'); return t; },
+  eliminarTorneo:           async (id) => { const r = await _fetch('/api/admin/torneos/' + id, { method: 'DELETE' }); toast('Torneo eliminado', ''); return r; },
+  inscribirsePublico:       (tId, datos) => _fetch('/api/torneos/' + tId + '/inscripcion', { method: 'POST', body: JSON.stringify(datos) }),
+
+  agregarParejaAdmin: async (tId, datos) => {
+    const torneo = await _fetch('/api/torneos/' + tId);
+    const nombrePareja = `${datos.jugador1.nombre.split(' ').pop()} / ${datos.jugador2.nombre.split(' ').pop()}`;
+    const nueva = { id: _uid(), jugador1: datos.jugador1, jugador2: datos.jugador2, nombrePareja, estadoInscripcion: 'aceptada' };
+    if (!Array.isArray(torneo.inscripciones)) torneo.inscripciones = [];
+    torneo.inscripciones.push(nueva);
+    const u = await _fetch('/api/admin/torneos/' + tId, { method: 'PUT', body: JSON.stringify(torneo) });
+    toast('Pareja agregada ✓', 'verde'); return u;
+  },
+
+  aceptarInscripcion: async (tId, iId) => {
+    const torneo = await _fetch('/api/torneos/' + tId);
+    const insc = (torneo.inscripciones || []).find(i => i.id === iId);
+    if (insc) insc.estadoInscripcion = 'aceptada';
+    const u = await _fetch('/api/admin/torneos/' + tId, { method: 'PUT', body: JSON.stringify(torneo) });
+    toast('Inscripción aceptada ✓', 'verde'); return u;
+  },
+
+  eliminarInscripcion: async (tId, iId) => {
+    const torneo = await _fetch('/api/torneos/' + tId);
+    torneo.inscripciones = (torneo.inscripciones || []).filter(i => i.id !== iId);
+    const u = await _fetch('/api/admin/torneos/' + tId, { method: 'PUT', body: JSON.stringify(torneo) });
+    toast('Pareja eliminada', ''); return u;
+  },
+
+  generarGrupos: async (tId) => {
+    const torneo = await _fetch('/api/torneos/' + tId);
+    const aceptadas = (torneo.inscripciones || []).filter(i => i.estadoInscripcion === 'aceptada');
+    if (aceptadas.length < 2) throw new Error('Se necesitan al menos 2 parejas aceptadas');
+    const shuffled = [...aceptadas];
+    for (let i = shuffled.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]; }
+    const n = shuffled.length;
+    const numGrupos = n <= 4 ? 1 : n <= 8 ? 2 : n <= 12 ? 3 : 4;
+    const letras = ['A','B','C','D'].slice(0, numGrupos);
+    torneo.grupos = {};
+    letras.forEach((letra, idx) => {
+      const ids = shuffled.slice(Math.floor(idx * n / numGrupos), Math.floor((idx + 1) * n / numGrupos)).map(p => p.id);
+      torneo.grupos[letra] = { parejas: ids, tabla: ids.map(id => ({ parejaId: id, V:0, D:0, SG:0, SP:0, JG:0, JP:0, Pts:0 })), partidos: _generarRoundRobin(letra, ids) };
+    });
+    torneo.estado = 'grupos'; torneo.bracket = []; torneo.campeon = null;
+    const u = await _fetch('/api/admin/torneos/' + tId, { method: 'PUT', body: JSON.stringify(torneo) });
+    toast('Grupos generados ✓', 'verde'); return u;
+  },
+
+  actualizarPartidoGrupo: async (tId, gl, pId, datos) => {
+    const torneo = await _fetch('/api/torneos/' + tId);
+    const grupo = torneo.grupos?.[gl]; if (!grupo) throw new Error('Grupo no encontrado');
+    const partido = (grupo.partidos || []).find(p => p.id === pId); if (!partido) throw new Error('Partido no encontrado');
+    if (datos.hora !== undefined) partido.hora = datos.hora;
+    if (datos.resultado !== undefined && datos.ganador !== undefined) { partido.resultado = datos.resultado; partido.ganador = datos.ganador; _recalcularTabla(grupo); }
+    const u = await _fetch('/api/admin/torneos/' + tId, { method: 'PUT', body: JSON.stringify(torneo) });
+    toast('Partido actualizado ✓', 'verde'); return u;
+  },
+
+  generarBracket: async (tId) => {
+    const torneo = await _fetch('/api/torneos/' + tId);
+    for (const l of Object.keys(torneo.grupos || {}).sort()) { if ((torneo.grupos[l].partidos || []).some(p => !p.ganador)) throw new Error(`Hay partidos sin resultado en Grupo ${l}`); }
+    _generarBracket(torneo);
+    const u = await _fetch('/api/admin/torneos/' + tId, { method: 'PUT', body: JSON.stringify(torneo) });
+    toast('Cuadro eliminatorio generado ✓', 'verde'); return u;
+  },
+
+  actualizarPartidoBracket: async (tId, pId, datos) => {
+    const torneo = await _fetch('/api/torneos/' + tId);
+    const partido = (torneo.bracket || []).find(p => p.id === pId); if (!partido) throw new Error('Partido no encontrado');
+    if (datos.hora !== undefined) partido.hora = datos.hora;
+    if (datos.resultado !== undefined && datos.ganador !== undefined) { partido.resultado = datos.resultado; partido.ganador = datos.ganador; _avanzarBracket(torneo, partido); }
+    const u = await _fetch('/api/admin/torneos/' + tId, { method: 'PUT', body: JSON.stringify(torneo) });
+    toast('Resultado cargado ✓', 'verde'); return u;
+  },
+
+  getProfesores:            () => _fetch('/api/profesores'),
+  agregarProfesor:          async (d) => { const p = await _fetch('/api/admin/profesores', { method: 'POST', body: JSON.stringify(d) }); toast('Profesor agregado ✓', 'verde'); return p; },
+  editarProfesor:           async (id, d) => { const p = await _fetch('/api/admin/profesores/' + id, { method: 'PATCH', body: JSON.stringify(d) }); toast('Profesor actualizado ✓', 'verde'); return p; },
+  quitarProfesor:           async (id) => { const r = await _fetch('/api/admin/profesores/' + id, { method: 'DELETE' }); toast('Profesor eliminado', ''); return r; },
+
+  getSocios:                () => _fetch('/api/admin/socios'),
+  getSocioPuntos:           (tel) => _fetch('/api/socios/' + tel),
+  ajustarPuntos:            async (id, pts) => { const s = await _fetch('/api/admin/socios/' + id + '/puntos', { method: 'PATCH', body: JSON.stringify({ puntos: pts }) }); toast('Puntos actualizados ✓', 'verde'); return s; },
+  editarSocio:              async (id, d) => { const s = await _fetch('/api/admin/socios/' + id, { method: 'PATCH', body: JSON.stringify(d) }); toast('Socio actualizado ✓', 'verde'); return s; },
+
+  getReporte:               () => _fetch('/api/admin/ingresos/reporte'),
+  getReporteMes:            (año, mes) => _fetch('/api/admin/ingresos/mes?año=' + año + '&mes=' + mes),
+  getDashboard:             () => _fetch('/api/admin/dashboard'),
+};
+
+const api = DEMO_MODE ? _apiDemo : _apiReal;
 
 /* ─── UTILIDADES GLOBALES ─────────────────────────────────── */
 

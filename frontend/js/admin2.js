@@ -3,35 +3,63 @@
    ════════════════════════════════════════════════════ */
 
 /* ─── AUTH ───────────────────────────────────────────── */
-const AUTH_KEY   = 'padelpro_token';
-const AUTH_PASS  = 'newface2026';
+const AUTH_KEY    = 'padelpro_token';
+const _ADM_API   = window.__API_URL__ || '';
+const _USE_API   = window.__DEMO_MODE__ === false && !!_ADM_API;
+const _C2N       = { c1: 1, c2: 2, c3: 3, c4: 4 };
+const _N2C       = { 1: 'c1', 2: 'c2', 3: 'c3', 4: 'c4' };
 
-function authCheck() {
+function _apiFetch(endpoint, opts = {}) {
   const token = localStorage.getItem(AUTH_KEY);
-  if (token) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  return fetch(_ADM_API + endpoint, { ...opts, headers }).then(async res => {
+    if (res.status === 401) { doLogout(); throw new Error('Sesión expirada'); }
+    if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.error || 'Error del servidor'); }
+    return res.json();
+  });
+}
+
+async function authCheck() {
+  const token = localStorage.getItem(AUTH_KEY);
+  if (!token) return;
+  if (_USE_API) {
+    try { await _apiFetch('/api/auth/verify'); document.getElementById('login-overlay').classList.add('hidden'); }
+    catch { localStorage.removeItem(AUTH_KEY); }
+  } else {
     document.getElementById('login-overlay').classList.add('hidden');
   }
 }
 
-function doLogin(e) {
+async function doLogin(e) {
   e.preventDefault();
-  const pass = document.getElementById('login-pass').value;
+  const pass  = document.getElementById('login-pass').value;
   const errEl = document.getElementById('login-error');
   const btn   = document.getElementById('login-btn');
   errEl.textContent = '';
-  if (pass !== AUTH_PASS) {
-    errEl.textContent = 'Contraseña incorrecta. Intentá de nuevo.';
-    document.getElementById('login-pass').value = '';
-    return;
-  }
   btn.disabled = true;
   btn.textContent = 'Ingresando...';
-  localStorage.setItem(AUTH_KEY, 'token-' + Date.now());
-  setTimeout(() => {
-    document.getElementById('login-overlay').classList.add('hidden');
-    btn.disabled = false;
-    btn.textContent = 'Ingresar';
-  }, 400);
+  if (_USE_API) {
+    try {
+      const data = await _apiFetch('/api/auth/login', { method: 'POST', body: JSON.stringify({ password: pass }) });
+      localStorage.setItem(AUTH_KEY, data.token);
+      document.getElementById('login-overlay').classList.add('hidden');
+      const now = new Date();
+      await _fetchTurnosMonth(now.getFullYear(), now.getMonth() + 1);
+      renderDashboard();
+    } catch (err) {
+      errEl.textContent = err.message || 'Error al conectar';
+      document.getElementById('login-pass').value = '';
+    } finally { btn.disabled = false; btn.textContent = 'Ingresar'; }
+  } else {
+    if (pass !== 'newface2026') {
+      errEl.textContent = 'Contraseña incorrecta. Intentá de nuevo.';
+      document.getElementById('login-pass').value = '';
+      btn.disabled = false; btn.textContent = 'Ingresar'; return;
+    }
+    localStorage.setItem(AUTH_KEY, 'token-' + Date.now());
+    setTimeout(() => { document.getElementById('login-overlay').classList.add('hidden'); btn.disabled = false; btn.textContent = 'Ingresar'; }, 400);
+  }
 }
 
 function doLogout() {
@@ -109,6 +137,34 @@ function loadFromStorage() {
   } catch(e) {}
 }
 
+async function _fetchTurnosDate(dateKey) {
+  try {
+    const data = await _apiFetch('/api/admin/reservas/' + dateKey);
+    ensureDate(dateKey);
+    Object.keys(data).forEach(num => {
+      const cid = _N2C[num]; if (!cid) return;
+      turnosStore[dateKey][cid] = {};
+      data[num].reservas.forEach(r => {
+        if (!r.libre) turnosStore[dateKey][cid][r.hora] = { nombre: r.nombre, estado: r.estado, metodoPago: r.metodoCobro || r.metodoPago || null, claveUnica: r.claveUnica, telefono: r.telefono || '' };
+      });
+    });
+  } catch (err) { console.error('Error cargando turnos:', err); }
+}
+
+async function _fetchTurnosMonth(year, month) {
+  const desde = `${year}-${String(month).padStart(2,'0')}-01`;
+  const dias  = new Date(year, month, 0).getDate();
+  const hasta = `${year}-${String(month).padStart(2,'0')}-${String(dias).padStart(2,'0')}`;
+  try {
+    const reservas = await _apiFetch('/api/admin/reservas?desde=' + desde + '&hasta=' + hasta);
+    reservas.forEach(r => {
+      const cid = _N2C[r.cancha]; if (!cid) return;
+      ensureDate(r.fecha);
+      turnosStore[r.fecha][cid][r.hora] = { nombre: r.nombre, estado: r.estado, metodoPago: r.metodoCobro || r.metodoPago || null, claveUnica: r.claveUnica, telefono: r.telefono || '' };
+    });
+  } catch (err) { console.error('Error cargando mes:', err); }
+}
+
 function exportCSV() {
   const rows = [['Fecha','Cancha','Tipo','Hora','Cliente','Estado','Método de pago','Precio']];
   Object.keys(turnosStore).sort().forEach(date => {
@@ -127,7 +183,7 @@ function exportCSV() {
   a.href = url; a.download = `padel-finanzas-${todayKey()}.csv`;
   document.body.appendChild(a); a.click();
   document.body.removeChild(a); URL.revokeObjectURL(url);
-  showToast('✓ CSV exportado correctamente','green');
+  toast('✓ CSV exportado correctamente','green');
 }
 
 /* ─── Store helpers ──────────────────────────────────── */
@@ -189,19 +245,22 @@ function getWeekData(monday) {
 }
 
 function getMonthData(year, month) {
-  let total=0, reservas=0, bestDay=null, bestAmt=0, efectivo=0, transferencia=0, online=0;
+  let total=0, reservas=0, bestDay=null, bestAmt=0, efectivo=0, transferencia=0, online=0, pendiente=0, turnosPendientes=0;
   const daysInMonth = new Date(year, month+1, 0).getDate();
   for (let d=1; d<=daysInMonth; d++) {
     const key = _key(year, month+1, d);
     const dd  = getDayData(key);
     total      += dd.ingresos;
+    pendiente  += dd.pendiente;
     reservas   += dd.reservas;
     efectivo   += dd.efectivo;
     transferencia += dd.transferencia;
     online     += dd.online;
     if (dd.ingresos > bestAmt) { bestAmt=dd.ingresos; bestDay=new Date(year, month, d); }
+    const data = turnosStore[_key(year, month+1, d)];
+    if (data) CANCHAS.forEach(c => { Object.values(data[c.id]||{}).forEach(t => { if (t.estado !== 'pagado') turnosPendientes++; }); });
   }
-  return { total, reservas, bestDay, bestAmt, efectivo, transferencia, online, daysInMonth };
+  return { total, reservas, bestDay, bestAmt, efectivo, transferencia, online, pendiente, turnosPendientes, daysInMonth };
 }
 
 /* ─── Sample data ────────────────────────────────────── */
@@ -578,17 +637,23 @@ function buildDetailPanel(canchaId, hora, data) {
     </div>`;
 }
 
-function agendarTurno(canchaId, hora, inputId) {
+async function agendarTurno(canchaId, hora, inputId) {
   const nombre = (document.getElementById(inputId)?.value||'').trim();
-  if (!nombre) { showToast('Ingresá el nombre del cliente','red'); return; }
+  if (!nombre) { toast('Ingresá el nombre del cliente','red'); return; }
   const key = getDateKey(currentDate);
   const c   = CANCHAS.find(x=>x.id===canchaId);
-  setTurno(key, canchaId, hora, nombre);
-  closeActivePanel();
-  renderSlotOnly(canchaId, hora);
-  updateBadgeLibres(canchaId);
-  updateDashStats();
-  showToast(`✓ ${nombre} agendado a las ${hora} — ${c.nombre}`,'green');
+  if (_USE_API) {
+    try {
+      await _apiFetch('/api/admin/reserva', { method:'POST', body:JSON.stringify({ nombre, telefono:'', fecha:key, hora, cancha:_C2N[canchaId] }) });
+      await _fetchTurnosDate(key);
+      closeActivePanel(); renderTurnos();
+      toast(`✓ ${nombre} agendado a las ${hora} — ${c.nombre}`,'green');
+    } catch (err) { toast(err.message||'Error al agendar','red'); }
+  } else {
+    setTurno(key, canchaId, hora, nombre);
+    closeActivePanel(); renderSlotOnly(canchaId, hora); updateBadgeLibres(canchaId); updateDashStats();
+    toast(`✓ ${nombre} agendado a las ${hora} — ${c.nombre}`,'green');
+  }
 }
 
 function setEstado(canchaId, hora, estado) {
@@ -602,6 +667,11 @@ function setEstado(canchaId, hora, estado) {
     activePanelInfo.panelEl.innerHTML = buildDetailPanel(canchaId, hora, slot);
   renderSlotOnly(canchaId, hora);
   updateDashStats();
+  if (_USE_API && slot.claveUnica && estado==='pagado') {
+    const c = CANCHAS.find(x=>x.id===canchaId);
+    _apiFetch('/api/admin/pago', { method:'PATCH', body:JSON.stringify({ claveUnica:slot.claveUnica, metodoCobro:slot.metodoPago||'efectivo', monto:c.precio }) })
+      .catch(err => toast('Error sync: '+err.message,'red'));
+  }
 }
 
 function setMetodo(canchaId, hora, metodo) {
@@ -614,16 +684,30 @@ function setMetodo(canchaId, hora, metodo) {
     activePanelInfo.panelEl.innerHTML = buildDetailPanel(canchaId, hora, slot);
   renderSlotOnly(canchaId, hora);
   updateDashStats();
+  if (_USE_API && slot.claveUnica && slot.estado==='pagado') {
+    const c = CANCHAS.find(x=>x.id===canchaId);
+    _apiFetch('/api/admin/pago', { method:'PATCH', body:JSON.stringify({ claveUnica:slot.claveUnica, metodoCobro:metodo, monto:c.precio }) })
+      .catch(err => toast('Error sync: '+err.message,'red'));
+  }
 }
 
-function liberarTurno(canchaId, hora, nombre) {
-  const c = CANCHAS.find(x=>x.id===canchaId);
-  delTurno(getDateKey(currentDate), canchaId, hora);
-  closeActivePanel();
-  renderSlotOnly(canchaId, hora);
-  updateBadgeLibres(canchaId);
-  updateDashStats();
-  showToast(`✕ Turno de ${nombre} a las ${hora} liberado`,'red');
+async function liberarTurno(canchaId, hora, nombre) {
+  const key = getDateKey(currentDate);
+  if (_USE_API) {
+    const slot = getTurno(key, canchaId, hora);
+    if (slot?.claveUnica) {
+      try {
+        await _apiFetch('/api/admin/reserva', { method:'DELETE', body:JSON.stringify({ claveUnica:slot.claveUnica }) });
+        await _fetchTurnosDate(key);
+        closeActivePanel(); renderTurnos();
+        toast(`✕ Turno de ${nombre} a las ${hora} liberado`,'red');
+      } catch (err) { toast(err.message||'Error','red'); }
+    }
+  } else {
+    delTurno(key, canchaId, hora);
+    closeActivePanel(); renderSlotOnly(canchaId, hora); updateBadgeLibres(canchaId); updateDashStats();
+    toast(`✕ Turno de ${nombre} a las ${hora} liberado`,'red');
+  }
 }
 
 function renderSlotOnly(canchaId, hora) {
@@ -745,6 +829,7 @@ function finChangeMonth(d) {
   const btnSig = document.getElementById('fin-btn-sig');
   if (btnSig) btnSig.disabled = finYear === now.getFullYear() && finMonth >= now.getMonth();
   renderResumenMes();
+  renderHistorial();
 }
 
 /* ─── Bloque A: Resumen del mes ──────────────────────── */
@@ -764,7 +849,7 @@ function renderResumenMes() {
   const lbl = document.getElementById('fin-mes-label');
   if (lbl) lbl.textContent = `${MESES[finMonth]} ${finYear}`;
 
-  // 4 stat cards
+  // 6 stat cards
   const bestSemana = calcBestWeek(finYear, finMonth);
   const el = document.getElementById('fin-stats-cards');
   if (el) el.innerHTML = `
@@ -773,9 +858,19 @@ function renderResumenMes() {
       <div class="adm2-fin-value" style="color:var(--a2-green)">${formatArs(md.total)}</div>
       <div class="adm2-fin-sub">${md.reservas} reservas confirmadas</div>
     </div>
+    <div class="adm2-fin-card adm2-fin-card-pending">
+      <div class="adm2-fin-label">Pagos pendientes</div>
+      <div class="adm2-fin-value" style="color:var(--a2-red)">${formatArs(md.pendiente)}</div>
+      <div class="adm2-fin-sub">${md.turnosPendientes} turno${md.turnosPendientes!==1?'s':''} sin cobrar</div>
+    </div>
+    <div class="adm2-fin-card">
+      <div class="adm2-fin-label">Turnos del mes</div>
+      <div class="adm2-fin-value" style="color:var(--a2-blue)">${md.reservas}</div>
+      <div class="adm2-fin-sub">${md.reservas - md.turnosPendientes} pagado${md.reservas - md.turnosPendientes!==1?'s':''} · ${md.turnosPendientes} pendiente${md.turnosPendientes!==1?'s':''}</div>
+    </div>
     <div class="adm2-fin-card">
       <div class="adm2-fin-label">Mejor semana</div>
-      <div class="adm2-fin-value" style="color:var(--a2-blue)">${formatArs(bestSemana.total)}</div>
+      <div class="adm2-fin-value" style="color:var(--a2-purple)">${formatArs(bestSemana.total)}</div>
       <div class="adm2-fin-sub">${bestSemana.reservas} reservas · ${bestSemana.label}</div>
     </div>
     <div class="adm2-fin-card">
@@ -785,7 +880,7 @@ function renderResumenMes() {
     </div>
     <div class="adm2-fin-card">
       <div class="adm2-fin-label">Promedio diario</div>
-      <div class="adm2-fin-value" style="color:var(--a2-purple)">${formatArs(Math.round(avgDaily))}</div>
+      <div class="adm2-fin-value" style="color:var(--a2-text-dim)">${formatArs(Math.round(avgDaily))}</div>
       <div class="adm2-fin-sub">Basado en ${dayOfMonth} día${dayOfMonth!==1?'s':''} con datos</div>
     </div>`;
 
@@ -967,58 +1062,76 @@ function renderDayDetail(key) {
     </div>`;
 }
 
-/* ─── Bloque C: Historial semanas ────────────────────── */
+/* ─── Bloque C: Historial semanas del mes seleccionado ── */
 function renderHistorial() {
   const el = document.getElementById('fin-hist-list');
   if (!el) return;
 
-  const today  = new Date();
-  const weeks  = [];
-  for (let i=0; i<8; i++) {
-    const monday = mondayOf(addDays(today, -i*7));
-    const wd     = getWeekData(monday);
-    const d1     = monday;
-    const d7     = addDays(monday,6);
-    const label  = `${d1.getDate()} ${MESES_CORTO[d1.getMonth()]} — ${d7.getDate()} ${MESES_CORTO[d7.getMonth()]}`;
-    weeks.push({ ...wd, label, idx:i });
+  // Actualizar título con el mes seleccionado
+  const lblMes = document.getElementById('fin-hist-mes-label');
+  if (lblMes) lblMes.textContent = `${MESES[finMonth]} ${finYear}`;
+
+  // Calcular todas las semanas del mes seleccionado
+  const weeks  = calcWeeksOfMonth(finYear, finMonth);
+  const todayStr = todayKey();
+  const DIASN  = ['Lu','Ma','Mi','Ju','Vi','Sá','Do'];
+
+  if (!weeks.length) {
+    el.innerHTML = '<p style="color:var(--a2-text-muted);padding:20px;text-align:center">Sin datos para este mes.</p>';
+    return;
   }
 
-  const maxTotal = Math.max(1, ...weeks.map(w=>w.total));
-  const DIASN    = ['Lu','Ma','Mi','Ju','Vi','Sá','Do'];
+  // Determinar semana actual para marcarla
+  const todayMonday = getDateKey(mondayOf(new Date()));
 
-  el.innerHTML = weeks.map(w => {
-    const maxDay = Math.max(1, ...w.days.map(d=>d.ingresos));
-    const daysHtml = w.days.map((d,di)=>`
+  const firstOfMonth = new Date(finYear, finMonth, 1);
+  const lastOfMonth  = new Date(finYear, finMonth + 1, 0);
+
+  el.innerHTML = weeks.map((w, idx) => {
+    // Recortar el rango al mes: nunca mostrar días de otro mes
+    const d1 = w.days[0].date < firstOfMonth ? firstOfMonth : w.days[0].date;
+    const d7 = w.days[6].date > lastOfMonth  ? lastOfMonth  : w.days[6].date;
+    const label = `${d1.getDate()} ${MESES_CORTO[d1.getMonth()]} — ${d7.getDate()} ${MESES_CORTO[d7.getMonth()]}`;
+    const isCurrentWeek = getDateKey(w.days[0].date) === todayMonday;
+
+    // Solo mostrar días que pertenecen al mes seleccionado
+    const daysDelMes = w.days.filter(d => d.date.getMonth() === finMonth && d.date.getFullYear() === finYear);
+    const maxDay = Math.max(1, ...daysDelMes.map(d => d.ingresos));
+    const daysHtml = daysDelMes.map((d, di) => `
       <div class="adm2-hist-day">
-        <span class="adm2-hist-day-name">${DIASN[di]} ${d.date.getDate()}/${d.date.getMonth()+1}</span>
+        <span class="adm2-hist-day-name">${DIASN[d.date.getDay() === 0 ? 6 : d.date.getDay() - 1]} ${d.date.getDate()}/${d.date.getMonth()+1}</span>
         <div class="adm2-hist-day-track"><div class="adm2-hist-day-fill" style="width:${(d.ingresos/maxDay*100).toFixed(0)}%"></div></div>
         <span class="adm2-hist-day-res">${d.reservas} res.</span>
         <span class="adm2-hist-day-total ${d.ingresos===0?'zero':''}">${d.ingresos>0?formatArsLong(d.ingresos):'—'}</span>
       </div>`).join('');
 
-    const bestStr = w.bestDay ? DIAS_LARGO[w.bestDay.getDay()]+' '+w.bestDay.getDate() : '—';
-    const isThis  = w.idx===0;
+    const bestStr = w.bestDay ? DIAS_LARGO[w.bestDay.getDay()] + ' ' + w.bestDay.getDate() : '—';
 
     return `
       <div class="adm2-hist-item">
-        <div class="adm2-hist-header" onclick="toggleHistItem(this)" data-idx="${w.idx}">
+        <div class="adm2-hist-header" onclick="toggleHistItem(this)" data-idx="${idx}">
           <span class="adm2-hist-chevron">▶</span>
-          <span class="adm2-hist-label">${isThis?'Esta semana · ':''}<b style="color:var(--a2-text)">${w.label}</b></span>
+          <span class="adm2-hist-label">${isCurrentWeek ? 'Esta semana · ' : ''}<b style="color:var(--a2-text)">${label}</b></span>
           <div class="adm2-hist-badges">
             <span class="adm2-hist-res">${w.reservas} res.</span>
             <span class="adm2-hist-best">⭐ ${bestStr}</span>
             <span class="adm2-hist-total">${formatArs(w.total)}</span>
           </div>
         </div>
-        <div class="adm2-hist-body" id="hist-body-${w.idx}">
+        <div class="adm2-hist-body" id="hist-body-${idx}">
           <div class="adm2-hist-days">${daysHtml}</div>
         </div>
       </div>`;
   }).join('');
 
-  // Abrir esta semana por defecto
-  const firstHeader = el.querySelector('.adm2-hist-header');
-  if (firstHeader) toggleHistItem(firstHeader);
+  // Abrir la semana actual o la primera por defecto
+  const currentHeader = el.querySelector('.adm2-hist-header[data-idx]');
+  const allHeaders = el.querySelectorAll('.adm2-hist-header');
+  const toOpen = Array.from(allHeaders).find(h => {
+    const idx = h.getAttribute('data-idx');
+    return document.getElementById('hist-body-'+idx)?.previousElementSibling?.querySelector('.adm2-hist-label')?.textContent?.includes('Esta semana');
+  }) || currentHeader;
+  if (toOpen) toggleHistItem(toOpen);
 }
 
 function toggleHistItem(header) {
@@ -1123,15 +1236,47 @@ function renderCampeon(t) {
 }
 
 function abrirModalTorneo() {
-  document.getElementById('torneo-nombre').value='';
-  document.getElementById('torneo-fecha').value=new Date().toISOString().split('T')[0];
+  document.getElementById('torneo-nombre').value = '';
+  document.getElementById('torneo-fecha').value  = new Date().toISOString().split('T')[0];
+  document.getElementById('torneo-desc').value   = '';
+  document.getElementById('torneo-imagen').value = '';
+  document.querySelectorAll('.tip-img').forEach(i => i.classList.remove('seleccionada'));
   abrirModal('modal-torneo');
 }
+
+function seleccionarImgTorneo(el, url) {
+  document.querySelectorAll('.tip-img').forEach(i => i.classList.remove('seleccionada'));
+  el.classList.add('seleccionada');
+  document.getElementById('torneo-imagen').value = url;
+}
+
+function cargarImgPropia(input) {
+  const file = input.files[0];
+  if (!file) return;
+  document.querySelectorAll('.tip-img').forEach(i => i.classList.remove('seleccionada'));
+  const nombreEl = document.getElementById('tip-file-nombre');
+  if (nombreEl) nombreEl.textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const dataUrl = e.target.result;
+    document.getElementById('torneo-imagen').value = dataUrl;
+    const preview = document.getElementById('tip-preview-propia');
+    if (preview) { preview.src = dataUrl; preview.style.display = 'block'; }
+  };
+  reader.readAsDataURL(file);
+}
+
 async function crearTorneo() {
-  const n=document.getElementById('torneo-nombre').value.trim();
-  const f=document.getElementById('torneo-fecha').value;
-  if(!n){toast('Ingresá un nombre para el torneo','rojo');return;}
-  try{await api.crearTorneo({nombre:n,fecha:f});cerrarModal('modal-torneo');cargarTorneosAdmin();}catch(e){toast(e.message||'Error','rojo');}
+  const n    = document.getElementById('torneo-nombre').value.trim();
+  const f    = document.getElementById('torneo-fecha').value;
+  const desc = document.getElementById('torneo-desc').value.trim();
+  const img  = document.getElementById('torneo-imagen').value;
+  if (!n) { toast('Ingresá un nombre para el torneo', 'rojo'); return; }
+  try {
+    await api.crearTorneo({ nombre:n, fecha:f, descripcion:desc, imagen:img });
+    cerrarModal('modal-torneo');
+    cargarTorneosAdmin();
+  } catch(e) { toast(e.message || 'Error', 'rojo'); }
 }
 async function eliminarTorneo(id) {
   if(!confirm('¿Eliminar este torneo?')) return;
@@ -1210,7 +1355,7 @@ async function confirmarResultado() {
    TOAST
    ════════════════════════════════════════════════════ */
 
-function showToast(msg, tipo='green') {
+function toast(msg, tipo='green') {
   const c = document.getElementById('adm2-toasts');
   if (!c) return;
   const t = document.createElement('div');
@@ -1224,11 +1369,17 @@ function showToast(msg, tipo='green') {
    INIT
    ════════════════════════════════════════════════════ */
 
-document.addEventListener('DOMContentLoaded', () => {
-  authCheck();
+document.addEventListener('DOMContentLoaded', async () => {
+  await authCheck();
   initPremios();
-  loadFromStorage();
-  generateSampleHistory();
+  const isLoggedIn = !!localStorage.getItem(AUTH_KEY);
+  if (_USE_API && isLoggedIn) {
+    const now = new Date();
+    await _fetchTurnosMonth(now.getFullYear(), now.getMonth() + 1);
+  } else if (!_USE_API) {
+    loadFromStorage();
+    generateSampleHistory();
+  }
   tickClock();
   setInterval(tickClock, 10000);
   renderDashboard();
@@ -1359,11 +1510,18 @@ function renderPremios() {
   const premios = getPremios();
   const grid = document.getElementById('premios-grid');
   if (!grid) return;
+
+  const btnNuevo = `
+    <div style="margin-bottom:20px">
+      <button class="adm2-btn-nuevo" onclick="abrirModalPremio(null)">+ Nuevo premio</button>
+    </div>`;
+
   if (!premios.length) {
-    grid.innerHTML = '<p style="color:var(--a2-text-muted);text-align:center;padding:40px">No hay premios. Agregá uno con el botón de arriba.</p>';
+    grid.innerHTML = btnNuevo + '<p style="color:var(--a2-text-muted);text-align:center;padding:40px">No hay premios todavía.</p>';
     return;
   }
-  grid.innerHTML = `<div class="premios-admin-grid">${premios.map(p => `
+
+  grid.innerHTML = btnNuevo + `<div class="premios-admin-grid">${premios.map(p => `
     <div class="premio-admin-card${p.activo ? '' : ' inactivo'}">
       <div class="premio-admin-top">
         <span class="premio-admin-icono">${p.icono || '🎁'}</span>
