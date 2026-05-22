@@ -126,10 +126,11 @@ function renderPaso3() {
   if (resumen) resumen.textContent = `${formatFecha(estado.fecha)} — ${estado.hora}`;
 
   const metodoPagoC = document.getElementById('metodo-pago-container');
-  if (metodoPagoC) {
-    metodoPagoC.querySelectorAll('.pago-opcion').forEach(op => {
+  if (metodoPagoC && !metodoPagoC._listenersReady) {
+    metodoPagoC._listenersReady = true;
+    metodoPagoC.querySelectorAll('.pago-prem-opcion').forEach(op => {
       op.addEventListener('click', () => {
-        metodoPagoC.querySelectorAll('.pago-opcion').forEach(o => o.classList.remove('seleccionada'));
+        metodoPagoC.querySelectorAll('.pago-prem-opcion').forEach(o => o.classList.remove('seleccionada'));
         op.classList.add('seleccionada');
         const radio = op.querySelector('input[type="radio"]');
         if (radio) radio.checked = true;
@@ -260,7 +261,7 @@ function reiniciarReserva() {
   const tel    = document.getElementById('telefono');
   if (nombre) nombre.value = '';
   if (tel)    tel.value    = '';
-  document.querySelectorAll('.pago-opcion').forEach(o => o.classList.remove('seleccionada'));
+  document.querySelectorAll('.pago-prem-opcion').forEach(o => o.classList.remove('seleccionada'));
   irAPaso(1);
   renderPaso1();
 }
