@@ -43,7 +43,7 @@ async function doLogin(e) {
       const data = await _apiFetch('/api/auth/login', { method: 'POST', body: JSON.stringify({ password: pass }) });
       localStorage.setItem(AUTH_KEY, data.token);
       document.getElementById('login-overlay').classList.add('hidden');
-      renderDashboard();
+      renderTurnosView();
     } catch (err) {
       errEl.textContent = err.message || 'Error al conectar';
       document.getElementById('login-pass').value = '';
@@ -55,7 +55,7 @@ async function doLogin(e) {
       btn.disabled = false; btn.textContent = 'Ingresar'; return;
     }
     localStorage.setItem(AUTH_KEY, 'token-' + Date.now());
-    setTimeout(() => { document.getElementById('login-overlay').classList.add('hidden'); btn.disabled = false; btn.textContent = 'Ingresar'; }, 400);
+    setTimeout(() => { document.getElementById('login-overlay').classList.add('hidden'); btn.disabled = false; btn.textContent = 'Ingresar'; renderTurnosView(); }, 400);
   }
 }
 
