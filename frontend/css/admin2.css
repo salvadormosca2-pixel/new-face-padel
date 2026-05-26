@@ -169,7 +169,7 @@
 .adm2-tab.active { color: var(--a2-green); border-bottom-color: var(--a2-green); }
 
 /* ─── Main content ───────────────────────────────────── */
-.adm2-main { padding: 24px 28px; max-width: 1600px; margin: 0 auto; }
+.adm2-main { padding: 16px 20px; max-width: 1600px; margin: 0 auto; }
 .adm2-view { display: none; }
 .adm2-view.active { display: block; animation: a2-fadeInUp .3s ease; }
 
@@ -194,6 +194,34 @@
   right: 0;
   height: 1px;
 }
+
+/* ─── Stats bar (compacta, horizontal) ──────────────── */
+.adm2-stats-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.adm2-stat-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--a2-mono);
+  border: 1px solid;
+}
+.adm2-stat-chip-icon { font-size: 13px; }
+.adm2-stat-chip.green   { background: var(--a2-green-dim); color: var(--a2-green); border-color: var(--a2-green-border); }
+.adm2-stat-chip.yellow  { background: rgba(234,179,8,.1); color: var(--a2-yellow); border-color: rgba(234,179,8,.25); }
+.adm2-stat-chip.blue    { background: var(--a2-blue-dim);  color: var(--a2-blue);  border-color: rgba(59,130,246,.25); }
+.adm2-stat-chip.purple  { background: rgba(168,85,247,.1); color: #a855f7;         border-color: rgba(168,85,247,.25); }
+
+/* ─── Secondary section (below main grid) ───────────── */
+.adm2-secondary-section { margin-top: 24px; }
 
 /* ─── Grillas de dashboard ───────────────────────────── */
 .adm2-stats-row {
@@ -415,8 +443,8 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 14px;
-  margin-bottom: 20px;
+  gap: 10px;
+  margin-bottom: 10px;
 }
 .adm2-view-toggle {
   display: flex;
@@ -498,7 +526,7 @@
 .adm2-canchas-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 12px;
 }
 
 /* ─── Cancha card ────────────────────────────────────── */
@@ -512,7 +540,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--a2-border);
 }
 .adm2-cancha-card-header-left {}
@@ -637,14 +665,16 @@
 .adm2-timeline {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 10px 12px;
+  gap: 3px;
+  padding: 6px 8px;
+  max-height: calc(100vh - 240px);
+  overflow-y: auto;
 }
 
 .adm2-tl-segment {
   border-radius: var(--a2-radius-sm);
   border: 1px solid;
-  padding: 12px 14px;
+  padding: 7px 10px;
   cursor: pointer;
   transition: all var(--a2-trans);
   user-select: none;
@@ -670,10 +700,10 @@
 
 .adm2-tl-time {
   font-family: var(--a2-mono);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   line-height: 1;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 .adm2-tl-segment.libre .adm2-tl-time    { color: var(--a2-green); }
 .adm2-tl-segment.ocupado .adm2-tl-time  { color: var(--a2-yellow); }
@@ -687,17 +717,17 @@
 }
 
 .adm2-tl-action {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   color: var(--a2-green);
-  margin-top: 4px;
+  margin-top: 2px;
   opacity: 0;
   transition: opacity var(--a2-trans);
 }
 .adm2-tl-segment.libre:hover .adm2-tl-action { opacity: 1; }
 
 .adm2-tl-cliente {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--a2-text);
   white-space: nowrap;
@@ -708,8 +738,8 @@
 .adm2-tl-meta {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 4px;
+  gap: 6px;
+  margin-top: 2px;
   flex-wrap: wrap;
 }
 
@@ -1048,10 +1078,10 @@
    TURNOS DISPONIBLES (resumen rápido)
    ════════════════════════════════════════════════════ */
 
-.adm2-disponibles-card { padding: 18px 20px; }
+.adm2-disponibles-card { padding: 14px 16px; }
 .adm2-disp-header {
   display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 14px; gap: 12px; flex-wrap: wrap;
+  margin-bottom: 10px; gap: 10px; flex-wrap: wrap;
 }
 .adm2-btn-copiar-wa {
   padding: 7px 16px; border-radius: var(--a2-radius-sm);
@@ -1061,8 +1091,8 @@
 }
 .adm2-btn-copiar-wa:hover { background: var(--a2-green); color: #000; }
 .adm2-disp-grid {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
 }
 .adm2-disp-cancha {
   background: var(--a2-card-deep); border: 1px solid var(--a2-border);
@@ -1305,7 +1335,9 @@
   .adm2-fin-mid     { grid-template-columns: 1fr; }
   .adm2-canchas-grid{ grid-template-columns: 1fr; }
   .adm2-day-cancha-grid { grid-template-columns: 1fr; }
+  .adm2-disp-grid   { grid-template-columns: 1fr 1fr; }
   .adm2-clock       { font-size: 15px; }
+  .adm2-timeline    { max-height: none; }
 }
 @media (max-width: 560px) {
   .adm2-stats-row   { grid-template-columns: 1fr 1fr; }

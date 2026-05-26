@@ -7,8 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=3">
-  <link rel="stylesheet" href="css/admin2.css?v=3">
+  <link rel="stylesheet" href="css/style.css?v=4">
+  <link rel="stylesheet" href="css/admin2.css?v=4">
 </head>
 <body class="adm2-body">
 
@@ -63,71 +63,19 @@
     <!-- ─── VISTA DASHBOARD ─────────────────────────── -->
     <section class="adm2-view active" id="adm2-view-dashboard">
 
-      <!-- Fila 1: stats del día -->
-      <div class="adm2-stats-row">
-
-        <div class="adm2-card adm2-stat-card adm2-stat-green">
-          <div class="adm2-stat-label"><span class="adm2-stat-icon">💰</span> Cobrado hoy</div>
-          <div class="adm2-stat-value" id="dash-cobrado-hoy">—</div>
-          <div class="adm2-stat-sub" id="dash-cobrado-sub">— turnos cobrados</div>
-          <div class="adm2-card-accent-line"></div>
-        </div>
-
-        <div class="adm2-card adm2-stat-card adm2-stat-yellow">
-          <div class="adm2-stat-label"><span class="adm2-stat-icon">⏳</span> Pendiente</div>
-          <div class="adm2-stat-value" id="dash-pendiente">—</div>
-          <div class="adm2-stat-sub" id="dash-pendiente-sub">— sin cobrar</div>
-          <div class="adm2-card-accent-line"></div>
-        </div>
-
-        <div class="adm2-card adm2-stat-card adm2-stat-blue">
-          <div class="adm2-stat-label"><span class="adm2-stat-icon">📅</span> Turnos hoy</div>
-          <div class="adm2-stat-value" id="dash-turnos-hoy">—</div>
-          <div class="adm2-stat-sub" id="dash-canchas-con-turnos">— / 4 canchas activas</div>
-          <div class="adm2-card-accent-line"></div>
-        </div>
-
-        <div class="adm2-card adm2-stat-card adm2-stat-purple">
-          <div class="adm2-stat-label"><span class="adm2-stat-icon">⚡</span> Hora pico</div>
-          <div class="adm2-stat-value" id="dash-hora-pico">—</div>
-          <div class="adm2-stat-sub">Mayor demanda del día</div>
-          <div class="adm2-card-accent-line"></div>
-        </div>
-
+      <!-- Stats compactos (barra horizontal) -->
+      <div class="adm2-stats-bar">
+        <div class="adm2-stat-chip green"><span class="adm2-stat-chip-icon">💰</span> <span id="dash-cobrado-hoy">—</span></div>
+        <div class="adm2-stat-chip yellow"><span class="adm2-stat-chip-icon">⏳</span> <span id="dash-pendiente">—</span></div>
+        <div class="adm2-stat-chip blue"><span class="adm2-stat-chip-icon">📅</span> <span id="dash-turnos-hoy">—</span> turnos</div>
+        <div class="adm2-stat-chip purple"><span class="adm2-stat-chip-icon">⚡</span> Pico: <span id="dash-hora-pico">—</span></div>
+        <span id="dash-cobrado-sub" style="display:none"></span>
+        <span id="dash-pendiente-sub" style="display:none"></span>
+        <span id="dash-canchas-con-turnos" style="display:none"></span>
       </div>
 
-      <!-- Fila 2: cierre de caja + estado canchas -->
-      <div class="adm2-mid-row">
-
-        <div class="adm2-card adm2-cobros-card">
-          <div class="adm2-card-title">Cierre de caja — cobros del día</div>
-          <div class="adm2-metodos-mes" id="dash-metodos"></div>
-        </div>
-
-        <div class="adm2-card adm2-cobrado-card">
-          <div class="adm2-card-title">Estado canchas hoy</div>
-          <div class="adm2-cancha-week-list" id="dash-estado-canchas"></div>
-        </div>
-
-      </div>
-
-      <!-- Fila 3: gráfico semanal -->
-      <div class="adm2-mid-row" style="grid-template-columns:1fr">
-        <div class="adm2-card adm2-tendencia-card">
-          <div class="adm2-card-title">Tendencia semanal</div>
-          <div id="adm2-chart"></div>
-        </div>
-      </div>
-
-      <!-- Turnos disponibles (resumen rápido para WhatsApp) -->
-      <div class="adm2-card adm2-disponibles-card" id="adm2-disponibles" style="margin-bottom:20px"></div>
-
-      <!-- Grilla de turnos del día -->
+      <!-- Navegación de fecha + leyenda -->
       <div class="adm2-turnos-topbar">
-        <div class="adm2-view-toggle">
-          <button class="adm2-view-btn active" id="btn-vista-dia" onclick="adm2SetVista('dia')">Vista del día</button>
-          <button class="adm2-view-btn" id="btn-vista-sem" onclick="adm2SetVista('semana')">Vista semanal</button>
-        </div>
         <div class="adm2-date-nav">
           <button class="adm2-date-nav-btn" onclick="adm2ChangeDate(-1)">◂</button>
           <span class="adm2-date-label" id="adm2-date-label">📅 —</span>
@@ -137,16 +85,43 @@
         <div class="adm2-turnos-legend">
           <div class="adm2-legend-slot">
             <div class="adm2-legend-slot-dot" style="background:rgba(34,197,94,.4);border:1px solid rgba(34,197,94,.5)"></div>
-            Libre — tocá para reservar
+            Libre
           </div>
           <div class="adm2-legend-slot">
             <div class="adm2-legend-slot-dot" style="background:rgba(234,179,8,.3);border:1px solid rgba(234,179,8,.4)"></div>
-            Ocupado — tocá para gestionar
+            Ocupado
           </div>
         </div>
       </div>
 
+      <!-- Grilla de 4 canchas (principal, pantalla completa) -->
       <div class="adm2-canchas-grid" id="adm2-canchas-grid"></div>
+
+      <!-- Turnos disponibles (resumen rápido para WhatsApp) -->
+      <div class="adm2-card adm2-disponibles-card" id="adm2-disponibles" style="margin-top:16px"></div>
+
+      <!-- Detalles secundarios (debajo, se llega con scroll) -->
+      <div class="adm2-secondary-section">
+
+        <div class="adm2-mid-row">
+          <div class="adm2-card adm2-cobros-card">
+            <div class="adm2-card-title">Cierre de caja — cobros del día</div>
+            <div class="adm2-metodos-mes" id="dash-metodos"></div>
+          </div>
+          <div class="adm2-card adm2-cobrado-card">
+            <div class="adm2-card-title">Estado canchas hoy</div>
+            <div class="adm2-cancha-week-list" id="dash-estado-canchas"></div>
+          </div>
+        </div>
+
+        <div class="adm2-mid-row" style="grid-template-columns:1fr">
+          <div class="adm2-card adm2-tendencia-card">
+            <div class="adm2-card-title">Tendencia semanal</div>
+            <div id="adm2-chart"></div>
+          </div>
+        </div>
+
+      </div>
 
     </section>
 
@@ -484,8 +459,8 @@
   <div id="toast-container"></div>
   <div id="adm2-toasts"></div>
 
-  <script src="js/config.js?v=3"></script>
-  <script src="js/api.js?v=3"></script>
-  <script src="js/admin2.js?v=3"></script>
+  <script src="js/config.js?v=4"></script>
+  <script src="js/api.js?v=4"></script>
+  <script src="js/admin2.js?v=4"></script>
 </body>
 </html>
