@@ -10,7 +10,8 @@ const API_URL = window.__API_URL__ || '';
 
 /* ─── TIME HELPERS ──────────────────────────────────────── */
 function _timeToMin(t) { const [h,m]=t.split(':').map(Number); return h*60+m; }
-function _minToTime(m) { return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); }
+function _minToTime(m) { const h=Math.floor(m/60)%24; return String(h).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); }
+function _cierreMin() { const c=_timeToMin(HORA_CIERRE); return c<=_timeToMin(HORA_APERTURA)?c+1440:c; }
 
 /* ─── CANCHAS CONFIG ────────────────────────────────────── */
 const CANCHAS_CONFIG = [
@@ -19,11 +20,11 @@ const CANCHAS_CONFIG = [
   { id:3, nombre:'Cancha 3', tipo:'Exterior', precioHora:4000, activa:true },
   { id:4, nombre:'Cancha 4', tipo:'Exterior', precioHora:4000, activa:true },
 ];
-const HORA_APERTURA = '08:00';
-const HORA_CIERRE   = '23:00';
+const HORA_APERTURA = '15:00';
+const HORA_CIERRE   = '00:00';
 
 /* ─── RESERVATIONS DB (localStorage) ───────────────────── */
-const RESERVAS_DB_KEY = 'nf_padel_reservas_v2';
+const RESERVAS_DB_KEY = 'nf_padel_reservas_v3';
 let _reservasDB = [];
 
 function _loadReservasDB() {
@@ -42,7 +43,7 @@ function _calcPrecio(canchaId, duracionMin) {
 function _calcDisponibilidad(fecha, duracionMinutos) {
   const resultados = [];
   const apertura = _timeToMin(HORA_APERTURA);
-  const cierre = _timeToMin(HORA_CIERRE);
+  const cierre = _cierreMin();
   const reservas = _reservasDB.filter(r => r.fecha === fecha && r.estado_reserva !== 'cancelada');
 
   for (let t = apertura; t + duracionMinutos <= cierre; t += 30) {
@@ -73,18 +74,18 @@ function _calcDisponibilidad(fecha, duracionMinutos) {
 function _generarReservasDemo() {
   const hoy = new Date().toISOString().split('T')[0];
   const base = [
-    { cancha_id:1, hora_inicio:'08:00', hora_fin:'09:30', duracion_minutos:90,  cliente_nombre:'Martín Gómez',    cliente_telefono:'1145678901', estado_pago:'pagado',    metodo_pago:'efectivo' },
-    { cancha_id:1, hora_inicio:'15:00', hora_fin:'16:00', duracion_minutos:60,  cliente_nombre:'Lucas Herrera',   cliente_telefono:'1167891234', estado_pago:'pendiente', metodo_pago:'mercadopago' },
+    { cancha_id:1, hora_inicio:'15:00', hora_fin:'16:00', duracion_minutos:60,  cliente_nombre:'Lucas Herrera',   cliente_telefono:'1167891234', estado_pago:'pendiente', metodo_pago:null },
     { cancha_id:1, hora_inicio:'19:00', hora_fin:'21:00', duracion_minutos:120, cliente_nombre:'Sebastián Mora',  cliente_telefono:'1156781234', estado_pago:'pagado',    metodo_pago:'transferencia' },
-    { cancha_id:2, hora_inicio:'09:00', hora_fin:'10:30', duracion_minutos:90,  cliente_nombre:'Carla Méndez',    cliente_telefono:'1134567890', estado_pago:'pagado',    metodo_pago:'mercadopago' },
+    { cancha_id:1, hora_inicio:'22:00', hora_fin:'23:30', duracion_minutos:90,  cliente_nombre:'Martín Gómez',    cliente_telefono:'1145678901', estado_pago:'pagado',    metodo_pago:'efectivo' },
     { cancha_id:2, hora_inicio:'16:00', hora_fin:'17:00', duracion_minutos:60,  cliente_nombre:'Valeria Torres',  cliente_telefono:'1145670123', estado_pago:'pagado',    metodo_pago:'efectivo' },
-    { cancha_id:2, hora_inicio:'20:00', hora_fin:'21:30', duracion_minutos:90,  cliente_nombre:'Paula Sánchez',   cliente_telefono:'1156783456', estado_pago:'pendiente', metodo_pago:'transferencia' },
-    { cancha_id:3, hora_inicio:'10:00', hora_fin:'11:00', duracion_minutos:60,  cliente_nombre:'Roberto Díaz',    cliente_telefono:'1189012345', estado_pago:'pagado',    metodo_pago:'efectivo' },
-    { cancha_id:3, hora_inicio:'17:00', hora_fin:'18:30', duracion_minutos:90,  cliente_nombre:'Gustavo Ruiz',    cliente_telefono:'1190123456', estado_pago:'pendiente', metodo_pago:'mercadopago' },
+    { cancha_id:2, hora_inicio:'18:30', hora_fin:'20:00', duracion_minutos:90,  cliente_nombre:'Carla Méndez',    cliente_telefono:'1134567890', estado_pago:'pagado',    metodo_pago:'mercadopago' },
+    { cancha_id:2, hora_inicio:'20:00', hora_fin:'21:30', duracion_minutos:90,  cliente_nombre:'Paula Sánchez',   cliente_telefono:'1156783456', estado_pago:'pendiente', metodo_pago:null },
+    { cancha_id:3, hora_inicio:'17:00', hora_fin:'18:30', duracion_minutos:90,  cliente_nombre:'Gustavo Ruiz',    cliente_telefono:'1190123456', estado_pago:'pendiente', metodo_pago:null },
     { cancha_id:3, hora_inicio:'21:00', hora_fin:'22:00', duracion_minutos:60,  cliente_nombre:'Nicolás Vega',    cliente_telefono:'1112345678', estado_pago:'pagado',    metodo_pago:'efectivo' },
-    { cancha_id:4, hora_inicio:'11:00', hora_fin:'12:30', duracion_minutos:90,  cliente_nombre:'Fernando Castro',  cliente_telefono:'1123456789', estado_pago:'pagado',    metodo_pago:'transferencia' },
+    { cancha_id:3, hora_inicio:'23:00', hora_fin:'00:00', duracion_minutos:60,  cliente_nombre:'Roberto Díaz',    cliente_telefono:'1189012345', estado_pago:'pagado',    metodo_pago:'efectivo' },
+    { cancha_id:4, hora_inicio:'15:00', hora_fin:'16:30', duracion_minutos:90,  cliente_nombre:'Fernando Castro',  cliente_telefono:'1123456789', estado_pago:'pagado',    metodo_pago:'transferencia' },
     { cancha_id:4, hora_inicio:'18:00', hora_fin:'19:00', duracion_minutos:60,  cliente_nombre:'Agustín Romero',  cliente_telefono:'1134560123', estado_pago:'pagado',    metodo_pago:'efectivo' },
-    { cancha_id:4, hora_inicio:'20:00', hora_fin:'22:00', duracion_minutos:120, cliente_nombre:'Emilio Suárez',   cliente_telefono:'1145671234', estado_pago:'pendiente', metodo_pago:'mercadopago' },
+    { cancha_id:4, hora_inicio:'20:00', hora_fin:'22:00', duracion_minutos:120, cliente_nombre:'Emilio Suárez',   cliente_telefono:'1145671234', estado_pago:'pendiente', metodo_pago:null },
   ];
   return base.map((r, i) => ({ ...r, id:`demo-${i+1}`, fecha:hoy, estado_reserva:'confirmada', created_at:hoy }));
 }
@@ -108,7 +109,7 @@ function _generarHistorialReservas() {
 
     CANCHAS_CONFIG.forEach((cancha, ci) => {
       let cursor = _timeToMin(HORA_APERTURA);
-      const cierre = _timeToMin(HORA_CIERRE);
+      const cierre = _cierreMin();
       let attempts = 0;
 
       while (cursor < cierre && attempts < 30) {

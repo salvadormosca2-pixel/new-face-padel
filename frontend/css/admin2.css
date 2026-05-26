@@ -1045,6 +1045,43 @@
 .adm2-tooltip-val { font-family: var(--a2-mono); font-weight: 700; color: var(--a2-text); margin-left: auto; }
 
 /* ════════════════════════════════════════════════════
+   TURNOS DISPONIBLES (resumen rápido)
+   ════════════════════════════════════════════════════ */
+
+.adm2-disponibles-card { padding: 18px 20px; }
+.adm2-disp-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px; gap: 12px; flex-wrap: wrap;
+}
+.adm2-btn-copiar-wa {
+  padding: 7px 16px; border-radius: var(--a2-radius-sm);
+  background: var(--a2-green-dim); border: 1px solid var(--a2-green-border);
+  color: var(--a2-green); font-size: 12px; font-weight: 700;
+  cursor: pointer; transition: all var(--a2-trans);
+}
+.adm2-btn-copiar-wa:hover { background: var(--a2-green); color: #000; }
+.adm2-disp-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+.adm2-disp-cancha {
+  background: var(--a2-card-deep); border: 1px solid var(--a2-border);
+  border-radius: var(--a2-radius-sm); padding: 12px 14px;
+}
+.adm2-disp-cancha-nombre {
+  font-size: 13px; font-weight: 700; color: var(--a2-text); margin-bottom: 8px;
+}
+.adm2-disp-cancha-tipo { font-weight: 500; color: var(--a2-text-muted); font-size: 11px; }
+.adm2-disp-slot {
+  font-family: var(--a2-mono); font-size: 12px; font-weight: 600;
+  padding: 4px 0; color: var(--a2-text-dim);
+}
+.adm2-disp-slot.libre::before { content: '✅ '; }
+.adm2-disp-slot.completa { color: var(--a2-red); font-size: 11px; font-weight: 600; }
+.adm2-disp-slot.completa::before { content: '❌ '; }
+.adm2-disp-dur { color: var(--a2-text-muted); font-size: 11px; }
+
+/* ════════════════════════════════════════════════════
    FINANZAS
    ════════════════════════════════════════════════════ */
 

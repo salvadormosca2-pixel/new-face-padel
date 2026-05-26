@@ -228,6 +228,129 @@ function tickClock() {
 function renderDashboard() {
   renderTurnos();
   updateDashStats();
+  buildChart(chartWeekOffset);
+}
+
+/* ════════════════════════════════════════════════════
+   GRÁFICO SEMANAL CON TOOLTIP
+   ════════════════════════════════════════════════════ */
+
+let chartWeekOffset = 0;
+
+function changeChartWeek(delta) {
+  chartWeekOffset += delta;
+  buildChart(chartWeekOffset);
+}
+
+function buildChart(weekOffset) {
+  const el = document.getElementById('adm2-chart');
+  if (!el) return;
+
+  const today  = new Date();
+  const anchor = addDays(today, weekOffset * 7);
+  const monday = mondayOf(anchor);
+  const dates  = Array.from({length:7}, (_,i) => addDays(monday, i));
+  const days   = dates.map(d => ({
+    label: DIAS_CORTO[d.getDay()],
+    key:   getDateKey(d),
+    isToday: getDateKey(d) === todayKey(),
+    isFuture: d > today,
+  }));
+
+  const reservas = days.map(d => getDayData(d.key).reservas);
+  const ingresos = days.map(d => getDayData(d.key).ingresos);
+
+  const d1 = dates[0]; const d7 = dates[6];
+  const rangeLabel = `${d1.getDate()} ${MESES_CORTO[d1.getMonth()]} — ${d7.getDate()} ${MESES_CORTO[d7.getMonth()]} ${d7.getFullYear()}`;
+
+  const W=490, H=192, pL=54, pR=14, pT=14, pB=34;
+  const cW=W-pL-pR, cH=H-pT-pB, n=7;
+
+  const maxR = Math.max(1, ...reservas);
+  const maxI = Math.max(1, ...ingresos);
+
+  const xPos = i => pL + (i/(n-1))*cW;
+  const yR   = v => pT + (1 - v/maxR)*cH;
+  const yI   = v => pT + (1 - v/maxI)*cH;
+
+  const lineR  = reservas.map((v,i)=>`${i===0?'M':'L'}${xPos(i).toFixed(1)},${yR(v).toFixed(1)}`).join(' ');
+  const areaR  = lineR + ` L${xPos(6).toFixed(1)},${(pT+cH).toFixed(1)} L${pL},${(pT+cH).toFixed(1)} Z`;
+  const lineI  = ingresos.map((v,i)=>`${i===0?'M':'L'}${xPos(i).toFixed(1)},${yI(v).toFixed(1)}`).join(' ');
+  const areaI  = lineI + ` L${xPos(6).toFixed(1)},${(pT+cH).toFixed(1)} L${pL},${(pT+cH).toFixed(1)} Z`;
+
+  const gridLines = [0,.25,.5,.75,1].map(t=>{
+    const y=(pT+t*cH).toFixed(1);
+    return `<line x1="${pL}" y1="${y}" x2="${W-pR}" y2="${y}" stroke="#1e2a3a" stroke-width="1" stroke-dasharray="3,4"/>`;
+  }).join('');
+
+  const yLabels = [0,.5,1].map(t=>{
+    const v = maxI*(1-t);
+    return `<text x="${pL-5}" y="${(pT+t*cH+4).toFixed(1)}" text-anchor="end" fill="#64748b" font-size="9.5" font-family="JetBrains Mono,monospace">${v>=1000?'$'+(v/1000).toFixed(0)+'k':'$'+v}</text>`;
+  }).join('');
+
+  const xLabels = days.map((d,i)=>`<text x="${xPos(i).toFixed(1)}" y="${H-5}" text-anchor="middle" fill="${d.isToday?'#22c55e':'#64748b'}" font-size="11" font-weight="${d.isToday?'700':'400'}">${d.label}</text>`).join('');
+
+  const dotsR  = reservas.map((v,i)=>`<circle cx="${xPos(i).toFixed(1)}" cy="${yR(v).toFixed(1)}" r="3.5" fill="#22c55e" stroke="#151c27" stroke-width="2"/>`).join('');
+  const dotsI  = ingresos.map((v,i)=>`<circle cx="${xPos(i).toFixed(1)}" cy="${yI(v).toFixed(1)}" r="3.5" fill="#3b82f6" stroke="#151c27" stroke-width="2"/>`).join('');
+
+  const bandW  = cW / n;
+  const bands  = days.map((d,i)=>`<rect class="chart-band" data-i="${i}" x="${(xPos(i)-bandW/2).toFixed(1)}" y="${pT}" width="${bandW.toFixed(1)}" height="${cH}" fill="transparent"/>`).join('');
+
+  el.innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
+      <defs>
+        <linearGradient id="gR" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#22c55e" stop-opacity=".28"/><stop offset="100%" stop-color="#22c55e" stop-opacity="0"/></linearGradient>
+        <linearGradient id="gI" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3b82f6" stop-opacity=".18"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/></linearGradient>
+      </defs>
+      ${gridLines}${yLabels}${xLabels}
+      <path d="${areaI}" fill="url(#gI)"/>
+      <path d="${lineI}" fill="none" stroke="#3b82f6" stroke-width="1.8"/>
+      <path d="${areaR}" fill="url(#gR)"/>
+      <path d="${lineR}" fill="none" stroke="#22c55e" stroke-width="1.8"/>
+      ${dotsI}${dotsR}
+      ${bands}
+    </svg>`;
+
+  el.querySelectorAll('.chart-band').forEach(band => {
+    band.addEventListener('mouseenter', e => {
+      const i   = parseInt(e.target.getAttribute('data-i'));
+      const d   = days[i];
+      document.getElementById('tt-day').textContent = d.label + (d.isToday ? ' (hoy)' : '');
+      document.getElementById('tt-res').textContent = reservas[i];
+      document.getElementById('tt-ing').textContent = formatArs(ingresos[i]);
+      document.getElementById('adm2-tooltip').classList.add('visible');
+    });
+    band.addEventListener('mousemove', e => {
+      const tt = document.getElementById('adm2-tooltip');
+      tt.style.left = (e.clientX + 14) + 'px';
+      tt.style.top  = (e.clientY - 40) + 'px';
+    });
+    band.addEventListener('mouseleave', () => {
+      document.getElementById('adm2-tooltip').classList.remove('visible');
+    });
+  });
+
+  _renderChartTopbar(rangeLabel);
+}
+
+function _renderChartTopbar(rangeLabel) {
+  const card = document.getElementById('adm2-chart');
+  if (!card) return;
+  const wrap = card.closest('.adm2-tendencia-card');
+  if (!wrap) return;
+  let topbar = wrap.querySelector('.adm2-chart-topbar');
+  if (!topbar) {
+    topbar = document.createElement('div');
+    topbar.className = 'adm2-chart-topbar';
+    wrap.insertBefore(topbar, wrap.querySelector('.adm2-card-title').nextSibling);
+  }
+  topbar.innerHTML = `
+    <div style="font-size:11px;color:var(--a2-text-muted);">Semana</div>
+    <div class="adm2-chart-week-nav">
+      <button class="adm2-chart-week-btn" onclick="changeChartWeek(-1)">◂</button>
+      <span class="adm2-chart-week-label" id="chart-week-label">${rangeLabel}</span>
+      <button class="adm2-chart-week-btn" onclick="changeChartWeek(1)" ${chartWeekOffset>=0?'disabled style="opacity:.35;cursor:not-allowed"':''}>▸</button>
+    </div>`;
 }
 
 /* ════════════════════════════════════════════════════
@@ -250,7 +373,7 @@ function formatDateLabel(d) {
 
 function buildTimeline(canchaId, dateKey) {
   const apertura = _timeToMin(HORA_APERTURA);
-  const cierre = _timeToMin(HORA_CIERRE);
+  const cierre = _cierreMin();
   const reservas = getReservasCancha(dateKey, canchaId);
   const segments = [];
   let cursor = apertura;
@@ -279,7 +402,78 @@ function renderTurnos() {
   const grid = document.getElementById('adm2-canchas-grid');
   if (!grid) return;
   grid.innerHTML = CANCHAS.map(c => buildCanchaCard(c, key)).join('');
+  renderTurnosDisponibles(key);
   updateDashStats();
+}
+
+/* ─── Turnos disponibles (resumen rápido para WhatsApp) ── */
+function renderTurnosDisponibles(dateKey) {
+  const el = document.getElementById('adm2-disponibles');
+  if (!el) return;
+
+  const d = new Date(dateKey + 'T12:00:00');
+  const diaLabel = `${DIAS_LARGO[d.getDay()]} ${d.getDate()} ${MESES[d.getMonth()]}`;
+
+  const canchasData = CANCHAS.map(c => {
+    const tl = buildTimeline(c.id, dateKey);
+    const libres = tl.filter(s => s.tipo === 'libre' && s.duracion >= 60);
+    return { cancha: c, libres };
+  });
+
+  const totalLibres = canchasData.reduce((a, c) => a + c.libres.length, 0);
+
+  let html = `
+    <div class="adm2-disp-header">
+      <div class="adm2-card-title">Turnos disponibles — ${diaLabel}</div>
+      <button class="adm2-btn-copiar-wa" onclick="copiarDisponiblesWA()">Copiar para WhatsApp</button>
+    </div>`;
+
+  if (totalLibres === 0) {
+    html += `<p style="color:var(--a2-text-muted);padding:12px 0;font-size:13px">No hay turnos disponibles. Todas las canchas están completas.</p>`;
+  } else {
+    html += `<div class="adm2-disp-grid">`;
+    canchasData.forEach(({ cancha, libres }) => {
+      html += `<div class="adm2-disp-cancha">
+        <div class="adm2-disp-cancha-nombre">${cancha.nombre} <span class="adm2-disp-cancha-tipo">${cancha.tipo} · $${cancha.precioHora.toLocaleString('es-AR')}/h</span></div>`;
+      if (libres.length === 0) {
+        html += `<div class="adm2-disp-slot completa">Completa</div>`;
+      } else {
+        libres.forEach(s => {
+          const durH = (s.duracion / 60).toFixed(1).replace('.0', '');
+          html += `<div class="adm2-disp-slot libre">${s.desde} a ${s.hasta} <span class="adm2-disp-dur">(${durH}h)</span></div>`;
+        });
+      }
+      html += `</div>`;
+    });
+    html += `</div>`;
+  }
+
+  el.innerHTML = html;
+}
+
+function copiarDisponiblesWA() {
+  const dateKey = getDateKey(currentDate);
+  const d = new Date(dateKey + 'T12:00:00');
+  const diaLabel = `${DIAS_CORTO[d.getDay()]} ${d.getDate()} ${MESES_CORTO[d.getMonth()]}`;
+
+  let text = `🎾 *Turnos disponibles — ${diaLabel}*\n`;
+
+  CANCHAS.forEach(c => {
+    const tl = buildTimeline(c.id, dateKey);
+    const libres = tl.filter(s => s.tipo === 'libre' && s.duracion >= 60);
+    text += `\n*${c.nombre}* (${c.tipo})`;
+    if (libres.length === 0) {
+      text += `\n❌ Completa`;
+    } else {
+      libres.forEach(s => { text += `\n✅ ${s.desde} a ${s.hasta}`; });
+    }
+  });
+
+  navigator.clipboard.writeText(text).then(() => {
+    toast('✓ Copiado al portapapeles — pegalo en WhatsApp', 'green');
+  }).catch(() => {
+    toast('No se pudo copiar. Intentá de nuevo.', 'red');
+  });
 }
 
 function buildCanchaCard(cancha, dateKey) {
@@ -481,6 +675,10 @@ function setEstado(reservaId, estado) {
   r.estado_pago = estado;
   if (estado === 'pendiente') r.metodo_pago = null;
   _saveReservasDB();
+  if (estado === 'pagado' && !r.metodo_pago && activePanelInfo) {
+    activePanelInfo.panelEl.innerHTML = buildDetailPanel(activePanelInfo.canchaId || r.cancha_id, r);
+    return;
+  }
   closeActivePanel(); renderTurnos();
 }
 
@@ -549,7 +747,7 @@ function updateDashStats() {
     const pag = cReservas.filter(r=>r.estado_pago==='pagado').length;
     const pen = ocu - pag;
     const totalMin = cReservas.reduce((a,r) => a + r.duracion_minutos, 0);
-    const totalHoras = _timeToMin(HORA_CIERRE) - _timeToMin(HORA_APERTURA);
+    const totalHoras = _cierreMin() - _timeToMin(HORA_APERTURA);
     return `
       <div class="adm2-cancha-week-item">
         <div class="adm2-cancha-week-header">
