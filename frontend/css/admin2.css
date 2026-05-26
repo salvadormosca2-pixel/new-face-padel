@@ -1114,6 +1114,113 @@
 .adm2-disp-slot.completa::before { content: '❌ '; }
 .adm2-disp-dur { color: var(--a2-text-muted); font-size: 11px; }
 
+/* ─── Filtro de duración en disponibles ──────────── */
+.adm2-disp-dur-tabs {
+  display: flex; gap: 6px; flex-wrap: wrap;
+}
+.adm2-disp-dur-tab {
+  padding: 5px 14px; border-radius: 16px;
+  font-size: 12px; font-weight: 700;
+  background: var(--a2-card-deep); border: 1px solid var(--a2-border);
+  color: var(--a2-text-muted); cursor: pointer;
+  transition: all var(--a2-trans);
+}
+.adm2-disp-dur-tab:hover { border-color: var(--a2-green); color: var(--a2-green); }
+.adm2-disp-dur-tab.active {
+  background: var(--a2-green); color: #000; border-color: var(--a2-green);
+}
+
+/* ─── Botón + Nuevo turno ────────────────────────── */
+.adm2-btn-nuevo-turno {
+  padding: 7px 18px; border-radius: var(--a2-radius-sm);
+  background: var(--a2-green); border: none;
+  color: #000; font-size: 13px; font-weight: 800;
+  cursor: pointer; transition: opacity var(--a2-trans);
+  letter-spacing: .3px;
+}
+.adm2-btn-nuevo-turno:hover { opacity: .85; }
+
+/* ─── Panel nuevo turno ─────────────────────────── */
+.adm2-nuevo-turno-panel {
+  background: var(--a2-card); border: 1px solid var(--a2-border);
+  border-radius: var(--a2-radius); padding: 16px 20px;
+  margin-bottom: 12px;
+  animation: a2-fadeInUp .25s ease;
+}
+.adm2-nt-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.adm2-nt-title {
+  font-size: 15px; font-weight: 800; color: var(--a2-text);
+}
+.adm2-nt-close {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--a2-card-deep); border: 1px solid var(--a2-border);
+  color: var(--a2-text-muted); font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all var(--a2-trans);
+}
+.adm2-nt-close:hover { border-color: var(--a2-red); color: var(--a2-red); }
+.adm2-nt-step-label {
+  font-size: 11px; font-weight: 700; letter-spacing: .5px;
+  text-transform: uppercase; color: var(--a2-text-muted);
+  margin-bottom: 8px;
+}
+.adm2-nt-dur-btns {
+  display: flex; gap: 8px; margin-bottom: 16px;
+}
+.adm2-nt-dur-btn {
+  padding: 10px 24px; border-radius: var(--a2-radius-sm);
+  background: var(--a2-card-deep); border: 1px solid var(--a2-border);
+  color: var(--a2-text); font-size: 14px; font-weight: 700;
+  cursor: pointer; transition: all var(--a2-trans);
+}
+.adm2-nt-dur-btn:hover { border-color: var(--a2-green); color: var(--a2-green); }
+.adm2-nt-dur-btn.active {
+  background: var(--a2-green); color: #000; border-color: var(--a2-green);
+}
+.adm2-nt-slots-area {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+}
+.adm2-nt-cancha-block {
+  background: var(--a2-card-deep); border: 1px solid var(--a2-border);
+  border-radius: var(--a2-radius-sm); padding: 10px 12px;
+}
+.adm2-nt-cancha-name {
+  font-size: 12px; font-weight: 700; color: var(--a2-text); margin-bottom: 6px;
+}
+.adm2-nt-cancha-name span { font-weight: 500; color: var(--a2-text-muted); font-size: 11px; }
+.adm2-nt-slots-wrap {
+  display: flex; flex-wrap: wrap; gap: 4px;
+}
+.adm2-nt-slot {
+  padding: 5px 10px; border-radius: var(--a2-radius-sm);
+  background: var(--a2-green-dim); border: 1px solid var(--a2-green-border);
+  color: var(--a2-green); font-family: var(--a2-mono);
+  font-size: 12px; font-weight: 700; cursor: pointer;
+  transition: all var(--a2-trans);
+}
+.adm2-nt-slot:hover {
+  background: var(--a2-green); color: #000; border-color: var(--a2-green);
+}
+.adm2-nt-no-slots {
+  font-size: 11px; color: var(--a2-text-muted); font-style: italic;
+}
+.adm2-nt-form {
+  margin-top: 14px; padding-top: 14px;
+  border-top: 1px solid var(--a2-border);
+  animation: a2-fadeInUp .2s ease;
+}
+.adm2-nt-form-info {
+  font-size: 13px; font-weight: 700; color: var(--a2-text);
+  margin-bottom: 10px;
+}
+.adm2-nt-form-info span { color: var(--a2-green); }
+.adm2-nt-form-row {
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+}
+
 /* ════════════════════════════════════════════════════
    FINANZAS
    ════════════════════════════════════════════════════ */

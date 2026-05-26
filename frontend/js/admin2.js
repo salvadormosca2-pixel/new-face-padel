@@ -410,7 +410,9 @@ function renderTurnos() {
   updateDashStats();
 }
 
-/* ─── Turnos disponibles (resumen rápido para WhatsApp) ── */
+/* ─── Turnos disponibles (con filtro por duración + WhatsApp) ── */
+let dispFiltroMin = 0;
+
 function renderTurnosDisponibles(dateKey) {
   const el = document.getElementById('adm2-disponibles');
   if (!el) return;
@@ -418,41 +420,66 @@ function renderTurnosDisponibles(dateKey) {
   const d = new Date(dateKey + 'T12:00:00');
   const diaLabel = `${DIAS_LARGO[d.getDay()]} ${d.getDate()} ${MESES[d.getMonth()]}`;
 
-  const canchasData = CANCHAS.map(c => {
-    const tl = buildTimeline(c.id, dateKey);
-    const libres = tl.filter(s => s.tipo === 'libre' && s.duracion >= 60);
-    return { cancha: c, libres };
-  });
-
-  const totalLibres = canchasData.reduce((a, c) => a + c.libres.length, 0);
-
   let html = `
     <div class="adm2-disp-header">
       <div class="adm2-card-title">Turnos disponibles — ${diaLabel}</div>
-      <button class="adm2-btn-copiar-wa" onclick="copiarDisponiblesWA()">Copiar para WhatsApp</button>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <div class="adm2-disp-dur-tabs">
+          <button class="adm2-disp-dur-tab ${dispFiltroMin===0?'active':''}" onclick="filtrarDisponibles(0)">Todos</button>
+          <button class="adm2-disp-dur-tab ${dispFiltroMin===60?'active':''}" onclick="filtrarDisponibles(60)">1h</button>
+          <button class="adm2-disp-dur-tab ${dispFiltroMin===90?'active':''}" onclick="filtrarDisponibles(90)">1.5h</button>
+          <button class="adm2-disp-dur-tab ${dispFiltroMin===120?'active':''}" onclick="filtrarDisponibles(120)">2h</button>
+        </div>
+        <button class="adm2-btn-copiar-wa" onclick="copiarDisponiblesWA()">Copiar para WhatsApp</button>
+      </div>
     </div>`;
 
-  if (totalLibres === 0) {
-    html += `<p style="color:var(--a2-text-muted);padding:12px 0;font-size:13px">No hay turnos disponibles. Todas las canchas están completas.</p>`;
-  } else {
-    html += `<div class="adm2-disp-grid">`;
-    canchasData.forEach(({ cancha, libres }) => {
-      html += `<div class="adm2-disp-cancha">
-        <div class="adm2-disp-cancha-nombre">${cancha.nombre} <span class="adm2-disp-cancha-tipo">${cancha.tipo} · $${cancha.precioHora.toLocaleString('es-AR')}/h</span></div>`;
-      if (libres.length === 0) {
-        html += `<div class="adm2-disp-slot completa">Completa</div>`;
-      } else {
-        libres.forEach(s => {
-          const durH = (s.duracion / 60).toFixed(1).replace('.0', '');
-          html += `<div class="adm2-disp-slot libre">${s.desde} a ${s.hasta} <span class="adm2-disp-dur">(${durH}h)</span></div>`;
-        });
-      }
+  if (dispFiltroMin > 0) {
+    const slots = _calcDisponibilidad(dateKey, dispFiltroMin);
+    const durLabel = dispFiltroMin >= 60 ? (dispFiltroMin/60).toFixed(1).replace('.0','')+'h' : dispFiltroMin+'min';
+    if (slots.length === 0) {
+      html += `<p style="color:var(--a2-text-muted);padding:8px 0;font-size:12px">No hay turnos de ${durLabel} disponibles.</p>`;
+    } else {
+      html += `<div style="display:flex;flex-wrap:wrap;gap:6px;padding:4px 0">`;
+      slots.forEach(s => {
+        html += `<div class="adm2-disp-slot libre" style="display:inline-block;padding:3px 0">${s.hora_inicio} a ${s.hora_fin}</div>`;
+      });
       html += `</div>`;
+    }
+  } else {
+    const canchasData = CANCHAS.map(c => {
+      const tl = buildTimeline(c.id, dateKey);
+      const libres = tl.filter(s => s.tipo === 'libre' && s.duracion >= 60);
+      return { cancha: c, libres };
     });
-    html += `</div>`;
+    const totalLibres = canchasData.reduce((a, c) => a + c.libres.length, 0);
+    if (totalLibres === 0) {
+      html += `<p style="color:var(--a2-text-muted);padding:8px 0;font-size:12px">No hay turnos disponibles. Todas las canchas están completas.</p>`;
+    } else {
+      html += `<div class="adm2-disp-grid">`;
+      canchasData.forEach(({ cancha, libres }) => {
+        html += `<div class="adm2-disp-cancha">
+          <div class="adm2-disp-cancha-nombre">${cancha.nombre} <span class="adm2-disp-cancha-tipo">${cancha.tipo}</span></div>`;
+        if (libres.length === 0) {
+          html += `<div class="adm2-disp-slot completa">Completa</div>`;
+        } else {
+          libres.forEach(s => {
+            const durH = (s.duracion / 60).toFixed(1).replace('.0', '');
+            html += `<div class="adm2-disp-slot libre">${s.desde} a ${s.hasta} <span class="adm2-disp-dur">(${durH}h)</span></div>`;
+          });
+        }
+        html += `</div>`;
+      });
+      html += `</div>`;
+    }
   }
 
   el.innerHTML = html;
+}
+
+function filtrarDisponibles(minutos) {
+  dispFiltroMin = minutos;
+  renderTurnosDisponibles(getDateKey(currentDate));
 }
 
 function copiarDisponiblesWA() {
@@ -460,24 +487,155 @@ function copiarDisponiblesWA() {
   const d = new Date(dateKey + 'T12:00:00');
   const diaLabel = `${DIAS_CORTO[d.getDay()]} ${d.getDate()} ${MESES_CORTO[d.getMonth()]}`;
 
-  let text = `🎾 *Turnos disponibles — ${diaLabel}*\n`;
-
-  CANCHAS.forEach(c => {
-    const tl = buildTimeline(c.id, dateKey);
-    const libres = tl.filter(s => s.tipo === 'libre' && s.duracion >= 60);
-    text += `\n*${c.nombre}* (${c.tipo})`;
-    if (libres.length === 0) {
-      text += `\n❌ Completa`;
-    } else {
-      libres.forEach(s => { text += `\n✅ ${s.desde} a ${s.hasta}`; });
+  if (dispFiltroMin > 0) {
+    const slots = _calcDisponibilidad(dateKey, dispFiltroMin);
+    const durLabel = dispFiltroMin >= 60 ? (dispFiltroMin/60).toFixed(1).replace('.0','')+'h' : dispFiltroMin+'min';
+    if (slots.length === 0) {
+      toast('No hay turnos de ' + durLabel + ' para copiar', 'red'); return;
     }
+    let text = `🎾 *Turnos de ${durLabel} disponibles — ${diaLabel}*\n`;
+    slots.forEach(s => { text += `\n✅ ${s.hora_inicio} a ${s.hora_fin}`; });
+    navigator.clipboard.writeText(text).then(() => {
+      toast('✓ Copiado — pegalo en WhatsApp', 'green');
+    }).catch(() => { toast('No se pudo copiar', 'red'); });
+  } else {
+    let text = `🎾 *Turnos disponibles — ${diaLabel}*\n`;
+    CANCHAS.forEach(c => {
+      const tl = buildTimeline(c.id, dateKey);
+      const libres = tl.filter(s => s.tipo === 'libre' && s.duracion >= 60);
+      text += `\n*${c.nombre}* (${c.tipo})`;
+      if (libres.length === 0) { text += `\n❌ Completa`; }
+      else { libres.forEach(s => { text += `\n✅ ${s.desde} a ${s.hasta}`; }); }
+    });
+    navigator.clipboard.writeText(text).then(() => {
+      toast('✓ Copiado — pegalo en WhatsApp', 'green');
+    }).catch(() => { toast('No se pudo copiar', 'red'); });
+  }
+}
+
+/* ─── Panel + Nuevo turno (flujo rápido) ─────────────── */
+let ntDuracion = 0;
+let ntSeleccion = null;
+
+function abrirNuevoTurno() {
+  const panel = document.getElementById('adm2-nuevo-turno');
+  if (!panel) return;
+  ntDuracion = 0;
+  ntSeleccion = null;
+  panel.style.display = 'block';
+  panel.innerHTML = `
+    <div class="adm2-nt-header">
+      <div class="adm2-nt-title">+ Nuevo turno</div>
+      <button class="adm2-nt-close" onclick="cerrarNuevoTurno()">✕</button>
+    </div>
+    <div class="adm2-nt-step-label">¿Cuánto tiempo?</div>
+    <div class="adm2-nt-dur-btns">
+      <button class="adm2-nt-dur-btn" onclick="ntElegirDuracion(60)">1h</button>
+      <button class="adm2-nt-dur-btn" onclick="ntElegirDuracion(90)">1.5h</button>
+      <button class="adm2-nt-dur-btn" onclick="ntElegirDuracion(120)">2h</button>
+    </div>
+    <div id="adm2-nt-slots"></div>
+    <div id="adm2-nt-form-area"></div>`;
+}
+
+function cerrarNuevoTurno() {
+  const panel = document.getElementById('adm2-nuevo-turno');
+  if (panel) { panel.style.display = 'none'; panel.innerHTML = ''; }
+}
+
+function ntElegirDuracion(min) {
+  ntDuracion = min;
+  ntSeleccion = null;
+  document.querySelectorAll('.adm2-nt-dur-btn').forEach(b => {
+    b.classList.toggle('active', parseInt(b.textContent) === min/60 || b.textContent === (min/60).toFixed(1).replace('.0','')+'h');
+  });
+  const durLabel = min >= 60 ? (min/60).toFixed(1).replace('.0','')+'h' : min+'min';
+  document.querySelectorAll('.adm2-nt-dur-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.adm2-nt-dur-btn').forEach(b => {
+    if (b.textContent === durLabel) b.classList.add('active');
   });
 
-  navigator.clipboard.writeText(text).then(() => {
-    toast('✓ Copiado al portapapeles — pegalo en WhatsApp', 'green');
-  }).catch(() => {
-    toast('No se pudo copiar. Intentá de nuevo.', 'red');
+  const dateKey = getDateKey(currentDate);
+  const slots = _calcDisponibilidad(dateKey, min);
+
+  const slotsEl = document.getElementById('adm2-nt-slots');
+  const formEl = document.getElementById('adm2-nt-form-area');
+  if (formEl) formEl.innerHTML = '';
+
+  if (slots.length === 0) {
+    slotsEl.innerHTML = `<p class="adm2-nt-no-slots">No hay turnos de ${durLabel} disponibles hoy.</p>`;
+    return;
+  }
+
+  const porCancha = {};
+  slots.forEach(s => {
+    s.canchas.forEach(c => {
+      if (!porCancha[c.id]) porCancha[c.id] = { cancha: c, horas: [] };
+      porCancha[c.id].horas.push(s.hora_inicio);
+    });
   });
+
+  let html = `<div class="adm2-nt-step-label">Elegí horario (${durLabel})</div>
+    <div class="adm2-nt-slots-area">`;
+  Object.values(porCancha).forEach(({ cancha, horas }) => {
+    const cc = CANCHAS.find(x => x.id === cancha.id);
+    const precio = _calcPrecio(cancha.id, min);
+    html += `<div class="adm2-nt-cancha-block">
+      <div class="adm2-nt-cancha-name">${cc.nombre} <span>${cc.tipo} · $${precio.toLocaleString('es-AR')}</span></div>
+      <div class="adm2-nt-slots-wrap">`;
+    const unique = [...new Set(horas)];
+    unique.forEach(h => {
+      html += `<button class="adm2-nt-slot" onclick="ntElegirSlot(${cancha.id},'${h}',${min})">${h}</button>`;
+    });
+    html += `</div></div>`;
+  });
+  html += `</div>`;
+  slotsEl.innerHTML = html;
+}
+
+function ntElegirSlot(canchaId, horaInicio, durMin) {
+  ntSeleccion = { canchaId, horaInicio, durMin };
+  const cc = CANCHAS.find(x => x.id === canchaId);
+  const horaFin = _minToTime(_timeToMin(horaInicio) + durMin);
+  const precio = _calcPrecio(canchaId, durMin);
+  const durLabel = durMin >= 60 ? (durMin/60).toFixed(1).replace('.0','')+'h' : durMin+'min';
+
+  document.querySelectorAll('.adm2-nt-slot').forEach(b => b.style.opacity = '.4');
+  event.target.style.opacity = '1';
+  event.target.style.background = 'var(--a2-green)';
+  event.target.style.color = '#000';
+
+  const formEl = document.getElementById('adm2-nt-form-area');
+  formEl.innerHTML = `
+    <div class="adm2-nt-form">
+      <div class="adm2-nt-form-info">
+        <span>${cc.nombre}</span> · ${horaInicio} a ${horaFin} · ${durLabel} · $${precio.toLocaleString('es-AR')}
+      </div>
+      <div class="adm2-nt-form-row">
+        <input class="adm2-input" id="nt-nombre" type="text" placeholder="Nombre del cliente" autocomplete="off" style="flex:1">
+        <input class="adm2-input" id="nt-tel" type="text" placeholder="Teléfono (opcional)" autocomplete="off" style="flex:0 0 160px">
+        <button class="adm2-btn-agendar" onclick="ntConfirmar()">✓ Agendar</button>
+      </div>
+    </div>`;
+  setTimeout(() => document.getElementById('nt-nombre')?.focus(), 80);
+}
+
+async function ntConfirmar() {
+  if (!ntSeleccion) return;
+  const nombre = (document.getElementById('nt-nombre')?.value || '').trim();
+  if (!nombre) { toast('Ingresá el nombre del cliente', 'red'); return; }
+  const telefono = (document.getElementById('nt-tel')?.value || '').trim();
+  const { canchaId, horaInicio, durMin } = ntSeleccion;
+  const dateKey = getDateKey(currentDate);
+  const cc = CANCHAS.find(x => x.id === canchaId);
+
+  try {
+    await api.agregarReservaAdmin({ canchaId, fecha: dateKey, hora_inicio: horaInicio, duracion_minutos: durMin, nombre, telefono });
+    cerrarNuevoTurno();
+    renderTurnos();
+    const horaFin = _minToTime(_timeToMin(horaInicio) + durMin);
+    toast(`✓ ${nombre} agendado ${horaInicio} — ${horaFin} — ${cc.nombre}`, 'green');
+  } catch (err) { toast(err.message || 'Error al agendar', 'red'); }
 }
 
 function buildCanchaCard(cancha, dateKey) {
