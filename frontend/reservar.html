@@ -76,15 +76,30 @@
           </div>
         </div>
 
-        <!-- PASO 2: HORARIO -->
+        <!-- PASO 2: DURACIÓN -->
         <div class="paso" id="paso2">
           <div class="rprem-card">
             <div class="rprem-card-title-row">
               <div class="rprem-card-title">
                 <span class="rprem-step-num">02</span>
-                Elegí el horario
+                ¿Cuánto tiempo vas a jugar?
               </div>
               <button class="btn-prem-back" onclick="irAPaso(1)">← Cambiar día</button>
+            </div>
+            <div class="duracion-prem-grid" id="duracion-container"></div>
+            <p class="rprem-hint">Elegí la duración de tu reserva.</p>
+          </div>
+        </div>
+
+        <!-- PASO 3: HORARIO -->
+        <div class="paso" id="paso3">
+          <div class="rprem-card">
+            <div class="rprem-card-title-row">
+              <div class="rprem-card-title">
+                <span class="rprem-step-num">03</span>
+                Elegí el horario
+              </div>
+              <button class="btn-prem-back" onclick="irAPaso(2)">← Cambiar duración</button>
             </div>
             <div class="horarios-prem-grid" id="horarios-container">
               <div class="loading-overlay"><div class="spinner"></div><p>Cargando horarios...</p></div>
@@ -92,15 +107,15 @@
           </div>
         </div>
 
-        <!-- PASO 3: DATOS -->
-        <div class="paso" id="paso3">
+        <!-- PASO 4: DATOS -->
+        <div class="paso" id="paso4">
           <div class="rprem-card">
             <div class="rprem-card-title-row">
               <div class="rprem-card-title">
-                <span class="rprem-step-num">03</span>
+                <span class="rprem-step-num">04</span>
                 Tus datos
               </div>
-              <button class="btn-prem-back" onclick="irAPaso(2)">← Cambiar horario</button>
+              <button class="btn-prem-back" onclick="irAPaso(3)">← Cambiar horario</button>
             </div>
 
             <p class="rprem-resumen-sel">
@@ -164,8 +179,8 @@
           </div>
         </div>
 
-        <!-- PASO 4: CONFIRMACIÓN -->
-        <div class="paso" id="paso4">
+        <!-- PASO 5: CONFIRMACIÓN -->
+        <div class="paso" id="paso5">
           <div id="confirmacion-container"></div>
         </div>
 

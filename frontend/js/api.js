@@ -8,6 +8,149 @@ const DEMO_MODE = window.__DEMO_MODE__ !== false;
 
 const API_URL = window.__API_URL__ || '';
 
+/* ─── TIME HELPERS ──────────────────────────────────────── */
+function _timeToMin(t) { const [h,m]=t.split(':').map(Number); return h*60+m; }
+function _minToTime(m) { return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); }
+
+/* ─── CANCHAS CONFIG ────────────────────────────────────── */
+const CANCHAS_CONFIG = [
+  { id:1, nombre:'Cancha 1', tipo:'Interior', precioHora:5000, activa:true },
+  { id:2, nombre:'Cancha 2', tipo:'Interior', precioHora:5000, activa:true },
+  { id:3, nombre:'Cancha 3', tipo:'Exterior', precioHora:4000, activa:true },
+  { id:4, nombre:'Cancha 4', tipo:'Exterior', precioHora:4000, activa:true },
+];
+const HORA_APERTURA = '08:00';
+const HORA_CIERRE   = '23:00';
+
+/* ─── RESERVATIONS DB (localStorage) ───────────────────── */
+const RESERVAS_DB_KEY = 'nf_padel_reservas_v2';
+let _reservasDB = [];
+
+function _loadReservasDB() {
+  try { _reservasDB = JSON.parse(localStorage.getItem(RESERVAS_DB_KEY)) || []; }
+  catch { _reservasDB = []; }
+}
+function _saveReservasDB() {
+  localStorage.setItem(RESERVAS_DB_KEY, JSON.stringify(_reservasDB));
+}
+function _calcPrecio(canchaId, duracionMin) {
+  const c = CANCHAS_CONFIG.find(x => x.id === canchaId);
+  return c ? Math.round(c.precioHora * duracionMin / 60) : 0;
+}
+
+/* ─── AVAILABILITY ALGORITHM ───────────────────────────── */
+function _calcDisponibilidad(fecha, duracionMinutos) {
+  const resultados = [];
+  const apertura = _timeToMin(HORA_APERTURA);
+  const cierre = _timeToMin(HORA_CIERRE);
+  const reservas = _reservasDB.filter(r => r.fecha === fecha && r.estado_reserva !== 'cancelada');
+
+  for (let t = apertura; t + duracionMinutos <= cierre; t += 30) {
+    const canchasLibres = [];
+    CANCHAS_CONFIG.forEach(cancha => {
+      if (!cancha.activa) return;
+      const chocan = reservas.some(r =>
+        r.cancha_id === cancha.id &&
+        _timeToMin(r.hora_inicio) < t + duracionMinutos &&
+        _timeToMin(r.hora_fin) > t
+      );
+      if (!chocan) canchasLibres.push({ id:cancha.id, nombre:cancha.nombre, tipo:cancha.tipo });
+    });
+    if (canchasLibres.length > 0) {
+      resultados.push({
+        hora_inicio: _minToTime(t),
+        hora_fin: _minToTime(t + duracionMinutos),
+        canchas_disponibles: canchasLibres.length,
+        canchas: canchasLibres,
+        precio_total: _calcPrecio(canchasLibres[0].id, duracionMinutos)
+      });
+    }
+  }
+  return resultados;
+}
+
+/* ─── DEMO RESERVATIONS GENERATOR ──────────────────────── */
+function _generarReservasDemo() {
+  const hoy = new Date().toISOString().split('T')[0];
+  const base = [
+    { cancha_id:1, hora_inicio:'08:00', hora_fin:'09:30', duracion_minutos:90,  cliente_nombre:'Martín Gómez',    cliente_telefono:'1145678901', estado_pago:'pagado',    metodo_pago:'efectivo' },
+    { cancha_id:1, hora_inicio:'15:00', hora_fin:'16:00', duracion_minutos:60,  cliente_nombre:'Lucas Herrera',   cliente_telefono:'1167891234', estado_pago:'pendiente', metodo_pago:'mercadopago' },
+    { cancha_id:1, hora_inicio:'19:00', hora_fin:'21:00', duracion_minutos:120, cliente_nombre:'Sebastián Mora',  cliente_telefono:'1156781234', estado_pago:'pagado',    metodo_pago:'transferencia' },
+    { cancha_id:2, hora_inicio:'09:00', hora_fin:'10:30', duracion_minutos:90,  cliente_nombre:'Carla Méndez',    cliente_telefono:'1134567890', estado_pago:'pagado',    metodo_pago:'mercadopago' },
+    { cancha_id:2, hora_inicio:'16:00', hora_fin:'17:00', duracion_minutos:60,  cliente_nombre:'Valeria Torres',  cliente_telefono:'1145670123', estado_pago:'pagado',    metodo_pago:'efectivo' },
+    { cancha_id:2, hora_inicio:'20:00', hora_fin:'21:30', duracion_minutos:90,  cliente_nombre:'Paula Sánchez',   cliente_telefono:'1156783456', estado_pago:'pendiente', metodo_pago:'transferencia' },
+    { cancha_id:3, hora_inicio:'10:00', hora_fin:'11:00', duracion_minutos:60,  cliente_nombre:'Roberto Díaz',    cliente_telefono:'1189012345', estado_pago:'pagado',    metodo_pago:'efectivo' },
+    { cancha_id:3, hora_inicio:'17:00', hora_fin:'18:30', duracion_minutos:90,  cliente_nombre:'Gustavo Ruiz',    cliente_telefono:'1190123456', estado_pago:'pendiente', metodo_pago:'mercadopago' },
+    { cancha_id:3, hora_inicio:'21:00', hora_fin:'22:00', duracion_minutos:60,  cliente_nombre:'Nicolás Vega',    cliente_telefono:'1112345678', estado_pago:'pagado',    metodo_pago:'efectivo' },
+    { cancha_id:4, hora_inicio:'11:00', hora_fin:'12:30', duracion_minutos:90,  cliente_nombre:'Fernando Castro',  cliente_telefono:'1123456789', estado_pago:'pagado',    metodo_pago:'transferencia' },
+    { cancha_id:4, hora_inicio:'18:00', hora_fin:'19:00', duracion_minutos:60,  cliente_nombre:'Agustín Romero',  cliente_telefono:'1134560123', estado_pago:'pagado',    metodo_pago:'efectivo' },
+    { cancha_id:4, hora_inicio:'20:00', hora_fin:'22:00', duracion_minutos:120, cliente_nombre:'Emilio Suárez',   cliente_telefono:'1145671234', estado_pago:'pendiente', metodo_pago:'mercadopago' },
+  ];
+  return base.map((r, i) => ({ ...r, id:`demo-${i+1}`, fecha:hoy, estado_reserva:'confirmada', created_at:hoy }));
+}
+
+function _generarHistorialReservas() {
+  const today = new Date();
+  const hoy = today.toISOString().split('T')[0];
+  const nombres = ['Juan García','María López','Carlos Ruiz','Ana Martínez','Diego Hernández','Lucía González','Pablo Fernández','Sofía Torres','Roberto Sánchez','Valentina Díaz','Tomás Pérez','Camila Rodríguez','Andrés Gómez','Florencia Castro','Matías Silva','Julia Romero','Gustavo Morales','Natalia Jiménez','Fernando Cruz','Laura Navarro'];
+  const metodos = ['efectivo','efectivo','transferencia','transferencia','mercadopago'];
+  const duraciones = [60,60,60,90,90,120];
+  const seed = (n) => { let x = Math.sin(n)*10000; return x - Math.floor(x); };
+  const reservas = [];
+  let globalId = 100;
+
+  for (let dia = 1; dia <= 60; dia++) {
+    const d = new Date(today); d.setDate(d.getDate() - dia);
+    const fecha = d.toISOString().split('T')[0];
+    const dow = d.getDay();
+    const isWeekend = dow === 0 || dow === 6;
+    let seedOffset = dia * 17;
+
+    CANCHAS_CONFIG.forEach((cancha, ci) => {
+      let cursor = _timeToMin(HORA_APERTURA);
+      const cierre = _timeToMin(HORA_CIERRE);
+      let attempts = 0;
+
+      while (cursor < cierre && attempts < 30) {
+        attempts++;
+        seedOffset++;
+        if (seed(seedOffset + ci*100) > (isWeekend ? 0.55 : 0.40)) {
+          cursor += 30;
+          continue;
+        }
+        const dur = duraciones[Math.floor(seed(seedOffset*7) * duraciones.length)];
+        if (cursor + dur > cierre) break;
+
+        const chocan = reservas.some(r =>
+          r.cancha_id === cancha.id && r.fecha === fecha &&
+          _timeToMin(r.hora_inicio) < cursor + dur && _timeToMin(r.hora_fin) > cursor
+        );
+        if (chocan) { cursor += 30; continue; }
+
+        const ni = Math.floor(seed(seedOffset*3) * nombres.length);
+        const mi = Math.floor(seed(seedOffset*11) * metodos.length);
+        const isPagado = seed(seedOffset*5) < 0.82;
+        reservas.push({
+          id: `hist-${globalId++}`,
+          cancha_id: cancha.id,
+          fecha,
+          hora_inicio: _minToTime(cursor),
+          hora_fin: _minToTime(cursor + dur),
+          duracion_minutos: dur,
+          cliente_nombre: nombres[ni],
+          cliente_telefono: '11' + String(Math.floor(seed(seedOffset*9)*90000000+10000000)),
+          estado_pago: isPagado ? 'pagado' : 'pendiente',
+          estado_reserva: 'confirmada',
+          metodo_pago: isPagado ? metodos[mi] : null,
+          created_at: fecha
+        });
+        cursor += dur;
+      }
+    });
+  }
+  return reservas;
+}
+
 async function _fetch(endpoint, opts = {}) {
   const token = localStorage.getItem('padelpro_token');
   const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
@@ -162,62 +305,7 @@ function _generarBracket(torneo) {
 
 const _demo = {
 
-  horarios: () => [
-    { hora: '08:00', libres: 4 },
-    { hora: '09:00', libres: 2 },
-    { hora: '10:00', libres: 3 },
-    { hora: '11:00', libres: 1 },
-    { hora: '15:00', libres: 3 },
-    { hora: '16:00', libres: 2 },
-    { hora: '17:00', libres: 0 },
-    { hora: '18:00', libres: 1 },
-    { hora: '19:00', libres: 4 },
-    { hora: '20:00', libres: 0 },
-    { hora: '21:00', libres: 2 },
-    { hora: '22:00', libres: 3 },
-  ],
-
-  reservasAdmin: () => {
-    const horasBase = ['08:00','09:00','10:00','11:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00','22:00'];
-    const datos = {
-      'cancha-1': [
-        { claveUnica: 'c1-08', hora: '08:00', nombre: 'Martín Gómez', telefono: '1145678901', metodoPago: 'efectivo', estado: 'pagado' },
-        { claveUnica: 'c1-15', hora: '15:00', nombre: 'Lucas Herrera', telefono: '1167891234', metodoPago: 'mercadopago', estado: 'pendiente' },
-        { claveUnica: 'c1-19', hora: '19:00', nombre: 'Sebastián Mora', telefono: '1156781234', metodoPago: 'transferencia', estado: 'pagado' },
-        { claveUnica: 'c1-21', hora: '21:00', nombre: 'Diego Fernández', telefono: '1178904567', metodoPago: 'efectivo', estado: 'pendiente' },
-      ],
-      'cancha-2': [
-        { claveUnica: 'c2-09', hora: '09:00', nombre: 'Carla Méndez', telefono: '1134567890', metodoPago: 'mercadopago', estado: 'pagado' },
-        { claveUnica: 'c2-16', hora: '16:00', nombre: 'Valeria Torres', telefono: '1145670123', metodoPago: 'efectivo', estado: 'pagado' },
-        { claveUnica: 'c2-20', hora: '20:00', nombre: 'Paula Sánchez', telefono: '1156783456', metodoPago: 'transferencia', estado: 'pendiente' },
-        { claveUnica: 'c2-22', hora: '22:00', nombre: 'Andrea López', telefono: '1167896789', metodoPago: 'efectivo', estado: 'pagado' },
-      ],
-      'cancha-3': [
-        { claveUnica: 'c3-10', hora: '10:00', nombre: 'Roberto Díaz', telefono: '1189012345', metodoPago: 'efectivo', estado: 'pagado' },
-        { claveUnica: 'c3-17', hora: '17:00', nombre: 'Gustavo Ruiz', telefono: '1190123456', metodoPago: 'mercadopago', estado: 'pendiente' },
-        { claveUnica: 'c3-21', hora: '21:00', nombre: 'Nicolás Vega', telefono: '1112345678', metodoPago: 'efectivo', estado: 'pagado' },
-      ],
-      'cancha-4': [
-        { claveUnica: 'c4-11', hora: '11:00', nombre: 'Fernando Castro', telefono: '1123456789', metodoPago: 'transferencia', estado: 'pagado' },
-        { claveUnica: 'c4-18', hora: '18:00', nombre: 'Agustín Romero', telefono: '1134560123', metodoPago: 'efectivo', estado: 'pagado' },
-        { claveUnica: 'c4-20', hora: '20:00', nombre: 'Emilio Suárez', telefono: '1145671234', metodoPago: 'mercadopago', estado: 'pendiente' },
-        { claveUnica: 'c4-22', hora: '22:00', nombre: 'Ricardo Álvarez', telefono: '1156782345', metodoPago: 'efectivo', estado: 'pagado' },
-      ],
-    };
-    const canchas = [
-      { id: 'cancha-1', nombre: 'Cancha 1', tipo: 'Cubierta' },
-      { id: 'cancha-2', nombre: 'Cancha 2', tipo: 'Cubierta' },
-      { id: 'cancha-3', nombre: 'Cancha 3', tipo: 'Aire libre' },
-      { id: 'cancha-4', nombre: 'Cancha 4', tipo: 'Aire libre' },
-    ];
-    return canchas.map(c => ({
-      ...c,
-      horas: horasBase.map(h => {
-        const reserva = datos[c.id].find(r => r.hora === h);
-        return reserva ? { ...reserva, tipo: 'ocupado' } : { hora: h, tipo: 'libre' };
-      })
-    }));
-  },
+  // horarios and reservasAdmin are now handled by _reservasDB
 
   torneos: () => [
     // ─── Torneo 1: Inscripción abierta ─────────────────────
@@ -387,7 +475,6 @@ const _demo = {
 };
 
 /* ─── ESTADO LOCAL DEMO ──────────────────────────────────── */
-let _reservasDemo = null;
 let _profesoresDemo = null;
 let _torneosDemo = null;
 let _sociosDemo = null;
@@ -428,58 +515,94 @@ function _findPartidoEnBracket(torneo, partidoId) {
 
 const _apiDemo = {
 
-  /* ── Horarios ── */
-  getHorarios: async () => {
+  /* ── Disponibilidad + Reservas ── */
+  getDisponibilidad: async (fecha, duracionMinutos) => {
     await _delay();
-    return _demo.horarios();
+    return _calcDisponibilidad(fecha, duracionMinutos || 60);
+  },
+
+  getHorarios: async (fecha) => {
+    await _delay();
+    return _calcDisponibilidad(fecha, 60);
   },
 
   reservar: async (datos) => {
     await _delay(600);
-    const canchas = ['Cubierta', 'Cubierta', 'Aire libre', 'Aire libre'];
-    const cancha = Math.floor(Math.random() * 4) + 1;
-    return { ...datos, cancha, tipo: canchas[cancha - 1], claveUnica: 'demo-' + Date.now() };
+    const { fecha, hora_inicio, duracion_minutos, nombre, telefono, metodoPago } = datos;
+    const dur = duracion_minutos || 60;
+    const horaFin = _minToTime(_timeToMin(hora_inicio) + dur);
+    const canchasLibres = CANCHAS_CONFIG.filter(cancha => {
+      if (!cancha.activa) return false;
+      return !_reservasDB.some(r =>
+        r.cancha_id === cancha.id && r.fecha === fecha && r.estado_reserva !== 'cancelada' &&
+        _timeToMin(r.hora_inicio) < _timeToMin(hora_inicio) + dur &&
+        _timeToMin(r.hora_fin) > _timeToMin(hora_inicio)
+      );
+    });
+    if (!canchasLibres.length) throw new Error('No hay canchas disponibles para ese horario');
+    const cancha = canchasLibres[0];
+    const reserva = {
+      id: 'res-' + Date.now() + '-' + Math.random().toString(36).substr(2,4),
+      cancha_id: cancha.id, fecha, hora_inicio, hora_fin: horaFin, duracion_minutos: dur,
+      cliente_nombre: nombre, cliente_telefono: telefono,
+      estado_pago: 'pendiente', estado_reserva: 'confirmada',
+      metodo_pago: metodoPago || null, created_at: new Date().toISOString()
+    };
+    _reservasDB.push(reserva);
+    _saveReservasDB();
+    return { id: reserva.id, nombre, telefono, fecha, hora: hora_inicio, hora_inicio, hora_fin: horaFin,
+      duracion_minutos: dur, cancha: cancha.id, cancha_nombre: cancha.nombre, tipo: cancha.tipo,
+      precio_total: _calcPrecio(cancha.id, dur), metodoPago };
   },
 
-  getReservasAdmin: async () => {
+  getReservasAdmin: async (fecha) => {
     await _delay();
-    if (!_reservasDemo) _reservasDemo = _demo.reservasAdmin();
-    return _reservasDemo;
+    const f = fecha || new Date().toISOString().split('T')[0];
+    return _reservasDB.filter(r => r.fecha === f && r.estado_reserva !== 'cancelada');
   },
 
-  marcarPagado: async ({ claveUnica, metodoPago }) => {
+  marcarPagado: async ({ id, metodoPago }) => {
     await _delay(300);
-    if (_reservasDemo) {
-      _reservasDemo.forEach(c => {
-        const slot = c.horas.find(h => h.claveUnica === claveUnica);
-        if (slot) { slot.estado = 'pagado'; slot.metodoPago = metodoPago; }
-      });
-    }
+    const r = _reservasDB.find(x => x.id === id);
+    if (r) { r.estado_pago = 'pagado'; if (metodoPago) r.metodo_pago = metodoPago; _saveReservasDB(); }
     toast('Pago registrado ✓', 'verde');
     return { ok: true };
   },
 
-  agregarTurnoAdmin: async (datos) => {
+  agregarReservaAdmin: async (datos) => {
     await _delay(400);
-    if (_reservasDemo) {
-      const cancha = _reservasDemo.find(c => c.id === datos.canchaId);
-      if (cancha) {
-        const slot = cancha.horas.find(h => h.hora === datos.hora);
-        if (slot) Object.assign(slot, { ...datos, tipo: 'ocupado', estado: 'pendiente', claveUnica: 'demo-' + Date.now() });
-      }
-    }
+    const { canchaId, fecha, hora_inicio, duracion_minutos, nombre, telefono } = datos;
+    const dur = duracion_minutos || 60;
+    const horaFin = _minToTime(_timeToMin(hora_inicio) + dur);
+    const chocan = _reservasDB.some(r =>
+      r.cancha_id === canchaId && r.fecha === fecha && r.estado_reserva !== 'cancelada' &&
+      _timeToMin(r.hora_inicio) < _timeToMin(hora_inicio) + dur && _timeToMin(r.hora_fin) > _timeToMin(hora_inicio)
+    );
+    if (chocan) throw new Error('Ese horario ya está ocupado');
+    const reserva = {
+      id: 'adm-' + Date.now() + '-' + Math.random().toString(36).substr(2,4),
+      cancha_id: canchaId, fecha, hora_inicio, hora_fin: horaFin, duracion_minutos: dur,
+      cliente_nombre: nombre, cliente_telefono: telefono || '',
+      estado_pago: 'pendiente', estado_reserva: 'confirmada', metodo_pago: null,
+      created_at: new Date().toISOString()
+    };
+    _reservasDB.push(reserva); _saveReservasDB();
+    return reserva;
+  },
+
+  agregarTurnoAdmin: async (datos) => {
+    return _apiDemo.agregarReservaAdmin(datos);
+  },
+
+  cancelarReserva: async ({ id }) => {
+    await _delay(300);
+    const r = _reservasDB.find(x => x.id === id);
+    if (r) { r.estado_reserva = 'cancelada'; _saveReservasDB(); }
     return { ok: true };
   },
 
-  quitarTurno: async ({ claveUnica }) => {
-    await _delay(300);
-    if (_reservasDemo) {
-      _reservasDemo.forEach(c => {
-        const i = c.horas.findIndex(h => h.claveUnica === claveUnica);
-        if (i !== -1) c.horas[i] = { hora: c.horas[i].hora, tipo: 'libre' };
-      });
-    }
-    return { ok: true };
+  quitarTurno: async ({ id }) => {
+    return _apiDemo.cancelarReserva({ id });
   },
 
   /* ── Torneos ── */
@@ -869,6 +992,13 @@ const _apiReal = {
   getReporteMes:            (año, mes) => _fetch('/api/admin/ingresos/mes?año=' + año + '&mes=' + mes),
   getDashboard:             () => _fetch('/api/admin/dashboard'),
 };
+
+/* ─── INIT RESERVAS ─────────────────────────────────────── */
+_loadReservasDB();
+if (DEMO_MODE && _reservasDB.length === 0) {
+  _reservasDB = [..._generarReservasDemo(), ..._generarHistorialReservas()];
+  _saveReservasDB();
+}
 
 const api = DEMO_MODE ? _apiDemo : _apiReal;
 

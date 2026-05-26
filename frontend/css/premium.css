@@ -1423,9 +1423,56 @@
 .dias-scroll-prem .dia-mes    { font-size: 11px; display: block; opacity: 0.7; }
 
 /* Grid de horarios */
+/* ─── SELECTOR DE DURACIÓN ─────────────────────── */
+.duracion-prem-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.duracion-btn {
+  padding: 28px 20px;
+  border-radius: 12px;
+  border: 2px solid var(--prem-border);
+  background: rgba(255,255,255,0.03);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.duracion-btn:hover {
+  border-color: rgba(0,232,122,0.4);
+  background: rgba(0,232,122,0.06);
+}
+
+.duracion-btn.seleccionado {
+  background: var(--prem-verde);
+  border-color: var(--prem-verde);
+  color: var(--prem-dark);
+}
+
+.duracion-tiempo {
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.duracion-precio {
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+.duracion-btn.seleccionado .duracion-precio { opacity: 0.8; color: var(--prem-dark); }
+
+/* ─── GRILLA DE HORARIOS DINÁMICOS ─────────────── */
 .horarios-prem-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 10px;
 }
 
@@ -1438,6 +1485,9 @@
   transition: all 0.2s ease;
   text-align: left;
   color: white;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .horarios-prem-grid .horario-btn:hover:not(:disabled) {
@@ -1457,18 +1507,37 @@
   background: rgba(255,255,255,0.02);
 }
 
-.horarios-prem-grid .horario-hora {
+.horario-rango {
+  font-size: 22px; font-weight: 900; display: block; line-height: 1;
+}
+
+.horario-hora {
   font-size: 24px; font-weight: 900; display: block; line-height: 1;
 }
 
 .horarios-prem-grid .horario-disponibilidad {
-  font-size: 12px; font-weight: 600; margin-top: 6px; display: block;
+  font-size: 12px; font-weight: 600; margin-top: 2px; display: block;
 }
+
+.horario-precio {
+  font-size: 15px; font-weight: 700; margin-top: 4px; display: block;
+  color: var(--prem-verde);
+}
+
+.horarios-prem-grid .horario-btn.seleccionado .horario-precio { color: var(--prem-dark); opacity: 0.8; }
 
 .horarios-prem-grid .horario-btn .disponible { color: var(--prem-verde); }
 .horarios-prem-grid .horario-btn.seleccionado .disponible { color: rgba(5,12,16,0.7); }
 .horarios-prem-grid .horario-btn .ultimo { color: #f59e0b; }
 .horarios-prem-grid .horario-btn .ocupado { color: rgba(255,255,255,0.25); }
+
+.rprem-no-horarios {
+  color: rgba(255,255,255,0.5);
+  text-align: center;
+  padding: 40px 20px;
+  font-size: 15px;
+  line-height: 1.6;
+}
 
 /* Formulario de datos */
 .rprem-form { display: flex; flex-direction: column; gap: 20px; }
@@ -1874,6 +1943,7 @@
   .rprem-card { padding: 24px 20px; }
 
   .horarios-prem-grid { grid-template-columns: repeat(3, 1fr); }
+  .duracion-prem-grid { grid-template-columns: repeat(3, 1fr); }
 
   .grupos-grid { grid-template-columns: 1fr; }
 
@@ -1883,6 +1953,9 @@
 
 @media (max-width: 480px) {
   .horarios-prem-grid { grid-template-columns: repeat(2, 1fr); }
+  .duracion-prem-grid { grid-template-columns: 1fr; }
+  .duracion-btn { padding: 20px 16px; }
+  .duracion-tiempo { font-size: 18px; }
   .dias-scroll-prem .dia-btn { min-width: 64px; }
   .rprem-card-title { font-size: 17px; }
 }

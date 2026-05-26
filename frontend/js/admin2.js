@@ -1,13 +1,12 @@
-﻿/* ════════════════════════════════════════════════════
-   admin2.js — Dashboard + Turnos + Finanzas
+/* ════════════════════════════════════════════════════
+   admin2.js — Dashboard + Turnos dinámicos + Finanzas
+   Slots de 30 min, duraciones variables
    ════════════════════════════════════════════════════ */
 
 /* ─── AUTH ───────────────────────────────────────────── */
 const AUTH_KEY    = 'padelpro_token';
 const _ADM_API   = window.__API_URL__ || '';
 const _USE_API   = window.__DEMO_MODE__ === false && !!_ADM_API;
-const _C2N       = { c1: 1, c2: 2, c3: 3, c4: 4 };
-const _N2C       = { 1: 'c1', 2: 'c2', 3: 'c3', 4: 'c4' };
 
 function _apiFetch(endpoint, opts = {}) {
   const token = localStorage.getItem(AUTH_KEY);
@@ -44,8 +43,6 @@ async function doLogin(e) {
       const data = await _apiFetch('/api/auth/login', { method: 'POST', body: JSON.stringify({ password: pass }) });
       localStorage.setItem(AUTH_KEY, data.token);
       document.getElementById('login-overlay').classList.add('hidden');
-      const now = new Date();
-      await _fetchTurnosMonth(now.getFullYear(), now.getMonth() + 1);
       renderDashboard();
     } catch (err) {
       errEl.textContent = err.message || 'Error al conectar';
@@ -70,28 +67,11 @@ function doLogout() {
 }
 
 /* ─── Config ─────────────────────────────────────────── */
-const CANCHAS = [
-  { id:'c1', nombre:'Cancha 1', tipo:'Interior', precio:5000 },
-  { id:'c2', nombre:'Cancha 2', tipo:'Interior', precio:5000 },
-  { id:'c3', nombre:'Cancha 3', tipo:'Exterior', precio:4000 },
-  { id:'c4', nombre:'Cancha 4', tipo:'Exterior', precio:4000 },
-];
-const HORAS = ['15:00','16:00','17:00','18:00','19:00','20:00','21:00','22:00'];
+const CANCHAS = CANCHAS_CONFIG;
 const DIAS_CORTO  = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 const DIAS_LARGO  = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 const MESES       = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const MESES_CORTO = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-const NOMBRES_DEMO = [
-  'Juan García','María López','Carlos Ruiz','Ana Martínez','Diego Hernández',
-  'Lucía González','Pablo Fernández','Sofía Torres','Roberto Sánchez','Valentina Díaz',
-  'Tomás Pérez','Camila Rodríguez','Andrés Gómez','Florencia Castro','Matías Silva',
-  'Julia Romero','Gustavo Morales','Natalia Jiménez','Fernando Cruz','Laura Navarro',
-  'Sebastián Méndez','Carolina Reyes','Nicolás Flores','Paula Herrera','Maximiliano Ríos',
-];
-const METODOS_DEMO = ['efectivo','efectivo','transferencia','transferencia','online'];
-
-/* ─── Store ──────────────────────────────────────────── */
-const turnosStore = {};
 
 /* ─── Date helpers ───────────────────────────────────── */
 function _key(y,m,d){ return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
@@ -100,7 +80,7 @@ function getDateKey(d){ return _key(d.getFullYear(),d.getMonth()+1,d.getDate());
 
 function mondayOf(d) {
   const r = new Date(d);
-  const day = r.getDay(); // 0=sun
+  const day = r.getDay();
   const diff = day === 0 ? -6 : 1 - day;
   r.setDate(r.getDate() + diff);
   return r;
@@ -123,110 +103,31 @@ function formatArsLong(n) {
   return '$' + (n||0).toLocaleString('es-AR');
 }
 
-/* ─── Storage (localStorage) ─────────────────────────── */
-const STORAGE_KEY = 'nf_padel_turnos_v1';
-
-function saveToStorage() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(turnosStore)); } catch(e) {}
+/* ─── Data helpers (read from _reservasDB) ──────────── */
+function getReservasDelDia(dateKey) {
+  return _reservasDB.filter(r => r.fecha === dateKey && r.estado_reserva !== 'cancelada');
 }
 
-function loadFromStorage() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) Object.assign(turnosStore, JSON.parse(raw));
-  } catch(e) {}
+function getReservasCancha(dateKey, canchaId) {
+  return _reservasDB.filter(r => r.fecha === dateKey && r.cancha_id === canchaId && r.estado_reserva !== 'cancelada')
+    .sort((a,b) => _timeToMin(a.hora_inicio) - _timeToMin(b.hora_inicio));
 }
 
-async function _fetchTurnosDate(dateKey) {
-  try {
-    const data = await _apiFetch('/api/admin/reservas/' + dateKey);
-    ensureDate(dateKey);
-    Object.keys(data).forEach(num => {
-      const cid = _N2C[num]; if (!cid) return;
-      turnosStore[dateKey][cid] = {};
-      data[num].reservas.forEach(r => {
-        if (!r.libre) turnosStore[dateKey][cid][r.hora] = { nombre: r.nombre, estado: r.estado, metodoPago: r.metodoCobro || r.metodoPago || null, claveUnica: r.claveUnica, telefono: r.telefono || '' };
-      });
-    });
-  } catch (err) { console.error('Error cargando turnos:', err); }
-}
-
-async function _fetchTurnosMonth(year, month) {
-  const desde = `${year}-${String(month).padStart(2,'0')}-01`;
-  const dias  = new Date(year, month, 0).getDate();
-  const hasta = `${year}-${String(month).padStart(2,'0')}-${String(dias).padStart(2,'0')}`;
-  try {
-    const reservas = await _apiFetch('/api/admin/reservas?desde=' + desde + '&hasta=' + hasta);
-    reservas.forEach(r => {
-      const cid = _N2C[r.cancha]; if (!cid) return;
-      ensureDate(r.fecha);
-      turnosStore[r.fecha][cid][r.hora] = { nombre: r.nombre, estado: r.estado, metodoPago: r.metodoCobro || r.metodoPago || null, claveUnica: r.claveUnica, telefono: r.telefono || '' };
-    });
-  } catch (err) { console.error('Error cargando mes:', err); }
-}
-
-function exportCSV() {
-  const rows = [['Fecha','Cancha','Tipo','Hora','Cliente','Estado','Método de pago','Precio']];
-  Object.keys(turnosStore).sort().forEach(date => {
-    CANCHAS.forEach(c => {
-      const slots = turnosStore[date]?.[c.id] || {};
-      Object.keys(slots).sort().forEach(hora => {
-        const t = slots[hora];
-        rows.push([date, c.nombre, c.tipo, hora, t.nombre, t.estado, t.metodoPago||'—', c.precio]);
-      });
-    });
-  });
-  const csv = '﻿' + rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
-  const blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url; a.download = `padel-finanzas-${todayKey()}.csv`;
-  document.body.appendChild(a); a.click();
-  document.body.removeChild(a); URL.revokeObjectURL(url);
-  toast('✓ CSV exportado correctamente','green');
-}
-
-/* ─── Store helpers ──────────────────────────────────── */
-function ensureDate(key) {
-  if (!turnosStore[key]) turnosStore[key] = { c1:{}, c2:{}, c3:{}, c4:{} };
-}
-
-function setTurno(dateKey, canchaId, hora, nombre) {
-  ensureDate(dateKey);
-  turnosStore[dateKey][canchaId][hora] = { nombre, estado:'pendiente', metodoPago:null };
-  saveToStorage();
-}
-
-function getTurno(dateKey, canchaId, hora) {
-  return turnosStore[dateKey]?.[canchaId]?.[hora] ?? null;
-}
-
-function delTurno(dateKey, canchaId, hora) {
-  if (turnosStore[dateKey]?.[canchaId]) {
-    delete turnosStore[dateKey][canchaId][hora];
-    saveToStorage();
-  }
-}
-
-/* ─── Data helpers ───────────────────────────────────── */
 function getDayData(dateKey) {
-  const data = turnosStore[dateKey];
-  if (!data) return { reservas:0, ingresos:0, pendiente:0, canceladas:0, efectivo:0, transferencia:0, online:0 };
-  let reservas=0, ingresos=0, pendiente=0, efectivo=0, transferencia=0, online=0;
-  CANCHAS.forEach(c => {
-    Object.values(data[c.id]||{}).forEach(t => {
-      reservas++;
-      if (t.estado==='pagado') {
-        ingresos += c.precio;
-        if (t.metodoPago==='efectivo')       efectivo += c.precio;
-        else if (t.metodoPago==='transferencia') transferencia += c.precio;
-        else if (t.metodoPago==='online')    online += c.precio;
-      } else {
-        pendiente += c.precio;
-      }
-    });
+  const reservas = getReservasDelDia(dateKey);
+  let ingresos=0, pendiente=0, efectivo=0, transferencia=0, online=0;
+  reservas.forEach(r => {
+    const precio = _calcPrecio(r.cancha_id, r.duracion_minutos);
+    if (r.estado_pago === 'pagado') {
+      ingresos += precio;
+      if (r.metodo_pago === 'efectivo') efectivo += precio;
+      else if (r.metodo_pago === 'transferencia') transferencia += precio;
+      else online += precio;
+    } else {
+      pendiente += precio;
+    }
   });
-  return { reservas, ingresos, pendiente, efectivo, transferencia, online };
+  return { reservas: reservas.length, ingresos, pendiente, efectivo, transferencia, online };
 }
 
 function getWeekData(monday) {
@@ -257,65 +158,32 @@ function getMonthData(year, month) {
     transferencia += dd.transferencia;
     online     += dd.online;
     if (dd.ingresos > bestAmt) { bestAmt=dd.ingresos; bestDay=new Date(year, month, d); }
-    const data = turnosStore[_key(year, month+1, d)];
-    if (data) CANCHAS.forEach(c => { Object.values(data[c.id]||{}).forEach(t => { if (t.estado !== 'pagado') turnosPendientes++; }); });
+    const dayReservas = getReservasDelDia(key);
+    dayReservas.forEach(r => { if (r.estado_pago !== 'pagado') turnosPendientes++; });
   }
   return { total, reservas, bestDay, bestAmt, efectivo, transferencia, online, pendiente, turnosPendientes, daysInMonth };
 }
 
-/* ─── Sample data ────────────────────────────────────── */
-function generateSampleHistory() {
-  const today    = new Date();
-  const todayKey_ = todayKey();
-
-  // Hoy (datos de ejemplo fijos)
-  ensureDate(todayKey_);
-  const s = turnosStore[todayKey_];
-  s.c1['19:00']={nombre:'Martín López',  estado:'pagado',   metodoPago:'efectivo'};
-  s.c1['20:00']={nombre:'Carlos Ruiz',   estado:'pendiente',metodoPago:null};
-  s.c1['21:00']={nombre:'Ana Pérez',     estado:'pagado',   metodoPago:'transferencia'};
-  s.c2['15:00']={nombre:'Diego Fernández',estado:'pendiente',metodoPago:null};
-  s.c2['18:00']={nombre:'Lucía Torres',  estado:'pagado',   metodoPago:'efectivo'};
-  s.c2['20:00']={nombre:'Pablo Martínez',estado:'pendiente',metodoPago:null};
-  s.c2['21:00']={nombre:'Sofía García',  estado:'pagado',   metodoPago:'online'};
-  s.c3['17:00']={nombre:'Roberto Sánchez',estado:'pagado',  metodoPago:'efectivo'};
-  s.c3['20:00']={nombre:'María Gómez',   estado:'pendiente',metodoPago:null};
-  s.c3['22:00']={nombre:'Javier Díaz',   estado:'pagado',   metodoPago:'transferencia'};
-  s.c4['16:00']={nombre:'Valentina Roa', estado:'pendiente',metodoPago:null};
-  s.c4['19:00']={nombre:'Tomás Herrera', estado:'pagado',   metodoPago:'efectivo'};
-  s.c4['20:00']={nombre:'Camila Vega',   estado:'pendiente',metodoPago:null};
-  s.c4['22:00']={nombre:'Nicolás Paz',   estado:'pagado',   metodoPago:'efectivo'};
-
-  // Últimos 60 días (datos históricos aleatorios pero realistas)
-  const seed = (n) => { let x=Math.sin(n)*10000; return x-Math.floor(x); };
-
-  for (let i=1; i<=60; i++) {
-    const d   = addDays(today, -i);
-    const key = getDateKey(d);
-    if (turnosStore[key] && Object.values(turnosStore[key]).some(c=>Object.keys(c).length>0)) continue;
-    ensureDate(key);
-    const dow    = d.getDay();
-    const isWeekend = dow===0||dow===6;
-    const occ   = isWeekend ? 0.78 : 0.52;
-    let slot_seed = i * 17;
-
-    CANCHAS.forEach((c,ci) => {
-      HORAS.forEach((h, hi) => {
-        slot_seed++;
-        if (seed(slot_seed + ci*100 + hi*13) < occ) {
-          const ni  = Math.floor(seed(slot_seed*7) * NOMBRES_DEMO.length);
-          const isPagado = seed(slot_seed*3) < 0.82;
-          const mi  = Math.floor(seed(slot_seed*11) * METODOS_DEMO.length);
-          turnosStore[key][c.id][h] = {
-            nombre: NOMBRES_DEMO[ni],
-            estado: isPagado ? 'pagado' : 'pendiente',
-            metodoPago: isPagado ? METODOS_DEMO[mi] : null,
-          };
-        }
-      });
+/* ─── CSV Export ─────────────────────────────────────── */
+function exportCSV() {
+  const rows = [['Fecha','Cancha','Tipo','Hora Inicio','Hora Fin','Duración','Cliente','Estado Pago','Método de pago','Precio']];
+  const fechas = [...new Set(_reservasDB.filter(r => r.estado_reserva !== 'cancelada').map(r => r.fecha))].sort();
+  fechas.forEach(fecha => {
+    const reservas = getReservasDelDia(fecha);
+    reservas.forEach(r => {
+      const cancha = CANCHAS.find(c => c.id === r.cancha_id);
+      const precio = _calcPrecio(r.cancha_id, r.duracion_minutos);
+      rows.push([fecha, cancha?.nombre || r.cancha_id, cancha?.tipo || '', r.hora_inicio, r.hora_fin, r.duracion_minutos+'min', r.cliente_nombre, r.estado_pago, r.metodo_pago||'—', precio]);
     });
-  }
-  saveToStorage();
+  });
+  const csv = '﻿' + rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  const blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = `padel-finanzas-${todayKey()}.csv`;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+  toast('✓ CSV exportado correctamente','green');
 }
 
 /* ════════════════════════════════════════════════════
@@ -363,139 +231,7 @@ function renderDashboard() {
 }
 
 /* ════════════════════════════════════════════════════
-   GRÁFICO CON TOOLTIP Y NAV DE SEMANAS
-   ════════════════════════════════════════════════════ */
-
-let chartWeekOffset = 0;
-
-function changeChartWeek(delta) {
-  chartWeekOffset += delta;
-  buildChart(chartWeekOffset);
-}
-
-function buildChart(weekOffset) {
-  const el = document.getElementById('adm2-chart');
-  if (!el) return;
-
-  // Calcular los 7 días a mostrar
-  const today  = new Date();
-  const anchor = addDays(today, weekOffset * 7);
-  const monday = mondayOf(anchor);
-  const dates  = Array.from({length:7}, (_,i) => addDays(monday, i));
-  const days   = dates.map(d => ({
-    label: DIAS_CORTO[d.getDay()],
-    key:   getDateKey(d),
-    isToday: getDateKey(d) === todayKey(),
-    isFuture: d > today,
-  }));
-
-  const reservas = days.map(d => getDayData(d.key).reservas);
-  const ingresos = days.map(d => getDayData(d.key).ingresos);
-
-  // Semana label
-  const d1 = dates[0]; const d7 = dates[6];
-  const rangeLabel = `${d1.getDate()} ${MESES_CORTO[d1.getMonth()]} — ${d7.getDate()} ${MESES_CORTO[d7.getMonth()]} ${d7.getFullYear()}`;
-  const labelEl = document.getElementById('chart-week-label');
-  if (labelEl) labelEl.textContent = rangeLabel;
-
-  const W=490, H=192, pL=54, pR=14, pT=14, pB=34;
-  const cW=W-pL-pR, cH=H-pT-pB, n=7;
-
-  const maxR = Math.max(1, ...reservas);
-  const maxI = Math.max(1, ...ingresos);
-
-  const xPos = i => pL + (i/(n-1))*cW;
-  const yR   = v => pT + (1 - v/maxR)*cH;
-  const yI   = v => pT + (1 - v/maxI)*cH;
-
-  const lineR  = reservas.map((v,i)=>`${i===0?'M':'L'}${xPos(i).toFixed(1)},${yR(v).toFixed(1)}`).join(' ');
-  const areaR  = lineR + ` L${xPos(6).toFixed(1)},${(pT+cH).toFixed(1)} L${pL},${(pT+cH).toFixed(1)} Z`;
-  const lineI  = ingresos.map((v,i)=>`${i===0?'M':'L'}${xPos(i).toFixed(1)},${yI(v).toFixed(1)}`).join(' ');
-  const areaI  = lineI + ` L${xPos(6).toFixed(1)},${(pT+cH).toFixed(1)} L${pL},${(pT+cH).toFixed(1)} Z`;
-
-  const gridLines = [0,.25,.5,.75,1].map(t=>{
-    const y=(pT+t*cH).toFixed(1);
-    return `<line x1="${pL}" y1="${y}" x2="${W-pR}" y2="${y}" stroke="#1e2a3a" stroke-width="1" stroke-dasharray="3,4"/>`;
-  }).join('');
-
-  const yLabels = [0,.5,1].map(t=>{
-    const v = maxI*(1-t);
-    return `<text x="${pL-5}" y="${(pT+t*cH+4).toFixed(1)}" text-anchor="end" fill="#64748b" font-size="9.5" font-family="JetBrains Mono,monospace">${v>=1000?'$'+(v/1000).toFixed(0)+'k':'$'+v}</text>`;
-  }).join('');
-
-  const xLabels = days.map((d,i)=>`<text x="${xPos(i).toFixed(1)}" y="${H-5}" text-anchor="middle" fill="${d.isToday?'#22c55e':'#64748b'}" font-size="11" font-weight="${d.isToday?'700':'400'}">${d.label}</text>`).join('');
-
-  const dotsR  = reservas.map((v,i)=>`<circle cx="${xPos(i).toFixed(1)}" cy="${yR(v).toFixed(1)}" r="3.5" fill="#22c55e" stroke="#151c27" stroke-width="2"/>`).join('');
-  const dotsI  = ingresos.map((v,i)=>`<circle cx="${xPos(i).toFixed(1)}" cy="${yI(v).toFixed(1)}" r="3.5" fill="#3b82f6" stroke="#151c27" stroke-width="2"/>`).join('');
-
-  // Hover bands (transparentes)
-  const bandW  = cW / n;
-  const bands  = days.map((d,i)=>`<rect class="chart-band" data-i="${i}" x="${(xPos(i)-bandW/2).toFixed(1)}" y="${pT}" width="${bandW.toFixed(1)}" height="${cH}" fill="transparent"/>`).join('');
-
-  el.innerHTML = `
-    <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
-      <defs>
-        <linearGradient id="gR" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#22c55e" stop-opacity=".28"/><stop offset="100%" stop-color="#22c55e" stop-opacity="0"/></linearGradient>
-        <linearGradient id="gI" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3b82f6" stop-opacity=".18"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/></linearGradient>
-      </defs>
-      ${gridLines}${yLabels}${xLabels}
-      <path d="${areaI}" fill="url(#gI)"/>
-      <path d="${lineI}" fill="none" stroke="#3b82f6" stroke-width="1.8"/>
-      <path d="${areaR}" fill="url(#gR)"/>
-      <path d="${lineR}" fill="none" stroke="#22c55e" stroke-width="1.8"/>
-      ${dotsI}${dotsR}
-      ${bands}
-    </svg>`;
-
-  // Tooltip hover
-  el.querySelectorAll('.chart-band').forEach(band => {
-    band.addEventListener('mouseenter', e => {
-      const i   = parseInt(e.target.getAttribute('data-i'));
-      const d   = days[i];
-      const res = reservas[i];
-      const ing = ingresos[i];
-      document.getElementById('tt-day').textContent = d.label + (d.isToday ? ' (hoy)' : '');
-      document.getElementById('tt-res').textContent = res;
-      document.getElementById('tt-ing').textContent = formatArs(ing);
-      document.getElementById('adm2-tooltip').classList.add('visible');
-    });
-    band.addEventListener('mousemove', e => {
-      const tt = document.getElementById('adm2-tooltip');
-      tt.style.left = (e.clientX + 14) + 'px';
-      tt.style.top  = (e.clientY - 40) + 'px';
-    });
-    band.addEventListener('mouseleave', () => {
-      document.getElementById('adm2-tooltip').classList.remove('visible');
-    });
-  });
-
-  // Render week label
-  _renderChartTopbar(rangeLabel);
-}
-
-function _renderChartTopbar(rangeLabel) {
-  const card = document.getElementById('adm2-chart');
-  if (!card) return;
-  const wrap = card.closest('.adm2-tendencia-card');
-  if (!wrap) return;
-
-  let topbar = wrap.querySelector('.adm2-chart-topbar');
-  if (!topbar) {
-    topbar = document.createElement('div');
-    topbar.className = 'adm2-chart-topbar';
-    wrap.insertBefore(topbar, wrap.querySelector('.adm2-card-title').nextSibling);
-  }
-  topbar.innerHTML = `
-    <div style="font-size:11px;color:var(--a2-text-muted);">Semana</div>
-    <div class="adm2-chart-week-nav">
-      <button class="adm2-chart-week-btn" onclick="changeChartWeek(-1)">◂</button>
-      <span class="adm2-chart-week-label" id="chart-week-label">${rangeLabel}</span>
-      <button class="adm2-chart-week-btn" onclick="changeChartWeek(1)" ${chartWeekOffset>=0?'disabled style="opacity:.35;cursor:not-allowed"':''}>▸</button>
-    </div>`;
-}
-
-/* ════════════════════════════════════════════════════
-   TURNOS
+   TURNOS — Timeline view
    ════════════════════════════════════════════════════ */
 
 let currentDate     = new Date();
@@ -512,23 +248,77 @@ function formatDateLabel(d) {
   return `📅 ${DIAS_LARGO[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]}`;
 }
 
+function buildTimeline(canchaId, dateKey) {
+  const apertura = _timeToMin(HORA_APERTURA);
+  const cierre = _timeToMin(HORA_CIERRE);
+  const reservas = getReservasCancha(dateKey, canchaId);
+  const segments = [];
+  let cursor = apertura;
+
+  reservas.forEach(r => {
+    const start = _timeToMin(r.hora_inicio);
+    const end = _timeToMin(r.hora_fin);
+    if (start > cursor) {
+      segments.push({ tipo:'libre', desde:_minToTime(cursor), hasta:_minToTime(start), duracion:start-cursor });
+    }
+    segments.push({ tipo:'ocupado', reserva:r, desde:r.hora_inicio, hasta:r.hora_fin, duracion:r.duracion_minutos });
+    cursor = end;
+  });
+
+  if (cursor < cierre) {
+    segments.push({ tipo:'libre', desde:_minToTime(cursor), hasta:_minToTime(cierre), duracion:cierre-cursor });
+  }
+  return segments;
+}
+
 function renderTurnos() {
   closeActivePanel();
   const key = getDateKey(currentDate);
-  ensureDate(key);
   const lbl = document.getElementById('adm2-date-label');
   if (lbl) lbl.textContent = formatDateLabel(currentDate);
   const grid = document.getElementById('adm2-canchas-grid');
   if (!grid) return;
-  grid.innerHTML = CANCHAS.map(c=>buildCanchaCard(c,key)).join('');
+  grid.innerHTML = CANCHAS.map(c => buildCanchaCard(c, key)).join('');
   updateDashStats();
 }
 
 function buildCanchaCard(cancha, dateKey) {
-  const turnos   = turnosStore[dateKey]?.[cancha.id] ?? {};
-  const libres   = HORAS.filter(h=>!turnos[h]).length;
-  const precioFmt= '$'+cancha.precio.toLocaleString('es-AR');
-  const slots    = HORAS.map((h,i)=>buildSlotHtml(cancha,h,i,turnos[h])).join('');
+  const reservas = getReservasCancha(dateKey, cancha.id);
+  const timeline = buildTimeline(cancha.id, dateKey);
+  const totalMinLibres = timeline.filter(s => s.tipo === 'libre').reduce((a,s) => a + s.duracion, 0);
+  const horasLibres = (totalMinLibres / 60).toFixed(1).replace('.0','');
+  const precioFmt = '$' + cancha.precioHora.toLocaleString('es-AR');
+
+  const timelineHtml = timeline.map((seg, idx) => {
+    if (seg.tipo === 'libre') {
+      const durLabel = seg.duracion >= 60 ? (seg.duracion/60).toFixed(1).replace('.0','') + 'h' : seg.duracion + 'min';
+      return `
+        <div class="adm2-tl-segment libre" data-cancha="${cancha.id}" data-desde="${seg.desde}" data-hasta="${seg.hasta}" data-dur="${seg.duracion}"
+             onclick="handleFreeClick(${cancha.id},'${seg.desde}','${seg.hasta}',${seg.duracion},${idx})">
+          <div class="adm2-tl-time">${seg.desde} — ${seg.hasta}</div>
+          <div class="adm2-tl-label">LIBRE · ${durLabel}</div>
+          <div class="adm2-tl-action">+ Agendar</div>
+        </div>`;
+    } else {
+      const r = seg.reserva;
+      const durLabel = r.duracion_minutos >= 60 ? (r.duracion_minutos/60).toFixed(1).replace('.0','') + 'h' : r.duracion_minutos + 'min';
+      const isPagado = r.estado_pago === 'pagado';
+      const badgeCls = isPagado ? 'pagado' : 'pendiente';
+      const badgeTxt = isPagado ? 'PAGADO ✓' : 'PENDIENTE';
+      const precio = _calcPrecio(cancha.id, r.duracion_minutos);
+      return `
+        <div class="adm2-tl-segment ocupado" onclick="handleOcupadoClick(${cancha.id},'${r.id}',${idx})">
+          <div class="adm2-tl-time">${r.hora_inicio} — ${r.hora_fin}</div>
+          <div class="adm2-tl-cliente">${r.cliente_nombre}</div>
+          <div class="adm2-tl-meta">
+            <span class="adm2-tl-dur">${durLabel}</span>
+            <span class="adm2-pago-badge ${badgeCls}">${badgeTxt}</span>
+            <span class="adm2-tl-precio">$${precio.toLocaleString('es-AR')}</span>
+          </div>
+        </div>`;
+    }
+  }).join('');
+
   return `
     <div class="adm2-cancha-card">
       <div class="adm2-cancha-card-header">
@@ -536,227 +326,203 @@ function buildCanchaCard(cancha, dateKey) {
           <div class="adm2-cancha-card-nombre">${cancha.nombre}</div>
           <div class="adm2-cancha-card-meta">${cancha.tipo} · <span>${precioFmt}/h</span></div>
         </div>
-        <div class="adm2-badge-libres">${libres} libres</div>
+        <div class="adm2-badge-libres">${reservas.length} turno${reservas.length!==1?'s':''} · ${horasLibres}h libres</div>
       </div>
-      <div class="adm2-slots-grid" id="grid-${cancha.id}">${slots}</div>
+      <div class="adm2-timeline" id="timeline-${cancha.id}">${timelineHtml}</div>
     </div>`;
 }
 
-function buildSlotHtml(cancha, hora, idx, data) {
-  const pf = '$'+cancha.precio.toLocaleString('es-AR');
-  if (!data) return `
-    <div class="adm2-slot libre" data-cancha="${cancha.id}" data-hora="${hora}" data-idx="${idx}" onclick="handleSlotClick('${cancha.id}','${hora}',${idx})">
-      <span class="adm2-slot-hora">${hora}</span>
-      <span class="adm2-slot-precio">${pf}</span>
-    </div>`;
-  const bc = data.estado==='pagado'?'pagado':'pendiente';
-  const bt = data.estado==='pagado'?'PAGADO ✓':'PENDIENTE';
-  return `
-    <div class="adm2-slot ocupado" data-cancha="${cancha.id}" data-hora="${hora}" data-idx="${idx}" onclick="handleSlotClick('${cancha.id}','${hora}',${idx})">
-      <span class="adm2-slot-hora">${hora}</span>
-      <span class="adm2-slot-nombre">${data.nombre}</span>
-      <span class="adm2-pago-badge ${bc}">${bt}</span>
-    </div>`;
-}
+/* ─── Panel interactions ─────────────────────────────── */
 
-function handleSlotClick(canchaId, hora, idx) {
-  const key  = getDateKey(currentDate);
-  const data = getTurno(key, canchaId, hora);
-
-  if (activePanelInfo?.canchaId===canchaId && activePanelInfo?.hora===hora) {
+function handleFreeClick(canchaId, desde, hasta, durDisponible, idx) {
+  if (activePanelInfo?.canchaId===canchaId && activePanelInfo?.idx===idx) {
     closeActivePanel(); return;
   }
   closeActivePanel();
 
-  const gridEl = document.getElementById('grid-'+canchaId);
-  if (!gridEl) return;
-  const slots  = [...gridEl.querySelectorAll('.adm2-slot')];
-  const rowEnd = Math.floor(idx/4)*4+3;
-  const anchor = slots[Math.min(rowEnd, slots.length-1)];
+  const tlEl = document.getElementById('timeline-'+canchaId);
+  if (!tlEl) return;
+  const segments = [...tlEl.querySelectorAll('.adm2-tl-segment')];
+  const anchor = segments[idx];
+  if (!anchor) return;
 
   const panel = document.createElement('div');
   panel.className = 'adm2-inline-panel';
-  panel.innerHTML = data ? buildDetailPanel(canchaId,hora,data) : buildAddForm(canchaId,hora);
+  panel.innerHTML = buildAddForm(canchaId, desde, hasta, durDisponible);
   anchor.insertAdjacentElement('afterend', panel);
   requestAnimationFrame(()=>panel.classList.add('visible'));
-  activePanelInfo = { canchaId, hora, panelEl:panel };
+  activePanelInfo = { canchaId, idx, panelEl:panel };
+  setTimeout(()=>panel.querySelector('.adm2-input')?.focus(), 80);
+}
 
-  if (!data) setTimeout(()=>panel.querySelector('.adm2-input')?.focus(), 80);
+function handleOcupadoClick(canchaId, reservaId, idx) {
+  if (activePanelInfo?.canchaId===canchaId && activePanelInfo?.idx===idx) {
+    closeActivePanel(); return;
+  }
+  closeActivePanel();
+
+  const r = _reservasDB.find(x => x.id === reservaId);
+  if (!r) return;
+
+  const tlEl = document.getElementById('timeline-'+canchaId);
+  if (!tlEl) return;
+  const segments = [...tlEl.querySelectorAll('.adm2-tl-segment')];
+  const anchor = segments[idx];
+  if (!anchor) return;
+
+  const panel = document.createElement('div');
+  panel.className = 'adm2-inline-panel';
+  panel.innerHTML = buildDetailPanel(canchaId, r);
+  anchor.insertAdjacentElement('afterend', panel);
+  requestAnimationFrame(()=>panel.classList.add('visible'));
+  activePanelInfo = { canchaId, idx, panelEl:panel, reservaId };
 }
 
 function closeActivePanel() {
   if (activePanelInfo) { activePanelInfo.panelEl.remove(); activePanelInfo=null; }
 }
 
-function buildAddForm(canchaId, hora) {
-  const c   = CANCHAS.find(x=>x.id===canchaId);
-  const pf  = '$'+c.precio.toLocaleString('es-AR');
-  const iid = `inp-${canchaId}-${hora.replace(':','')}`;
+function buildAddForm(canchaId, desde, hasta, durDisponible) {
+  const cancha = CANCHAS.find(x=>x.id===canchaId);
+  const iid = `inp-${canchaId}-${desde.replace(':','')}`;
+
+  const startOptions = [];
+  const tDesde = _timeToMin(desde);
+  const tHasta = _timeToMin(hasta);
+  for (let t = tDesde; t < tHasta; t += 30) {
+    startOptions.push(_minToTime(t));
+  }
+
+  const durOptions = [60, 90, 120].filter(d => d <= durDisponible);
+  if (durOptions.length === 0 && durDisponible >= 30) durOptions.push(durDisponible);
+
   return `
     <div class="adm2-panel-inner">
       <div class="adm2-panel-header">
-        <span class="adm2-panel-header-title">+ Agendar · ${hora} · ${pf}</span>
+        <span class="adm2-panel-header-title">+ Agendar · ${cancha.nombre}</span>
         <button class="adm2-panel-close" onclick="closeActivePanel()">✕</button>
       </div>
       <div class="adm2-add-form">
-        <input class="adm2-input" id="${iid}" type="text" placeholder="Nombre del cliente" autocomplete="off"
-               onkeydown="if(event.key==='Enter') agendarTurno('${canchaId}','${hora}','${iid}')">
-        <button class="adm2-btn-agendar" onclick="agendarTurno('${canchaId}','${hora}','${iid}')">✓ Agendar</button>
+        <input class="adm2-input" id="${iid}" type="text" placeholder="Nombre del cliente" autocomplete="off">
+        <div class="adm2-add-row">
+          <select class="adm2-select" id="sel-inicio-${canchaId}">
+            ${startOptions.map(h => `<option value="${h}">${h}</option>`).join('')}
+          </select>
+          <select class="adm2-select" id="sel-dur-${canchaId}" onchange="updateEndTime(${canchaId})">
+            ${durOptions.map(d => `<option value="${d}">${d>=60?(d/60).toFixed(1).replace('.0','')+'h':d+'min'}</option>`).join('')}
+          </select>
+          <span class="adm2-add-precio" id="precio-${canchaId}">$${_calcPrecio(canchaId, durOptions[0]).toLocaleString('es-AR')}</span>
+        </div>
+        <button class="adm2-btn-agendar" onclick="agendarTurno(${canchaId},'${iid}')">✓ Agendar</button>
       </div>
     </div>`;
 }
 
-function buildDetailPanel(canchaId, hora, data) {
-  const c  = CANCHAS.find(x=>x.id===canchaId);
-  const ip = data.estado==='pagado';
-  const ml = {efectivo:'💵 Efectivo', transferencia:'🏦 Transferencia', online:'🌐 Pago Online'};
-  const metBtns = ip && !data.metodoPago ? `
-    <div class="adm2-metodo-btns" id="mbts-${canchaId}">
-      <button class="adm2-metodo-btn" onclick="setMetodo('${canchaId}','${hora}','efectivo')">💵 Efectivo</button>
-      <button class="adm2-metodo-btn" onclick="setMetodo('${canchaId}','${hora}','transferencia')">🏦 Transferencia</button>
-      <button class="adm2-metodo-btn" onclick="setMetodo('${canchaId}','${hora}','online')">🌐 Pago Online</button>
-    </div>` : ip && data.metodoPago ? `<div style="font-size:11px;color:#64748b;margin-top:6px">${ml[data.metodoPago]||data.metodoPago}</div>` : '';
+function updateEndTime(canchaId) {
+  const dur = parseInt(document.getElementById('sel-dur-'+canchaId)?.value || 60);
+  const precioEl = document.getElementById('precio-'+canchaId);
+  if (precioEl) precioEl.textContent = '$' + _calcPrecio(canchaId, dur).toLocaleString('es-AR');
+}
+
+function buildDetailPanel(canchaId, r) {
+  const cancha = CANCHAS.find(x=>x.id===canchaId);
+  const ip = r.estado_pago === 'pagado';
+  const precio = _calcPrecio(canchaId, r.duracion_minutos);
+  const durLabel = r.duracion_minutos >= 60 ? (r.duracion_minutos/60).toFixed(1).replace('.0','')+'h' : r.duracion_minutos+'min';
+  const ml = {efectivo:'💵 Efectivo', transferencia:'🏦 Transferencia', mercadopago:'💳 MercadoPago', online:'🌐 Online'};
+
+  const metBtns = ip && !r.metodo_pago ? `
+    <div class="adm2-metodo-btns">
+      <button class="adm2-metodo-btn" onclick="setMetodo('${r.id}','efectivo')">💵 Efectivo</button>
+      <button class="adm2-metodo-btn" onclick="setMetodo('${r.id}','transferencia')">🏦 Transferencia</button>
+      <button class="adm2-metodo-btn" onclick="setMetodo('${r.id}','mercadopago')">💳 MercadoPago</button>
+    </div>` : ip && r.metodo_pago ? `<div style="font-size:11px;color:#64748b;margin-top:6px">${ml[r.metodo_pago]||r.metodo_pago}</div>` : '';
+
   return `
     <div class="adm2-panel-inner">
       <div class="adm2-panel-header">
-        <span class="adm2-panel-header-title">📋 ${data.nombre}</span>
+        <span class="adm2-panel-header-title">📋 ${r.cliente_nombre}</span>
         <button class="adm2-panel-close" onclick="closeActivePanel()">✕</button>
       </div>
-      <div class="adm2-panel-info-row"><b>${hora}</b> · ${c.nombre} · $${c.precio.toLocaleString('es-AR')}</div>
+      <div class="adm2-panel-info-row"><b>${r.hora_inicio} — ${r.hora_fin}</b> · ${durLabel} · ${cancha.nombre} · $${precio.toLocaleString('es-AR')}</div>
+      ${r.cliente_telefono ? `<div class="adm2-panel-info-row" style="font-size:12px;color:#64748b">Tel: ${r.cliente_telefono}</div>` : ''}
       <div class="adm2-panel-section">
         <div class="adm2-payment-toggle">
-          <button class="adm2-toggle-btn ${!ip?'active-red':''}" onclick="setEstado('${canchaId}','${hora}','pendiente')">PENDIENTE</button>
-          <button class="adm2-toggle-btn ${ip?'active-green':''}" onclick="setEstado('${canchaId}','${hora}','pagado')">PAGADO</button>
+          <button class="adm2-toggle-btn ${!ip?'active-red':''}" onclick="setEstado('${r.id}','pendiente')">PENDIENTE</button>
+          <button class="adm2-toggle-btn ${ip?'active-green':''}" onclick="setEstado('${r.id}','pagado')">PAGADO</button>
         </div>
         ${metBtns}
       </div>
       <div class="adm2-panel-danger">
-        <button class="adm2-btn-liberar" onclick="liberarTurno('${canchaId}','${hora}','${data.nombre}')">Liberar turno</button>
+        <button class="adm2-btn-liberar" onclick="liberarTurno('${r.id}','${r.cliente_nombre}')">Liberar turno</button>
         <button class="adm2-btn-cancel-danger" onclick="closeActivePanel()">Cancelar</button>
       </div>
     </div>`;
 }
 
-async function agendarTurno(canchaId, hora, inputId) {
+async function agendarTurno(canchaId, inputId) {
   const nombre = (document.getElementById(inputId)?.value||'').trim();
   if (!nombre) { toast('Ingresá el nombre del cliente','red'); return; }
   const key = getDateKey(currentDate);
-  const c   = CANCHAS.find(x=>x.id===canchaId);
-  if (_USE_API) {
-    try {
-      await _apiFetch('/api/admin/reserva', { method:'POST', body:JSON.stringify({ nombre, telefono:'', fecha:key, hora, cancha:_C2N[canchaId] }) });
-      await _fetchTurnosDate(key);
-      closeActivePanel(); renderTurnos();
-      toast(`✓ ${nombre} agendado a las ${hora} — ${c.nombre}`,'green');
-    } catch (err) { toast(err.message||'Error al agendar','red'); }
-  } else {
-    setTurno(key, canchaId, hora, nombre);
-    closeActivePanel(); renderSlotOnly(canchaId, hora); updateBadgeLibres(canchaId); updateDashStats();
-    toast(`✓ ${nombre} agendado a las ${hora} — ${c.nombre}`,'green');
-  }
+  const cancha = CANCHAS.find(x=>x.id===canchaId);
+  const horaInicio = document.getElementById('sel-inicio-'+canchaId)?.value;
+  const dur = parseInt(document.getElementById('sel-dur-'+canchaId)?.value || 60);
+
+  try {
+    await api.agregarReservaAdmin({ canchaId, fecha:key, hora_inicio:horaInicio, duracion_minutos:dur, nombre, telefono:'' });
+    closeActivePanel(); renderTurnos();
+    toast(`✓ ${nombre} agendado ${horaInicio} — ${_minToTime(_timeToMin(horaInicio)+dur)} — ${cancha.nombre}`,'green');
+  } catch (err) { toast(err.message||'Error al agendar','red'); }
 }
 
-function setEstado(canchaId, hora, estado) {
-  const key  = getDateKey(currentDate);
-  const slot = getTurno(key, canchaId, hora);
-  if (!slot) return;
-  slot.estado = estado;
-  if (estado==='pendiente') slot.metodoPago=null;
-  saveToStorage();
-  if (activePanelInfo?.canchaId===canchaId && activePanelInfo?.hora===hora)
-    activePanelInfo.panelEl.innerHTML = buildDetailPanel(canchaId, hora, slot);
-  renderSlotOnly(canchaId, hora);
-  updateDashStats();
-  if (_USE_API && slot.claveUnica && estado==='pagado') {
-    const c = CANCHAS.find(x=>x.id===canchaId);
-    _apiFetch('/api/admin/pago', { method:'PATCH', body:JSON.stringify({ claveUnica:slot.claveUnica, metodoCobro:slot.metodoPago||'efectivo', monto:c.precio }) })
-      .catch(err => toast('Error sync: '+err.message,'red'));
-  }
+function setEstado(reservaId, estado) {
+  const r = _reservasDB.find(x => x.id === reservaId);
+  if (!r) return;
+  r.estado_pago = estado;
+  if (estado === 'pendiente') r.metodo_pago = null;
+  _saveReservasDB();
+  closeActivePanel(); renderTurnos();
 }
 
-function setMetodo(canchaId, hora, metodo) {
-  const key  = getDateKey(currentDate);
-  const slot = getTurno(key, canchaId, hora);
-  if (!slot) return;
-  slot.metodoPago = metodo;
-  saveToStorage();
-  if (activePanelInfo?.canchaId===canchaId && activePanelInfo?.hora===hora)
-    activePanelInfo.panelEl.innerHTML = buildDetailPanel(canchaId, hora, slot);
-  renderSlotOnly(canchaId, hora);
-  updateDashStats();
-  if (_USE_API && slot.claveUnica && slot.estado==='pagado') {
-    const c = CANCHAS.find(x=>x.id===canchaId);
-    _apiFetch('/api/admin/pago', { method:'PATCH', body:JSON.stringify({ claveUnica:slot.claveUnica, metodoCobro:metodo, monto:c.precio }) })
-      .catch(err => toast('Error sync: '+err.message,'red'));
-  }
+function setMetodo(reservaId, metodo) {
+  const r = _reservasDB.find(x => x.id === reservaId);
+  if (!r) return;
+  r.metodo_pago = metodo;
+  _saveReservasDB();
+  closeActivePanel(); renderTurnos();
 }
 
-async function liberarTurno(canchaId, hora, nombre) {
-  const key = getDateKey(currentDate);
-  if (_USE_API) {
-    const slot = getTurno(key, canchaId, hora);
-    if (slot?.claveUnica) {
-      try {
-        await _apiFetch('/api/admin/reserva', { method:'DELETE', body:JSON.stringify({ claveUnica:slot.claveUnica }) });
-        await _fetchTurnosDate(key);
-        closeActivePanel(); renderTurnos();
-        toast(`✕ Turno de ${nombre} a las ${hora} liberado`,'red');
-      } catch (err) { toast(err.message||'Error','red'); }
-    }
-  } else {
-    delTurno(key, canchaId, hora);
-    closeActivePanel(); renderSlotOnly(canchaId, hora); updateBadgeLibres(canchaId); updateDashStats();
-    toast(`✕ Turno de ${nombre} a las ${hora} liberado`,'red');
-  }
+async function liberarTurno(reservaId, nombre) {
+  await api.cancelarReserva({ id: reservaId });
+  closeActivePanel(); renderTurnos();
+  toast(`✕ Turno de ${nombre} liberado`,'red');
 }
 
-function renderSlotOnly(canchaId, hora) {
-  const key    = getDateKey(currentDate);
-  const cancha = CANCHAS.find(c=>c.id===canchaId);
-  const data   = getTurno(key, canchaId, hora);
-  const idx    = HORAS.indexOf(hora);
-  const gridEl = document.getElementById('grid-'+canchaId);
-  if (!gridEl) return;
-  const slots  = [...gridEl.querySelectorAll('.adm2-slot')];
-  const slot   = slots[idx];
-  if (!slot) return;
-  const tmp = document.createElement('div');
-  tmp.innerHTML = buildSlotHtml(cancha, hora, idx, data);
-  slot.replaceWith(tmp.firstElementChild);
-}
-
-function updateBadgeLibres(canchaId) {
-  const key    = getDateKey(currentDate);
-  const libres = HORAS.filter(h=>!turnosStore[key]?.[canchaId]?.[h]).length;
-  const gridEl = document.getElementById('grid-'+canchaId);
-  const badge  = gridEl?.closest('.adm2-cancha-card')?.querySelector('.adm2-badge-libres');
-  if (badge) badge.textContent = libres+' libres';
-}
-
+/* ─── Dashboard stats ────────────────────────────────── */
 function updateDashStats() {
   const key = getDateKey(currentDate);
   const dd  = getDayData(key);
-  let pagados=0, pendientesCount=0, canchasConTurnos=0;
+  const reservas = getReservasDelDia(key);
+  let pagados=0, pendientesCount=0, canchasConTurnos=new Set();
   const horaCount = {};
-  CANCHAS.forEach(c => {
-    const slots = turnosStore[key][c.id] || {};
-    const hs = Object.keys(slots);
-    if(hs.length) canchasConTurnos++;
-    hs.forEach(h => {
-      horaCount[h]=(horaCount[h]||0)+1;
-      if(slots[h].estado==='pagado') pagados++; else pendientesCount++;
-    });
+
+  reservas.forEach(r => {
+    if (r.estado_pago === 'pagado') pagados++; else pendientesCount++;
+    canchasConTurnos.add(r.cancha_id);
+    const h = r.hora_inicio.split(':')[0] + ':00';
+    horaCount[h] = (horaCount[h]||0) + 1;
   });
+
   let horaPico='—', maxC=0;
-  Object.entries(horaCount).forEach(([h,c])=>{ if(c>maxC){ maxC=c; horaPico=h+'hs'; } });
+  Object.entries(horaCount).forEach(([h,c])=>{ if(c>maxC){ maxC=c; horaPico=h.replace(':00','')+'hs'; } });
 
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
   set('dash-cobrado-hoy',   formatArs(dd.ingresos));
   set('dash-cobrado-sub',   `${pagados} turno${pagados!==1?'s':''} cobrado${pagados!==1?'s':''}`);
   set('dash-pendiente',     formatArs(dd.pendiente));
   set('dash-pendiente-sub', `${pendientesCount} sin cobrar`);
-  set('dash-turnos-hoy',    pagados+pendientesCount);
-  set('dash-canchas-con-turnos', `${canchasConTurnos}/4 canchas activas`);
+  set('dash-turnos-hoy',    reservas.length);
+  set('dash-canchas-con-turnos', `${canchasConTurnos.size}/4 canchas activas`);
   set('dash-hora-pico',     horaPico);
 
   const total = dd.efectivo + dd.transferencia + dd.online;
@@ -765,7 +531,7 @@ function updateDashStats() {
   if(metEl) metEl.innerHTML = [
     ['💵','Efectivo','green',dd.efectivo],
     ['🏦','Transferencia','blue',dd.transferencia],
-    ['🌐','Pago Online','purple',dd.online],
+    ['💳','Online/MP','purple',dd.online],
   ].map(([icon,name,cls,v])=>`
     <div class="adm2-metodo-row">
       <span class="adm2-metodo-icon">${icon}</span>
@@ -775,23 +541,24 @@ function updateDashStats() {
       <span class="adm2-metodo-monto">${formatArsLong(v)}</span>
     </div>`).join('');
 
-  const colors = {c1:'#22c55e',c2:'#3b82f6',c3:'#eab308',c4:'#a855f7'};
+  const colors = {1:'#22c55e',2:'#3b82f6',3:'#eab308',4:'#a855f7'};
   const estEl  = document.getElementById('dash-estado-canchas');
   if(estEl) estEl.innerHTML = CANCHAS.map(c => {
-    const slots = turnosStore[key][c.id] || {};
-    const ocu = Object.keys(slots).length;
-    const pag = Object.values(slots).filter(t=>t.estado==='pagado').length;
+    const cReservas = getReservasCancha(key, c.id);
+    const ocu = cReservas.length;
+    const pag = cReservas.filter(r=>r.estado_pago==='pagado').length;
     const pen = ocu - pag;
-    const lib = HORAS.length - ocu;
+    const totalMin = cReservas.reduce((a,r) => a + r.duracion_minutos, 0);
+    const totalHoras = _timeToMin(HORA_CIERRE) - _timeToMin(HORA_APERTURA);
     return `
       <div class="adm2-cancha-week-item">
         <div class="adm2-cancha-week-header">
           <div class="adm2-cancha-week-dot" style="background:${colors[c.id]}"></div>
           <span class="adm2-cancha-week-name">${c.nombre} · ${c.tipo}</span>
-          <span class="adm2-cancha-week-count">${pag}✓${pen>0?' '+pen+'⏳':''} · ${lib} lib.</span>
+          <span class="adm2-cancha-week-count">${pag}✓${pen>0?' '+pen+'⏳':''} · ${((totalHoras-totalMin)/60).toFixed(1).replace('.0','')}h lib.</span>
         </div>
         <div class="adm2-cancha-week-track">
-          <div class="adm2-cancha-week-fill" style="background:${colors[c.id]};width:${(ocu/HORAS.length*100).toFixed(0)}%"></div>
+          <div class="adm2-cancha-week-fill" style="background:${colors[c.id]};width:${(totalMin/totalHoras*100).toFixed(0)}%"></div>
         </div>
       </div>`;
   }).join('');
@@ -845,11 +612,9 @@ function renderResumenMes() {
   const proyeccion = Math.round(avgDaily * diasEnMes);
   const diasRest   = diasEnMes - dayOfMonth;
 
-  // Label del mes
   const lbl = document.getElementById('fin-mes-label');
   if (lbl) lbl.textContent = `${MESES[finMonth]} ${finYear}`;
 
-  // 6 stat cards
   const bestSemana = calcBestWeek(finYear, finMonth);
   const el = document.getElementById('fin-stats-cards');
   if (el) el.innerHTML = `
@@ -884,7 +649,6 @@ function renderResumenMes() {
       <div class="adm2-fin-sub">Basado en ${dayOfMonth} día${dayOfMonth!==1?'s':''} con datos</div>
     </div>`;
 
-  // Semanas del mes
   const semanas = calcWeeksOfMonth(finYear, finMonth);
   const maxSem  = Math.max(1, ...semanas.map(s=>s.total));
   const semanasEl = document.getElementById('fin-semanas-list');
@@ -895,14 +659,12 @@ function renderResumenMes() {
       <span class="adm2-semana-valor">${formatArs(s.total)}</span>
     </div>`).join('');
 
-  // Proyección
   const proyEl = document.getElementById('fin-proyeccion');
   if (proyEl) proyEl.innerHTML = `
     <div class="adm2-proy-item"><span class="adm2-proy-lbl">Proyección cierre</span><span class="adm2-proy-val">${formatArs(proyeccion)}</span></div>
     <div class="adm2-proy-item"><span class="adm2-proy-lbl">Recaudado hoy</span><span class="adm2-proy-val dim">${formatArs(getDayData(todayKey()).ingresos)}</span></div>
     <div class="adm2-proy-item"><span class="adm2-proy-lbl">Días restantes</span><span class="adm2-proy-val dim">${diasRest}</span></div>`;
 
-  // Métodos del mes
   const totalMetodos = md.efectivo + md.transferencia + md.online;
   const pct = (v) => totalMetodos > 0 ? (v/totalMetodos*100).toFixed(0) : 0;
   const metEl = document.getElementById('fin-metodos');
@@ -922,8 +684,8 @@ function renderResumenMes() {
       <span class="adm2-metodo-monto">${formatArs(md.transferencia)}</span>
     </div>
     <div class="adm2-metodo-row">
-      <span class="adm2-metodo-icon">🌐</span>
-      <span class="adm2-metodo-name">Pago Online</span>
+      <span class="adm2-metodo-icon">💳</span>
+      <span class="adm2-metodo-name">Online/MercadoPago</span>
       <div class="adm2-metodo-track"><div class="adm2-metodo-fill purple" style="width:${pct(md.online)}%"></div></div>
       <span class="adm2-metodo-pct">${pct(md.online)}%</span>
       <span class="adm2-metodo-monto">${formatArs(md.online)}</span>
@@ -938,7 +700,7 @@ function calcWeeksOfMonth(year, month) {
   let n = 1;
   while (cursor <= lastDay) {
     const wd = getWeekData(cursor);
-    const d1 = cursor.getDate() < 1 ? new Date(year, month, 1) : (cursor.getMonth()!==month ? new Date(year, month, 1) : cursor);
+    const d1 = cursor.getMonth()!==month ? new Date(year, month, 1) : cursor;
     const d2 = addDays(cursor,6); const d2f = d2 > lastDay ? lastDay : d2;
     semanas.push({ ...wd, label:`Sem ${n} (${d1.getDate()}–${d2f.getDate()})` });
     cursor = addDays(cursor, 7);
@@ -969,14 +731,12 @@ function renderCalendario() {
   const daysInMonth= new Date(calYear, calMonth+1, 0).getDate();
   const todayStr   = todayKey();
 
-  // día de semana del día 1 (0=lun, 6=dom)
   let startDow = firstDay.getDay() - 1;
   if (startDow < 0) startDow = 6;
 
   let cells = '';
   for (let e=0; e<startDow; e++) cells += `<div class="adm2-cal-cell empty"></div>`;
 
-  // Calcular max del mes para color relativo
   let maxAmt = 0;
   for (let d=1; d<=daysInMonth; d++) {
     const amt = getDayData(_key(calYear, calMonth+1, d)).ingresos;
@@ -1001,7 +761,7 @@ function renderCalendario() {
       ? `<span class="adm2-cal-amt">${formatArs(dd.ingresos)}</span><span class="adm2-cal-res">${dd.reservas} res.</span>`
       : `<span class="adm2-cal-res" style="opacity:.4">—</span>`;
 
-    cells += `<div class="adm2-cal-cell ${cls}" onclick="selectCalDay('${key}')" title="${_key(calYear,calMonth+1,d)}">
+    cells += `<div class="adm2-cal-cell ${cls}" onclick="selectCalDay('${key}')" title="${key}">
       <span class="adm2-cal-num">${d}</span>
       ${amtHtml}
     </div>`;
@@ -1032,14 +792,19 @@ function renderDayDetail(key) {
 
   let canchasHtml = '';
   CANCHAS.forEach(c => {
-    const slots = Object.entries(turnosStore[key]?.[c.id]||{}).sort(([a],[b])=>a.localeCompare(b));
-    const rows  = slots.map(([hora,t])=>`
+    const reservas = getReservasCancha(key, c.id);
+    const rows = reservas.map(r => {
+      const precio = _calcPrecio(c.id, r.duracion_minutos);
+      const durLabel = r.duracion_minutos >= 60 ? (r.duracion_minutos/60).toFixed(1).replace('.0','')+'h' : r.duracion_minutos+'min';
+      return `
       <div class="adm2-day-turno-row">
-        <span class="adm2-day-hora">${hora}</span>
-        <span class="adm2-day-nom">${t.nombre}</span>
-        <span class="adm2-day-badge ${t.estado}">${t.estado==='pagado'?'PAGADO ✓':'PENDIENTE'}</span>
-        <span class="adm2-day-precio">${t.estado==='pagado'?'$'+c.precio.toLocaleString('es-AR'):'—'}</span>
-      </div>`).join('');
+        <span class="adm2-day-hora">${r.hora_inicio}—${r.hora_fin}</span>
+        <span class="adm2-day-nom">${r.cliente_nombre}</span>
+        <span class="adm2-day-dur">${durLabel}</span>
+        <span class="adm2-day-badge ${r.estado_pago}">${r.estado_pago==='pagado'?'PAGADO ✓':'PENDIENTE'}</span>
+        <span class="adm2-day-precio">${r.estado_pago==='pagado'?'$'+precio.toLocaleString('es-AR'):'—'}</span>
+      </div>`;
+    }).join('');
     canchasHtml += `
       <div class="adm2-day-cancha-block">
         <div class="adm2-day-cancha-title">${c.nombre} · ${c.tipo}</div>
@@ -1067,11 +832,9 @@ function renderHistorial() {
   const el = document.getElementById('fin-hist-list');
   if (!el) return;
 
-  // Actualizar título con el mes seleccionado
   const lblMes = document.getElementById('fin-hist-mes-label');
   if (lblMes) lblMes.textContent = `${MESES[finMonth]} ${finYear}`;
 
-  // Calcular todas las semanas del mes seleccionado
   const weeks  = calcWeeksOfMonth(finYear, finMonth);
   const todayStr = todayKey();
   const DIASN  = ['Lu','Ma','Mi','Ju','Vi','Sá','Do'];
@@ -1081,23 +844,19 @@ function renderHistorial() {
     return;
   }
 
-  // Determinar semana actual para marcarla
   const todayMonday = getDateKey(mondayOf(new Date()));
-
   const firstOfMonth = new Date(finYear, finMonth, 1);
   const lastOfMonth  = new Date(finYear, finMonth + 1, 0);
 
   el.innerHTML = weeks.map((w, idx) => {
-    // Recortar el rango al mes: nunca mostrar días de otro mes
     const d1 = w.days[0].date < firstOfMonth ? firstOfMonth : w.days[0].date;
     const d7 = w.days[6].date > lastOfMonth  ? lastOfMonth  : w.days[6].date;
     const label = `${d1.getDate()} ${MESES_CORTO[d1.getMonth()]} — ${d7.getDate()} ${MESES_CORTO[d7.getMonth()]}`;
     const isCurrentWeek = getDateKey(w.days[0].date) === todayMonday;
 
-    // Solo mostrar días que pertenecen al mes seleccionado
     const daysDelMes = w.days.filter(d => d.date.getMonth() === finMonth && d.date.getFullYear() === finYear);
     const maxDay = Math.max(1, ...daysDelMes.map(d => d.ingresos));
-    const daysHtml = daysDelMes.map((d, di) => `
+    const daysHtml = daysDelMes.map(d => `
       <div class="adm2-hist-day">
         <span class="adm2-hist-day-name">${DIASN[d.date.getDay() === 0 ? 6 : d.date.getDay() - 1]} ${d.date.getDate()}/${d.date.getMonth()+1}</span>
         <div class="adm2-hist-day-track"><div class="adm2-hist-day-fill" style="width:${(d.ingresos/maxDay*100).toFixed(0)}%"></div></div>
@@ -1124,12 +883,10 @@ function renderHistorial() {
       </div>`;
   }).join('');
 
-  // Abrir la semana actual o la primera por defecto
   const currentHeader = el.querySelector('.adm2-hist-header[data-idx]');
   const allHeaders = el.querySelectorAll('.adm2-hist-header');
   const toOpen = Array.from(allHeaders).find(h => {
-    const idx = h.getAttribute('data-idx');
-    return document.getElementById('hist-body-'+idx)?.previousElementSibling?.querySelector('.adm2-hist-label')?.textContent?.includes('Esta semana');
+    return h.querySelector('.adm2-hist-label')?.textContent?.includes('Esta semana');
   }) || currentHeader;
   if (toOpen) toggleHistItem(toOpen);
 }
@@ -1372,14 +1129,6 @@ function toast(msg, tipo='green') {
 document.addEventListener('DOMContentLoaded', async () => {
   await authCheck();
   initPremios();
-  const isLoggedIn = !!localStorage.getItem(AUTH_KEY);
-  if (_USE_API && isLoggedIn) {
-    const now = new Date();
-    await _fetchTurnosMonth(now.getFullYear(), now.getMonth() + 1);
-  } else if (!_USE_API) {
-    loadFromStorage();
-    generateSampleHistory();
-  }
   tickClock();
   setInterval(tickClock, 10000);
   renderDashboard();
@@ -1537,7 +1286,6 @@ function renderPremios() {
       </div>
     </div>`).join('')}</div>`;
 }
-
 
 let _editingPremioId = null;
 

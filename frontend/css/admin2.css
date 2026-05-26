@@ -633,6 +633,131 @@
   border: 1px solid var(--a2-green-border);
 }
 
+/* ─── Timeline view ─────────────────────────────────── */
+.adm2-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+}
+
+.adm2-tl-segment {
+  border-radius: var(--a2-radius-sm);
+  border: 1px solid;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: all var(--a2-trans);
+  user-select: none;
+}
+
+.adm2-tl-segment.libre {
+  background: var(--a2-green-dim);
+  border-color: var(--a2-green-border);
+}
+.adm2-tl-segment.libre:hover {
+  border-color: var(--a2-green);
+  box-shadow: 0 0 0 2px var(--a2-green-glow);
+}
+
+.adm2-tl-segment.ocupado {
+  background: var(--a2-yellow-dim);
+  border-color: rgba(234,179,8,.25);
+}
+.adm2-tl-segment.ocupado:hover {
+  border-color: var(--a2-yellow);
+  box-shadow: 0 0 0 2px rgba(234,179,8,.15);
+}
+
+.adm2-tl-time {
+  font-family: var(--a2-mono);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.adm2-tl-segment.libre .adm2-tl-time    { color: var(--a2-green); }
+.adm2-tl-segment.ocupado .adm2-tl-time  { color: var(--a2-yellow); }
+
+.adm2-tl-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .6px;
+  text-transform: uppercase;
+  color: var(--a2-text-muted);
+}
+
+.adm2-tl-action {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--a2-green);
+  margin-top: 4px;
+  opacity: 0;
+  transition: opacity var(--a2-trans);
+}
+.adm2-tl-segment.libre:hover .adm2-tl-action { opacity: 1; }
+
+.adm2-tl-cliente {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--a2-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.adm2-tl-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.adm2-tl-dur {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--a2-text-muted);
+}
+
+.adm2-tl-precio {
+  font-family: var(--a2-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--a2-text-dim);
+  margin-left: auto;
+}
+
+/* ─── Add form extras ────────────────────────────────── */
+.adm2-select {
+  padding: 9px 12px;
+  background: var(--a2-card);
+  border: 1px solid var(--a2-border-mid);
+  border-radius: var(--a2-radius-sm);
+  color: var(--a2-text);
+  font-size: 13px;
+  font-family: var(--a2-mono);
+  outline: none;
+  transition: border-color var(--a2-trans);
+  cursor: pointer;
+  min-width: 80px;
+}
+.adm2-select:focus { border-color: var(--a2-green); }
+
+.adm2-add-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.adm2-add-precio {
+  font-family: var(--a2-mono);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--a2-green);
+  white-space: nowrap;
+}
+
 /* ─── Panel inline ───────────────────────────────────── */
 .adm2-inline-panel {
   grid-column: 1 / -1;
@@ -1088,6 +1213,7 @@
 .adm2-day-badge { font-size: 9px; font-weight: 700; padding: 2px 5px; border-radius: 4px; white-space: nowrap; }
 .adm2-day-badge.pagado    { background: var(--a2-green-dim); color: var(--a2-green); border: 1px solid var(--a2-green-border); }
 .adm2-day-badge.pendiente { background: var(--a2-red-dim); color: var(--a2-red); border: 1px solid rgba(239,68,68,.3); }
+.adm2-day-dur    { font-size: 11px; color: var(--a2-text-muted); font-weight: 600; white-space: nowrap; }
 .adm2-day-precio { font-family: var(--a2-mono); font-size: 10px; color: var(--a2-text-muted); }
 
 /* ─── Historial semanas ──────────────────────────────── */

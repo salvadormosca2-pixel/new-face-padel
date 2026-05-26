@@ -1,16 +1,26 @@
 /* ═══════════════════════════════════════════
-   reservar.js — Sistema de reservas 4 pasos
+   reservar.js — Sistema de reservas dinámico
+   Slots de 30 min, duraciones 1h / 1.5h / 2h
    ═══════════════════════════════════════════ */
 
 const estado = {
   paso: 1,
   fecha: null,
-  hora: null,
+  duracion: null,
+  horaInicio: null,
+  horaFin: null,
+  precioTotal: null,
   nombre: null,
   telefono: null,
   metodoPago: null,
   confirmacion: null
 };
+
+const DURACIONES = [
+  { minutos: 60,  label: '1 hora',      labelCorto: '1h' },
+  { minutos: 90,  label: '1 hora y media', labelCorto: '1.5h' },
+  { minutos: 120, label: '2 horas',     labelCorto: '2h' },
+];
 
 function iniciarReservas() {
   renderPasos();
@@ -19,7 +29,7 @@ function iniciarReservas() {
 
 /* ─── INDICADOR DE PASOS ──────────────────── */
 function renderPasos() {
-  const labels = ['Día', 'Horario', 'Datos', 'Confirmación'];
+  const labels = ['Día', 'Duración', 'Horario', 'Datos', 'Confirmación'];
   const c = document.getElementById('steps-bar');
   if (!c) return;
   c.innerHTML = labels.map((lbl, i) => {
@@ -48,7 +58,6 @@ function irAPaso(n) {
 function renderPaso1() {
   const c = document.getElementById('dias-container');
   if (!c) return;
-  // Aplicar clase premium si existe el contenedor scroll premium
   if (c.closest('.rprem-card')) c.classList.add('dias-scroll-prem');
   const hds = [];
   for (let i = 0; i < 7; i++) {
@@ -69,8 +78,6 @@ function renderPaso1() {
       </button>
     `;
   }).join('');
-
-  // Seleccionar hoy por defecto
   estado.fecha = hds[0].toISOString().split('T')[0];
 }
 
@@ -78,32 +85,60 @@ function seleccionarDia(fecha, btn) {
   document.querySelectorAll('.dia-btn').forEach(b => b.classList.remove('seleccionado'));
   btn.classList.add('seleccionado');
   estado.fecha = fecha;
-  estado.hora  = null;
+  estado.horaInicio = null;
+  estado.horaFin = null;
   irAPaso(2);
-  cargarHorarios(fecha);
+  renderPaso2();
 }
 
-/* ─── PASO 2: GRILLA DE HORARIOS ─────────── */
-async function cargarHorarios(fecha) {
+/* ─── PASO 2: SELECTOR DE DURACIÓN ─────────── */
+function renderPaso2() {
+  const c = document.getElementById('duracion-container');
+  if (!c) return;
+  c.innerHTML = DURACIONES.map(d => {
+    const precioDesde = Math.min(...CANCHAS_CONFIG.map(cc => Math.round(cc.precioHora * d.minutos / 60)));
+    return `
+      <button class="duracion-btn${estado.duracion === d.minutos ? ' seleccionado' : ''}"
+              onclick="seleccionarDuracion(${d.minutos}, this)">
+        <span class="duracion-tiempo">${d.label}</span>
+        <span class="duracion-precio">desde $${precioDesde.toLocaleString('es-AR')}</span>
+      </button>
+    `;
+  }).join('');
+}
+
+function seleccionarDuracion(minutos, btn) {
+  document.querySelectorAll('.duracion-btn').forEach(b => b.classList.remove('seleccionado'));
+  btn.classList.add('seleccionado');
+  estado.duracion = minutos;
+  estado.horaInicio = null;
+  estado.horaFin = null;
+  irAPaso(3);
+  cargarHorarios();
+}
+
+/* ─── PASO 3: GRILLA DE HORARIOS DINÁMICA ──── */
+async function cargarHorarios() {
   const c = document.getElementById('horarios-container');
   if (!c) return;
   spinner(c);
   try {
-    const horarios = await api.getHorarios(fecha);
+    const horarios = await api.getDisponibilidad(estado.fecha, estado.duracion);
+    if (!horarios.length) {
+      c.innerHTML = `<p class="rprem-no-horarios">No hay horarios disponibles para ${_durLabel(estado.duracion)} el ${formatFechaLarga(estado.fecha)}. Probá otro día o duración.</p>`;
+      return;
+    }
     c.innerHTML = horarios.map(h => {
-      const libre = h.libres > 0;
-      const ultimo = h.libres === 1;
-      const disp = libre
-        ? (ultimo ? `<span class="ultimo">¡Último lugar!</span>` : `<span class="disponible">${h.libres} canchas libres</span>`)
-        : `<span class="ocupado">Sin lugar</span>`;
+      const ultimo = h.canchas_disponibles === 1;
+      const disp = ultimo
+        ? `<span class="ultimo">¡Último lugar!</span>`
+        : `<span class="disponible">${h.canchas_disponibles} canchas libres</span>`;
       return `
-        <button
-          class="horario-btn"
-          ${!libre ? 'disabled' : ''}
-          onclick="seleccionarHora('${h.hora}', this)"
-        >
-          <span class="horario-hora">${h.hora}</span>
+        <button class="horario-btn horario-dinamico"
+                onclick="seleccionarHorario('${h.hora_inicio}','${h.hora_fin}',${h.precio_total}, this)">
+          <span class="horario-rango">${h.hora_inicio} — ${h.hora_fin}</span>
           <span class="horario-disponibilidad">${disp}</span>
+          <span class="horario-precio">$${h.precio_total.toLocaleString('es-AR')}</span>
         </button>
       `;
     }).join('');
@@ -112,18 +147,20 @@ async function cargarHorarios(fecha) {
   }
 }
 
-function seleccionarHora(hora, btn) {
+function seleccionarHorario(horaInicio, horaFin, precio, btn) {
   document.querySelectorAll('.horario-btn').forEach(b => b.classList.remove('seleccionado'));
   btn.classList.add('seleccionado');
-  estado.hora = hora;
-  irAPaso(3);
-  renderPaso3();
+  estado.horaInicio = horaInicio;
+  estado.horaFin = horaFin;
+  estado.precioTotal = precio;
+  irAPaso(4);
+  renderPaso4();
 }
 
-/* ─── PASO 3: FORMULARIO DE DATOS ─────────── */
-function renderPaso3() {
+/* ─── PASO 4: FORMULARIO DE DATOS ─────────── */
+function renderPaso4() {
   const resumen = document.getElementById('resumen-seleccion');
-  if (resumen) resumen.textContent = `${formatFecha(estado.fecha)} — ${estado.hora}`;
+  if (resumen) resumen.textContent = `${formatFecha(estado.fecha)} — ${estado.horaInicio} a ${estado.horaFin} (${_durLabel(estado.duracion)}) — $${estado.precioTotal.toLocaleString('es-AR')}`;
 
   const metodoPagoC = document.getElementById('metodo-pago-container');
   if (metodoPagoC && !metodoPagoC._listenersReady) {
@@ -188,19 +225,20 @@ async function enviarReserva() {
       telefono: estado.telefono,
       metodoPago: estado.metodoPago,
       fecha: estado.fecha,
-      hora: estado.hora
+      hora_inicio: estado.horaInicio,
+      duracion_minutos: estado.duracion
     });
     estado.confirmacion = data;
-    irAPaso(4);
+    irAPaso(5);
     renderConfirmacion(data);
     _sumarPuntosReserva();
   } catch (e) {
     toast(e.message || 'Error al confirmar la reserva', 'rojo');
-    if (btn) { btn.disabled = false; btn.textContent = 'Confirmar reserva'; }
+    if (btn) { btn.disabled = false; btn.innerHTML = 'Confirmar reserva <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>'; }
   }
 }
 
-/* ─── PASO 4: CONFIRMACIÓN ─────────────────── */
+/* ─── PASO 5: CONFIRMACIÓN ─────────────────── */
 function renderConfirmacion(data) {
   const c = document.getElementById('confirmacion-container');
   if (!c) return;
@@ -221,6 +259,9 @@ function renderConfirmacion(data) {
         <span>Abonás al llegar al club. ¡Te esperamos!</span>
        </div>`;
 
+  const durLabel = _durLabel(data.duracion_minutos);
+  const precio = data.precio_total || estado.precioTotal;
+
   c.innerHTML = `
     <div class="confirmacion">
       <div class="confirmacion-check">
@@ -230,12 +271,12 @@ function renderConfirmacion(data) {
         </svg>
       </div>
       <h2>${data.nombre}, tu turno está confirmado</h2>
-      <p>${formatFechaLarga(data.fecha)} a las ${data.hora}</p>
+      <p>${formatFechaLarga(data.fecha)} de ${data.hora_inicio} a ${data.hora_fin} (${durLabel})</p>
 
       <div class="cancha-asignada">
         <span class="label">Tu cancha asignada es</span>
         <div class="cancha-num-grande">${data.cancha}</div>
-        <div class="cancha-tipo-conf">${data.tipo}</div>
+        <div class="cancha-tipo-conf">${data.tipo || data.cancha_nombre}</div>
         ${avisoMetodo}
       </div>
 
@@ -243,8 +284,9 @@ function renderConfirmacion(data) {
         <div class="resumen-fila"><span class="clave">Nombre</span><span class="valor">${data.nombre}</span></div>
         <div class="resumen-fila"><span class="clave">Teléfono</span><span class="valor">${data.telefono || estado.telefono}</span></div>
         <div class="resumen-fila"><span class="clave">Día</span><span class="valor">${formatFechaLarga(data.fecha)}</span></div>
-        <div class="resumen-fila"><span class="clave">Horario</span><span class="valor">${data.hora}</span></div>
-        <div class="resumen-fila"><span class="clave">Cancha</span><span class="valor verde">Cancha ${data.cancha} — ${data.tipo}</span></div>
+        <div class="resumen-fila"><span class="clave">Horario</span><span class="valor">${data.hora_inicio} a ${data.hora_fin} (${durLabel})</span></div>
+        <div class="resumen-fila"><span class="clave">Cancha</span><span class="valor verde">Cancha ${data.cancha} — ${data.tipo || data.cancha_nombre}</span></div>
+        <div class="resumen-fila"><span class="clave">Precio</span><span class="valor verde">$${precio.toLocaleString('es-AR')}</span></div>
         <div class="resumen-fila"><span class="clave">Forma de pago</span><span class="valor">${metodoLabel}</span></div>
       </div>
 
@@ -256,7 +298,7 @@ function renderConfirmacion(data) {
 }
 
 function reiniciarReserva() {
-  Object.assign(estado, { paso: 1, fecha: null, hora: null, nombre: null, telefono: null, metodoPago: null, confirmacion: null });
+  Object.assign(estado, { paso:1, fecha:null, duracion:null, horaInicio:null, horaFin:null, precioTotal:null, nombre:null, telefono:null, metodoPago:null, confirmacion:null });
   const nombre = document.getElementById('nombre');
   const tel    = document.getElementById('telefono');
   if (nombre) nombre.value = '';
@@ -264,6 +306,12 @@ function reiniciarReserva() {
   document.querySelectorAll('.pago-prem-opcion').forEach(o => o.classList.remove('seleccionada'));
   irAPaso(1);
   renderPaso1();
+}
+
+/* ─── HELPERS ──────────────────────────────── */
+function _durLabel(min) {
+  const d = DURACIONES.find(x => x.minutos === min);
+  return d ? d.label : min + ' min';
 }
 
 document.addEventListener('DOMContentLoaded', iniciarReservas);
