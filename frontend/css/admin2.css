@@ -443,8 +443,8 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 10px;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 .adm2-view-toggle {
   display: flex;
@@ -526,7 +526,7 @@
 .adm2-canchas-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 8px;
 }
 
 /* ─── Cancha card ────────────────────────────────────── */
@@ -540,20 +540,20 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
+  padding: 6px 10px;
   border-bottom: 1px solid var(--a2-border);
 }
 .adm2-cancha-card-header-left {}
 .adm2-cancha-card-nombre {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 800;
   color: var(--a2-text);
   letter-spacing: .3px;
 }
 .adm2-cancha-card-meta {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--a2-text-muted);
-  margin-top: 2px;
+  margin-top: 1px;
 }
 .adm2-cancha-card-meta span {
   font-family: var(--a2-mono);
@@ -563,9 +563,9 @@
 .adm2-badge-libres {
   background: var(--a2-green-dim);
   border: 1px solid var(--a2-green-border);
-  border-radius: 12px;
-  padding: 4px 10px;
-  font-size: 11px;
+  border-radius: 10px;
+  padding: 2px 8px;
+  font-size: 10px;
   font-weight: 700;
   color: var(--a2-green);
   font-family: var(--a2-mono);
@@ -642,12 +642,12 @@
 /* Estado de pago badge */
 .adm2-pago-badge {
   display: inline-block;
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 700;
   letter-spacing: .4px;
-  border-radius: 4px;
-  padding: 2px 5px;
-  margin-top: 4px;
+  border-radius: 3px;
+  padding: 1px 4px;
+  margin-top: 0;
   align-self: flex-start;
 }
 .adm2-pago-badge.pendiente {
@@ -665,16 +665,16 @@
 .adm2-timeline {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  padding: 6px 8px;
-  max-height: calc(100vh - 240px);
+  gap: 2px;
+  padding: 4px 6px;
+  max-height: calc(100vh - 200px);
   overflow-y: auto;
 }
 
 .adm2-tl-segment {
   border-radius: var(--a2-radius-sm);
   border: 1px solid;
-  padding: 7px 10px;
+  padding: 4px 8px;
   cursor: pointer;
   transition: all var(--a2-trans);
   user-select: none;
@@ -700,34 +700,37 @@
 
 .adm2-tl-time {
   font-family: var(--a2-mono);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   line-height: 1;
-  margin-bottom: 2px;
+  margin-bottom: 1px;
 }
 .adm2-tl-segment.libre .adm2-tl-time    { color: var(--a2-green); }
 .adm2-tl-segment.ocupado .adm2-tl-time  { color: var(--a2-yellow); }
 
 .adm2-tl-label {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
-  letter-spacing: .6px;
+  letter-spacing: .5px;
   text-transform: uppercase;
   color: var(--a2-text-muted);
 }
 
 .adm2-tl-action {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
   color: var(--a2-green);
-  margin-top: 2px;
+  margin-top: 0;
   opacity: 0;
-  transition: opacity var(--a2-trans);
+  height: 0;
+  overflow: hidden;
+  transition: opacity var(--a2-trans), height var(--a2-trans);
 }
+.adm2-tl-segment.libre:hover .adm2-tl-action { height: auto; }
 .adm2-tl-segment.libre:hover .adm2-tl-action { opacity: 1; }
 
 .adm2-tl-cliente {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--a2-text);
   white-space: nowrap;
@@ -738,20 +741,20 @@
 .adm2-tl-meta {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 2px;
+  gap: 5px;
+  margin-top: 1px;
   flex-wrap: wrap;
 }
 
 .adm2-tl-dur {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   color: var(--a2-text-muted);
 }
 
 .adm2-tl-precio {
   font-family: var(--a2-mono);
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 700;
   color: var(--a2-text-dim);
   margin-left: auto;
