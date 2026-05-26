@@ -169,7 +169,7 @@
 .adm2-tab.active { color: var(--a2-green); border-bottom-color: var(--a2-green); }
 
 /* ─── Main content ───────────────────────────────────── */
-.adm2-main { padding: 16px 20px; max-width: 1600px; margin: 0 auto; }
+.adm2-main { padding: 16px 20px; max-width: 1800px; margin: 0 auto; }
 .adm2-view { display: none; }
 .adm2-view.active { display: block; animation: a2-fadeInUp .3s ease; }
 

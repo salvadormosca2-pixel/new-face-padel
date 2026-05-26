@@ -197,6 +197,7 @@ function adm2SwitchTab(nombre, el) {
   el?.classList.add('active');
 
   if (nombre==='dashboard') renderDashboard();
+  if (nombre==='turnos')    renderTurnosView();
   if (nombre==='torneos')   cargarTorneosAdmin();
   if (nombre==='finanzas')  renderFinanzas();
   if (nombre==='usuarios')  renderUsuarios();
@@ -226,9 +227,12 @@ function tickClock() {
    ════════════════════════════════════════════════════ */
 
 function renderDashboard() {
-  renderTurnos();
   updateDashStats();
   buildChart(chartWeekOffset);
+}
+
+function renderTurnosView() {
+  renderTurnos();
 }
 
 /* ════════════════════════════════════════════════════
@@ -397,7 +401,7 @@ function buildTimeline(canchaId, dateKey) {
 function renderTurnos() {
   closeActivePanel();
   const key = getDateKey(currentDate);
-  const lbl = document.getElementById('adm2-date-label');
+  const lbl = document.getElementById('adm2-date-label-turnos');
   if (lbl) lbl.textContent = formatDateLabel(currentDate);
   const grid = document.getElementById('adm2-canchas-grid');
   if (!grid) return;
@@ -1329,7 +1333,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initPremios();
   tickClock();
   setInterval(tickClock, 10000);
-  renderDashboard();
+  renderTurnosView();
 });
 
 /* ════════════════════════════════════════════════════
