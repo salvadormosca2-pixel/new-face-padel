@@ -2,4 +2,4 @@
 cmd = "node server.js"
 
 [phases.setup]
-nixPkgs = ["nodejs_18"]
+nixPkgs = ["nodejs_20"]
