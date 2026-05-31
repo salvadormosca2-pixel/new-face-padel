@@ -3,8 +3,8 @@ const express     = require('express');
 const cors        = require('cors');
 const helmet      = require('helmet');
 const compression = require('compression');
-const mongoose    = require('mongoose');
 const jwt         = require('jsonwebtoken');
+const { sequelize } = require('./models');
 
 const app = express();
 
@@ -45,7 +45,7 @@ app.use('/', require('./routes/club'));
 app.use('/', require('./routes/premios'));
 app.use('/', require('./routes/bot'));
 
-app.get('/', (_req, res) => res.json({ status: 'ok', club: 'New Face Padel Club', version: '1.0.0' }));
+app.get('/', (_req, res) => res.json({ status: 'ok', club: 'New Face Padel Club', version: '2.0.0' }));
 
 app.use((_req, res) => res.status(404).json({ error: 'Ruta no encontrada' }));
 
@@ -56,24 +56,20 @@ app.use((err, _req, res, _next) => {
 
 const PORT = process.env.PORT || 3000;
 
-mongoose.connect(process.env.MONGODB_URI, {
-  maxPoolSize: 5,
-  serverSelectionTimeoutMS: 5000,
-  socketTimeoutMS: 45000,
-}).then(() => {
-  console.log('MongoDB conectado');
+sequelize.sync({ alter: true }).then(() => {
+  console.log('PostgreSQL sincronizado');
   const server = app.listen(PORT, () => console.log(`API → puerto ${PORT}`));
 
   const shutdown = () => {
     console.log('Cerrando servidor...');
     server.close(() => {
-      mongoose.connection.close(false).then(() => process.exit(0));
+      sequelize.close().then(() => process.exit(0));
     });
     setTimeout(() => process.exit(1), 10000);
   };
   process.on('SIGTERM', shutdown);
   process.on('SIGINT', shutdown);
 }).catch(err => {
-  console.error('MongoDB error:', err.message);
+  console.error('PostgreSQL error:', err.message);
   process.exit(1);
 });

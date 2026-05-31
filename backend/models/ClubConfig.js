@@ -1,45 +1,24 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const sequelize = require('../db');
 
-const clubConfigSchema = new mongoose.Schema({
-  nombre:    { type: String, default: 'New Face Padel Club' },
-  direccion: { type: String, default: '' },
-  telefono:  { type: String, default: '' },
-  whatsapp:  { type: String, default: '' },
-  email:     { type: String, default: '' },
-  redes: {
-    instagram: { type: String, default: '' },
-    facebook:  { type: String, default: '' },
-    tiktok:    { type: String, default: '' }
-  },
-  horarios: {
-    lunesViernes: { type: String, default: '15:00 a 23:00' },
-    sabados:      { type: String, default: '09:00 a 23:00' },
-    domingos:     { type: String, default: '09:00 a 23:00' },
-    feriados:     { type: String, default: '09:00 a 23:00' }
-  },
-  canchas: [{
-    numero: Number,
-    tipo:   String,
-    techada: Boolean
-  }],
-  precios: [{
-    tipo:        String,
-    franjaHoraria: String,
-    precio:      Number,
-    moneda:      { type: String, default: 'ARS' }
-  }],
-  servicios: [String],
-  metodosPago: [String],
-  reglas: {
-    cancelacion:     { type: String, default: '' },
-    anticipoMinimo:  { type: String, default: '' },
-    vestimenta:      { type: String, default: '' },
-    llegada:         { type: String, default: '' }
-  },
-  sistemaPuntos: {
-    puntosPorReserva:  { type: Number, default: 10 },
-    descripcion:       { type: String, default: 'Ganás puntos por cada reserva y los canjeás por premios.' }
-  }
-}, { timestamps: true });
+const ClubConfig = sequelize.define('ClubConfig', {
+  id:            { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+  nombre:        { type: DataTypes.STRING, defaultValue: 'New Face Padel Club' },
+  direccion:     { type: DataTypes.STRING, defaultValue: '' },
+  telefono:      { type: DataTypes.STRING, defaultValue: '' },
+  whatsapp:      { type: DataTypes.STRING, defaultValue: '' },
+  email:         { type: DataTypes.STRING, defaultValue: '' },
+  redes:         { type: DataTypes.JSONB, defaultValue: { instagram: '', facebook: '', tiktok: '' } },
+  horarios:      { type: DataTypes.JSONB, defaultValue: { lunesViernes: '15:00 a 23:00', sabados: '09:00 a 23:00', domingos: '09:00 a 23:00', feriados: '09:00 a 23:00' } },
+  canchas:       { type: DataTypes.JSONB, defaultValue: [{ numero: 1, tipo: 'Cubierta', techada: true }, { numero: 2, tipo: 'Cubierta', techada: true }, { numero: 3, tipo: 'Al aire libre', techada: false }, { numero: 4, tipo: 'Al aire libre', techada: false }] },
+  precios:       { type: DataTypes.JSONB, defaultValue: [] },
+  servicios:     { type: DataTypes.JSONB, defaultValue: ['Estacionamiento', 'Vestuarios', 'Buffet'] },
+  metodosPago:   { type: DataTypes.JSONB, defaultValue: ['Efectivo', 'MercadoPago', 'Transferencia bancaria'] },
+  reglas:        { type: DataTypes.JSONB, defaultValue: { cancelacion: '', anticipoMinimo: '', vestimenta: '', llegada: '' } },
+  sistemaPuntos: { type: DataTypes.JSONB, defaultValue: { puntosPorReserva: 10, descripcion: 'Ganás puntos por cada reserva y los canjeás por premios.' } }
+}, {
+  tableName: 'club_config',
+  timestamps: true
+});
 
-module.exports = mongoose.model('ClubConfig', clubConfigSchema);
+module.exports = ClubConfig;

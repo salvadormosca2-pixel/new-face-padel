@@ -1,16 +1,21 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const sequelize = require('../db');
 
-const torneoSchema = new mongoose.Schema({
-  nombre:            { type: String, required: true },
-  fecha:             { type: String, required: true },
-  descripcion:       { type: String, default: '' },
-  imagen:            { type: String, default: '' },
-  estado:            { type: String, default: 'inscripcion' },
-  inscripciones:     { type: mongoose.Schema.Types.Mixed, default: [] },
-  grupos:            { type: mongoose.Schema.Types.Mixed, default: {} },
-  bracket:           { type: mongoose.Schema.Types.Mixed, default: [] },
-  campeon:           { type: String, default: null },
-  cantidadJugadores: { type: Number, default: 0 },
-}, { timestamps: true, minimize: false });
+const Torneo = sequelize.define('Torneo', {
+  id:                { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+  nombre:            { type: DataTypes.STRING, allowNull: false },
+  fecha:             { type: DataTypes.STRING(10), allowNull: false },
+  descripcion:       { type: DataTypes.TEXT, defaultValue: '' },
+  imagen:            { type: DataTypes.TEXT, defaultValue: '' },
+  estado:            { type: DataTypes.STRING, defaultValue: 'inscripcion' },
+  inscripciones:     { type: DataTypes.JSONB, defaultValue: [] },
+  grupos:            { type: DataTypes.JSONB, defaultValue: {} },
+  bracket:           { type: DataTypes.JSONB, defaultValue: [] },
+  campeon:           { type: DataTypes.STRING, defaultValue: null },
+  cantidadJugadores: { type: DataTypes.INTEGER, defaultValue: 0 }
+}, {
+  tableName: 'torneos',
+  timestamps: true
+});
 
-module.exports = mongoose.model('Torneo', torneoSchema);
+module.exports = Torneo;

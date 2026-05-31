@@ -1,22 +1,24 @@
 const express = require('express');
 const router  = express.Router();
+const { Op }  = require('sequelize');
 const Torneo  = require('../models/Torneo');
 
 router.get('/api/torneos', async (req, res) => {
   try {
-    const torneos = await Torneo.find().sort({ createdAt: -1 }).lean();
+    const torneos = await Torneo.findAll({ order: [['createdAt', 'DESC']], raw: true });
     res.json(torneos);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.get('/api/torneos/proximos', async (_req, res) => {
   try {
-    const torneos = await Torneo.find({
-      estado: { $in: ['inscripcion', 'grupos', 'bracket'] }
-    }).sort({ fecha: 1 }).lean();
-
+    const torneos = await Torneo.findAll({
+      where: { estado: { [Op.in]: ['inscripcion', 'grupos', 'bracket'] } },
+      order: [['fecha', 'ASC']],
+      raw: true
+    });
     res.json(torneos.map(t => ({
-      id: t._id,
+      id: t.id,
       nombre: t.nombre,
       fecha: t.fecha,
       descripcion: t.descripcion,
@@ -29,9 +31,11 @@ router.get('/api/torneos/proximos', async (_req, res) => {
 router.get('/api/torneos/mi-progreso/:telefono', async (req, res) => {
   try {
     const tel = req.params.telefono;
-    const torneos = await Torneo.find({
-      estado: { $in: ['inscripcion', 'grupos', 'bracket', 'finalizado'] }
-    }).sort({ fecha: -1 }).lean();
+    const torneos = await Torneo.findAll({
+      where: { estado: { [Op.in]: ['inscripcion', 'grupos', 'bracket', 'finalizado'] } },
+      order: [['fecha', 'DESC']],
+      raw: true
+    });
 
     const resultados = [];
 
@@ -43,7 +47,7 @@ router.get('/api/torneos/mi-progreso/:telefono', async (req, res) => {
       if (!miInscripcion) continue;
 
       const entry = {
-        torneoId: t._id,
+        torneoId: t.id,
         torneo: t.nombre,
         fecha: t.fecha,
         estadoTorneo: t.estado,
@@ -152,7 +156,7 @@ router.get('/api/torneos/mi-progreso/:telefono', async (req, res) => {
 
 router.get('/api/torneos/:id', async (req, res) => {
   try {
-    const torneo = await Torneo.findById(req.params.id).lean();
+    const torneo = await Torneo.findByPk(req.params.id, { raw: true });
     if (!torneo) return res.status(404).json({ error: 'Torneo no encontrado' });
     res.json(torneo);
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -160,7 +164,7 @@ router.get('/api/torneos/:id', async (req, res) => {
 
 router.post('/api/torneos/:id/inscripcion', async (req, res) => {
   try {
-    const torneo = await Torneo.findById(req.params.id);
+    const torneo = await Torneo.findByPk(req.params.id);
     if (!torneo) return res.status(404).json({ error: 'Torneo no encontrado' });
     if (torneo.estado !== 'inscripcion') return res.status(400).json({ error: 'El torneo ya no acepta inscripciones' });
 
@@ -171,10 +175,9 @@ router.post('/api/torneos/:id/inscripcion', async (req, res) => {
     const nombrePareja = `${jugador1.nombre.split(' ').pop()} / ${jugador2.nombre.split(' ').pop()}`;
     const nueva = { id, jugador1, jugador2, nombrePareja, estadoInscripcion: 'pendiente' };
 
-    if (!Array.isArray(torneo.inscripciones)) torneo.inscripciones = [];
-    torneo.inscripciones.push(nueva);
-    torneo.markModified('inscripciones');
-    await torneo.save();
+    const inscripciones = Array.isArray(torneo.inscripciones) ? [...torneo.inscripciones] : [];
+    inscripciones.push(nueva);
+    await torneo.update({ inscripciones });
 
     res.json({ ok: true, inscripcion: nueva });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -184,33 +187,31 @@ router.post('/api/admin/torneos', async (req, res) => {
   try {
     const { nombre, fecha, descripcion, imagen } = req.body;
     if (!nombre || !fecha) return res.status(400).json({ error: 'Nombre y fecha son obligatorios' });
-    const torneo = await new Torneo({ nombre, fecha, descripcion, imagen }).save();
+    const torneo = await Torneo.create({ nombre, fecha, descripcion, imagen });
     res.json(torneo);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.put('/api/admin/torneos/:id', async (req, res) => {
   try {
-    const torneo = await Torneo.findById(req.params.id);
+    const torneo = await Torneo.findByPk(req.params.id);
     if (!torneo) return res.status(404).json({ error: 'Torneo no encontrado' });
 
-    const fields = ['nombre', 'fecha', 'descripcion', 'imagen', 'estado', 'campeon', 'cantidadJugadores'];
-    fields.forEach(f => { if (req.body[f] !== undefined) torneo[f] = req.body[f]; });
+    const fields = ['nombre', 'fecha', 'descripcion', 'imagen', 'estado', 'campeon', 'cantidadJugadores',
+                    'inscripciones', 'grupos', 'bracket'];
+    const update = {};
+    fields.forEach(f => { if (req.body[f] !== undefined) update[f] = req.body[f]; });
 
-    const mixed = ['inscripciones', 'grupos', 'bracket'];
-    mixed.forEach(f => {
-      if (req.body[f] !== undefined) { torneo[f] = req.body[f]; torneo.markModified(f); }
-    });
-
-    await torneo.save();
+    await torneo.update(update);
     res.json(torneo);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.delete('/api/admin/torneos/:id', async (req, res) => {
   try {
-    const deleted = await Torneo.findByIdAndDelete(req.params.id);
+    const deleted = await Torneo.findByPk(req.params.id);
     if (!deleted) return res.status(404).json({ error: 'Torneo no encontrado' });
+    await deleted.destroy();
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

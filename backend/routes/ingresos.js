@@ -1,5 +1,6 @@
 const express = require('express');
 const router  = express.Router();
+const { Op }  = require('sequelize');
 const Reserva = require('../models/Reserva');
 const Socio   = require('../models/Socio');
 
@@ -8,7 +9,7 @@ function hace(dias) { const d = new Date(); d.setDate(d.getDate() - dias); retur
 
 router.get('/api/admin/ingresos/hoy', async (req, res) => {
   try {
-    const reservas   = await Reserva.find({ fecha: hoy() }).lean();
+    const reservas   = await Reserva.findAll({ where: { fecha: hoy() }, raw: true });
     const pagadas    = reservas.filter(r => r.estado === 'pagado');
     const pendientes = reservas.filter(r => r.estado === 'pendiente');
     const total      = pagadas.reduce((s, r) => s + (r.monto || 0), 0);
@@ -23,8 +24,8 @@ router.get('/api/admin/ingresos/semana', async (req, res) => {
     const dias     = Array.from({ length: 7 }, (_, i) => hace(6 - i));
     const diasPrev = Array.from({ length: 7 }, (_, i) => hace(13 - i));
     const [semRes, prevRes] = await Promise.all([
-      Reserva.find({ fecha: { $in: dias }, estado: 'pagado' }).lean(),
-      Reserva.find({ fecha: { $in: diasPrev }, estado: 'pagado' }).lean()
+      Reserva.findAll({ where: { fecha: { [Op.in]: dias }, estado: 'pagado' }, raw: true }),
+      Reserva.findAll({ where: { fecha: { [Op.in]: diasPrev }, estado: 'pagado' }, raw: true })
     ]);
     const porDia = dias.map(fecha => ({
       fecha,
@@ -41,7 +42,7 @@ router.get('/api/admin/ingresos/semana', async (req, res) => {
 router.get('/api/admin/ingresos/reporte', async (req, res) => {
   try {
     const dias     = Array.from({ length: 7 }, (_, i) => hace(6 - i));
-    const reservas = await Reserva.find({ fecha: { $in: dias } }).lean();
+    const reservas = await Reserva.findAll({ where: { fecha: { [Op.in]: dias } }, raw: true });
 
     const porCancha = { 1: 0, 2: 0, 3: 0, 4: 0 };
     const ingCancha = { 1: 0, 2: 0, 3: 0, 4: 0 };
@@ -78,7 +79,10 @@ router.get('/api/admin/ingresos/mes', async (req, res) => {
     const diasMes = new Date(año, mes, 0).getDate();
     const hasta   = `${año}-${String(mes).padStart(2, '0')}-${String(diasMes).padStart(2, '0')}`;
 
-    const reservas = await Reserva.find({ fecha: { $gte: desde, $lte: hasta }, estado: 'pagado' }).lean();
+    const reservas = await Reserva.findAll({
+      where: { fecha: { [Op.gte]: desde, [Op.lte]: hasta }, estado: 'pagado' },
+      raw: true
+    });
     const total    = reservas.reduce((s, r) => s + (r.monto || 0), 0);
     const porMetodo    = { efectivo: 0, mercadopago: 0, transferencia: 0 };
     const porDiaSemana = {};
@@ -107,10 +111,10 @@ router.get('/api/admin/dashboard', async (req, res) => {
     const dPrev = Array.from({ length: 7 }, (_, i) => hace(13 - i));
 
     const [resHoy, semRes, prevRes, sociosActivos] = await Promise.all([
-      Reserva.find({ fecha: h }).lean(),
-      Reserva.find({ fecha: { $in: dias }, estado: 'pagado' }).lean(),
-      Reserva.find({ fecha: { $in: dPrev }, estado: 'pagado' }).lean(),
-      Socio.countDocuments({ activo: true })
+      Reserva.findAll({ where: { fecha: h }, raw: true }),
+      Reserva.findAll({ where: { fecha: { [Op.in]: dias }, estado: 'pagado' }, raw: true }),
+      Reserva.findAll({ where: { fecha: { [Op.in]: dPrev }, estado: 'pagado' }, raw: true }),
+      Socio.count({ where: { activo: true } })
     ]);
 
     const pagadasHoy  = resHoy.filter(r => r.estado === 'pagado');

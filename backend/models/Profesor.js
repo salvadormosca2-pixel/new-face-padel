@@ -1,16 +1,21 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const sequelize = require('../db');
 
-const profesorSchema = new mongoose.Schema({
-  nombre:      { type: String, required: true, trim: true },
-  especialidad:{ type: String, required: true },
-  experiencia: { type: String, required: true },
-  horarios:    { type: String, required: true },
-  whatsapp:    { type: String, required: true },
-  imagen:      { type: String, default: '' },
-  alumnos:     { type: Number, default: 0 },
-  rating:      { type: Number, default: 5.0, min: 0, max: 5 },
-  gruposEdad:  [String],
-  niveles:     [String]
-}, { timestamps: true });
+const Profesor = sequelize.define('Profesor', {
+  id:           { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+  nombre:       { type: DataTypes.STRING, allowNull: false },
+  especialidad: { type: DataTypes.STRING, allowNull: false },
+  experiencia:  { type: DataTypes.STRING, allowNull: false },
+  horarios:     { type: DataTypes.STRING, allowNull: false },
+  whatsapp:     { type: DataTypes.STRING, allowNull: false },
+  imagen:       { type: DataTypes.TEXT, defaultValue: '' },
+  alumnos:      { type: DataTypes.INTEGER, defaultValue: 0 },
+  rating:       { type: DataTypes.FLOAT, defaultValue: 5.0, validate: { min: 0, max: 5 } },
+  gruposEdad:   { type: DataTypes.JSONB, defaultValue: [] },
+  niveles:      { type: DataTypes.JSONB, defaultValue: [] }
+}, {
+  tableName: 'profesores',
+  timestamps: true
+});
 
-module.exports = mongoose.model('Profesor', profesorSchema);
+module.exports = Profesor;

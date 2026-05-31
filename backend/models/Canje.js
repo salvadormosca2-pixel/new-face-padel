@@ -1,14 +1,20 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const sequelize = require('../db');
 
-const canjeSchema = new mongoose.Schema({
-  socioTelefono: { type: String, required: true },
-  socioNombre:   { type: String, default: '' },
-  premioId:      { type: mongoose.Schema.Types.ObjectId, ref: 'Premio', required: true },
-  premioNombre:  { type: String, required: true },
-  puntosUsados:  { type: Number, required: true },
-  estado:        { type: String, default: 'pendiente', enum: ['pendiente', 'entregado', 'cancelado'] }
-}, { timestamps: true });
+const Canje = sequelize.define('Canje', {
+  id:            { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+  socioTelefono: { type: DataTypes.STRING, allowNull: false },
+  socioNombre:   { type: DataTypes.STRING, defaultValue: '' },
+  premioId:      { type: DataTypes.INTEGER, allowNull: false },
+  premioNombre:  { type: DataTypes.STRING, allowNull: false },
+  puntosUsados:  { type: DataTypes.INTEGER, allowNull: false },
+  estado:        { type: DataTypes.STRING, defaultValue: 'pendiente', validate: { isIn: [['pendiente', 'entregado', 'cancelado']] } }
+}, {
+  tableName: 'canjes',
+  timestamps: true,
+  indexes: [
+    { fields: ['socioTelefono', 'createdAt'] }
+  ]
+});
 
-canjeSchema.index({ socioTelefono: 1, createdAt: -1 });
-
-module.exports = mongoose.model('Canje', canjeSchema);
+module.exports = Canje;

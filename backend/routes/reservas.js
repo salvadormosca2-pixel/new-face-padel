@@ -1,6 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 const { v4: uuidv4 } = require('uuid');
+const { Op } = require('sequelize');
 const Reserva = require('../models/Reserva');
 const Socio   = require('../models/Socio');
 
@@ -12,7 +13,7 @@ const TIPO    = { 1: 'Cubierta', 2: 'Cubierta', 3: 'Al aire libre', 4: 'Al aire 
 
 router.get('/api/horarios/:fecha', async (req, res) => {
   try {
-    const reservas = await Reserva.find({ fecha: req.params.fecha }).lean();
+    const reservas = await Reserva.findAll({ where: { fecha: req.params.fecha }, raw: true });
     const horarios = HORAS.map(hora => {
       const ocupadas = reservas.filter(r => r.hora === hora).map(r => r.cancha);
       const libres   = CANCHAS.filter(c => !ocupadas.includes(c));
@@ -35,7 +36,7 @@ router.post('/api/reservar', async (req, res) => {
     if (!nombre || !telefono || !metodoPago || !fecha || !hora)
       return res.status(400).json({ error: 'Todos los campos son obligatorios' });
 
-    const ocupadas = (await Reserva.find({ fecha, hora }).lean()).map(r => r.cancha);
+    const ocupadas = (await Reserva.findAll({ where: { fecha, hora }, raw: true })).map(r => r.cancha);
     let libres = CANCHAS.filter(c => !ocupadas.includes(c));
     if (!libres.length) return res.status(400).json({ error: 'Horario completo' });
 
@@ -53,17 +54,21 @@ router.post('/api/reservar', async (req, res) => {
     const cancha     = libres[Math.floor(Math.random() * libres.length)];
     const claveUnica = uuidv4();
 
-    const reserva = await new Reserva({ fecha, hora, cancha, nombre, telefono, metodoPago, claveUnica }).save();
+    await Reserva.create({ fecha, hora, cancha, nombre, telefono, metodoPago, claveUnica });
 
-    await Socio.findOneAndUpdate(
-      { telefono },
-      { $setOnInsert: { nombre }, $set: { ultimaReserva: new Date(), metodoPago }, $inc: { puntos: 10 } },
-      { upsert: true }
-    );
+    const [socio] = await Socio.findOrCreate({
+      where: { telefono },
+      defaults: { nombre, puntos: 0, totalGastado: 0 }
+    });
+    await socio.update({
+      ultimaReserva: new Date(),
+      metodoPago,
+      puntos: socio.puntos + 10
+    });
 
     res.json({ claveUnica, cancha, tipo: TIPO[cancha], nombre, fecha, hora, metodoPago });
   } catch (err) {
-    if (err.code === 11000) return res.status(400).json({ error: 'Esa cancha ya está reservada en ese horario' });
+    if (err.name === 'SequelizeUniqueConstraintError') return res.status(400).json({ error: 'Esa cancha ya está reservada en ese horario' });
     res.status(500).json({ error: err.message });
   }
 });
@@ -72,7 +77,7 @@ router.post('/api/reservar', async (req, res) => {
 
 router.get('/api/mis-reservas/verificar/:claveUnica', async (req, res) => {
   try {
-    const r = await Reserva.findOne({ claveUnica: req.params.claveUnica }).lean();
+    const r = await Reserva.findOne({ where: { claveUnica: req.params.claveUnica }, raw: true });
     if (!r) return res.status(404).json({ error: 'Reserva no encontrada' });
     res.json({
       claveUnica: r.claveUnica,
@@ -90,11 +95,11 @@ router.get('/api/mis-reservas/verificar/:claveUnica', async (req, res) => {
 router.get('/api/mis-reservas/:telefono', async (req, res) => {
   try {
     const hoy = new Date().toISOString().split('T')[0];
-    const reservas = await Reserva.find({
-      telefono: req.params.telefono,
-      fecha: { $gte: hoy }
-    }).sort({ fecha: 1, hora: 1 }).lean();
-
+    const reservas = await Reserva.findAll({
+      where: { telefono: req.params.telefono, fecha: { [Op.gte]: hoy } },
+      order: [['fecha', 'ASC'], ['hora', 'ASC']],
+      raw: true
+    });
     res.json(reservas.map(r => ({
       claveUnica: r.claveUnica,
       fecha: r.fecha,
@@ -111,10 +116,14 @@ router.get('/api/mis-reservas/:telefono/historial', async (req, res) => {
   try {
     const tel = req.params.telefono;
     const [total, reservas] = await Promise.all([
-      Reserva.countDocuments({ telefono: tel }),
-      Reserva.find({ telefono: tel }).sort({ fecha: -1, hora: -1 }).limit(50).lean()
+      Reserva.count({ where: { telefono: tel } }),
+      Reserva.findAll({
+        where: { telefono: tel },
+        order: [['fecha', 'DESC'], ['hora', 'DESC']],
+        limit: 50,
+        raw: true
+      })
     ]);
-
     res.json({
       total,
       mostrando: reservas.length,
@@ -137,13 +146,13 @@ router.delete('/api/mis-reservas/cancelar', async (req, res) => {
     const { telefono, claveUnica } = req.body;
     if (!telefono || !claveUnica) return res.status(400).json({ error: 'telefono y claveUnica son requeridos' });
 
-    const reserva = await Reserva.findOne({ claveUnica, telefono });
+    const reserva = await Reserva.findOne({ where: { claveUnica, telefono } });
     if (!reserva) return res.status(404).json({ error: 'Reserva no encontrada o el teléfono no coincide' });
 
     const hoy = new Date().toISOString().split('T')[0];
     if (reserva.fecha < hoy) return res.status(400).json({ error: 'No se puede cancelar una reserva pasada' });
 
-    await Reserva.deleteOne({ _id: reserva._id });
+    await reserva.destroy();
     res.json({ ok: true, mensaje: `Reserva del ${reserva.fecha} a las ${reserva.hora} cancelada correctamente` });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -152,9 +161,11 @@ router.delete('/api/mis-reservas/cancelar', async (req, res) => {
 
 router.get('/api/admin/reservas/recordatorios/:fecha', async (req, res) => {
   try {
-    const reservas = await Reserva.find({ fecha: req.params.fecha })
-      .sort({ hora: 1, cancha: 1 }).lean();
-
+    const reservas = await Reserva.findAll({
+      where: { fecha: req.params.fecha },
+      order: [['hora', 'ASC'], ['cancha', 'ASC']],
+      raw: true
+    });
     res.json(reservas.map(r => ({
       nombre: r.nombre,
       telefono: r.telefono,
@@ -172,14 +183,21 @@ router.get('/api/admin/reservas', async (req, res) => {
   try {
     const { desde, hasta } = req.query;
     if (!desde || !hasta) return res.status(400).json({ error: 'desde y hasta son requeridos' });
-    const reservas = await Reserva.find({ fecha: { $gte: desde, $lte: hasta } }).lean();
+    const reservas = await Reserva.findAll({
+      where: { fecha: { [Op.gte]: desde, [Op.lte]: hasta } },
+      raw: true
+    });
     res.json(reservas);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.get('/api/admin/reservas/:fecha', async (req, res) => {
   try {
-    const reservas = await Reserva.find({ fecha: req.params.fecha }).sort({ cancha: 1, hora: 1 }).lean();
+    const reservas = await Reserva.findAll({
+      where: { fecha: req.params.fecha },
+      order: [['cancha', 'ASC'], ['hora', 'ASC']],
+      raw: true
+    });
     const resultado = {};
     CANCHAS.forEach(c => {
       resultado[c] = {
@@ -187,7 +205,7 @@ router.get('/api/admin/reservas/:fecha', async (req, res) => {
         reservas: HORAS.map(hora => {
           const r = reservas.find(x => x.cancha === c && x.hora === hora);
           return r
-            ? { hora, cancha: c, tipo: TIPO[c], _id: r._id, claveUnica: r.claveUnica,
+            ? { hora, cancha: c, tipo: TIPO[c], _id: r.id, claveUnica: r.claveUnica,
                 nombre: r.nombre, telefono: r.telefono, metodoPago: r.metodoPago,
                 estado: r.estado, metodoCobro: r.metodoCobro, monto: r.monto, libre: false }
             : { hora, cancha: c, tipo: TIPO[c], libre: true };
@@ -201,13 +219,15 @@ router.get('/api/admin/reservas/:fecha', async (req, res) => {
 router.patch('/api/admin/pago', async (req, res) => {
   try {
     const { claveUnica, metodoCobro, monto } = req.body;
-    const reserva = await Reserva.findOneAndUpdate(
-      { claveUnica },
-      { estado: 'pagado', metodoCobro, monto: monto || 0 },
-      { new: true }
-    );
+    const reserva = await Reserva.findOne({ where: { claveUnica } });
     if (!reserva) return res.status(404).json({ error: 'Reserva no encontrada' });
-    if (monto) await Socio.findOneAndUpdate({ telefono: reserva.telefono }, { $inc: { totalGastado: monto } });
+
+    await reserva.update({ estado: 'pagado', metodoCobro, monto: monto || 0 });
+
+    if (monto) {
+      const socio = await Socio.findOne({ where: { telefono: reserva.telefono } });
+      if (socio) await socio.update({ totalGastado: socio.totalGastado + monto });
+    }
     res.json(reserva);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -220,14 +240,14 @@ router.post('/api/admin/reserva', async (req, res) => {
 
     const canchaNum  = parseInt(cancha);
     const claveUnica = uuidv4();
-    const reserva = await new Reserva({
-      fecha, hora, cancha: canchaNum, nombre, telefono,
+    const reserva = await Reserva.create({
+      fecha, hora, cancha: canchaNum, nombre, telefono: telefono || '',
       metodoPago: metodoPago || 'efectivo', claveUnica
-    }).save();
+    });
 
-    res.json({ ...reserva.toObject(), tipo: TIPO[canchaNum] });
+    res.json({ ...reserva.toJSON(), tipo: TIPO[canchaNum] });
   } catch (err) {
-    if (err.code === 11000) return res.status(400).json({ error: 'Esa cancha ya está ocupada en ese horario' });
+    if (err.name === 'SequelizeUniqueConstraintError') return res.status(400).json({ error: 'Esa cancha ya está ocupada en ese horario' });
     res.status(500).json({ error: err.message });
   }
 });
@@ -235,8 +255,9 @@ router.post('/api/admin/reserva', async (req, res) => {
 router.delete('/api/admin/reserva', async (req, res) => {
   try {
     const { claveUnica } = req.body;
-    const deleted = await Reserva.findOneAndDelete({ claveUnica });
+    const deleted = await Reserva.findOne({ where: { claveUnica } });
     if (!deleted) return res.status(404).json({ error: 'Reserva no encontrada' });
+    await deleted.destroy();
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

@@ -1,5 +1,6 @@
 const express    = require('express');
 const router     = express.Router();
+const { Op }     = require('sequelize');
 const { getOrCreate } = require('./club');
 const Torneo     = require('../models/Torneo');
 const Profesor   = require('../models/Profesor');
@@ -17,7 +18,7 @@ function fechaStr(offset) {
 }
 
 async function disponibilidadFecha(fecha) {
-  const reservas = await Reserva.find({ fecha }).lean();
+  const reservas = await Reserva.findAll({ where: { fecha }, raw: true });
   return HORAS.map(hora => {
     const ocupadas = reservas.filter(r => r.hora === hora).map(r => r.cancha);
     const libres   = CANCHAS.filter(c => !ocupadas.includes(c));
@@ -37,15 +38,19 @@ router.get('/api/bot/contexto', async (_req, res) => {
 
     const [club, torneos, profesores, premios, dispHoy, dispManana] = await Promise.all([
       getOrCreate(),
-      Torneo.find({ estado: { $in: ['inscripcion', 'grupos', 'bracket'] } }).sort({ fecha: 1 }).lean(),
-      Profesor.find().lean(),
-      Premio.find({ activo: true }).sort({ puntos: 1 }).lean(),
+      Torneo.findAll({
+        where: { estado: { [Op.in]: ['inscripcion', 'grupos', 'bracket'] } },
+        order: [['fecha', 'ASC']],
+        raw: true
+      }),
+      Profesor.findAll({ raw: true }),
+      Premio.findAll({ where: { activo: true }, order: [['puntos', 'ASC']], raw: true }),
       disponibilidadFecha(hoy),
       disponibilidadFecha(manana)
     ]);
 
     const torneosResumen = torneos.map(t => ({
-      id: t._id,
+      id: t.id,
       nombre: t.nombre,
       fecha: t.fecha,
       estado: t.estado,
@@ -54,7 +59,7 @@ router.get('/api/bot/contexto', async (_req, res) => {
     }));
 
     const profesoresResumen = profesores.map(p => ({
-      id: p._id,
+      id: p.id,
       nombre: p.nombre,
       especialidad: p.especialidad,
       experiencia: p.experiencia,

@@ -1,14 +1,19 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const sequelize = require('../db');
 
-const socioSchema = new mongoose.Schema({
-  nombre:        { type: String, required: true, trim: true },
-  email:         { type: String, default: '', trim: true },
-  telefono:      { type: String, required: true, unique: true, trim: true },
-  puntos:        { type: Number, default: 0 },
-  ultimaReserva: { type: Date, default: null },
-  metodoPago:    { type: String, default: null },
-  totalGastado:  { type: Number, default: 0 },
-  activo:        { type: Boolean, default: true }
-}, { timestamps: true });
+const Socio = sequelize.define('Socio', {
+  id:            { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+  nombre:        { type: DataTypes.STRING, allowNull: false },
+  email:         { type: DataTypes.STRING, defaultValue: '' },
+  telefono:      { type: DataTypes.STRING, allowNull: false, unique: true },
+  puntos:        { type: DataTypes.INTEGER, defaultValue: 0 },
+  ultimaReserva: { type: DataTypes.DATE, defaultValue: null },
+  metodoPago:    { type: DataTypes.STRING, defaultValue: null },
+  totalGastado:  { type: DataTypes.FLOAT, defaultValue: 0 },
+  activo:        { type: DataTypes.BOOLEAN, defaultValue: true }
+}, {
+  tableName: 'socios',
+  timestamps: true
+});
 
-module.exports = mongoose.model('Socio', socioSchema);
+module.exports = Socio;

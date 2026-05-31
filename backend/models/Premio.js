@@ -1,12 +1,17 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const sequelize = require('../db');
 
-const premioSchema = new mongoose.Schema({
-  nombre:      { type: String, required: true, trim: true },
-  descripcion: { type: String, default: '' },
-  icono:       { type: String, default: '' },
-  puntos:      { type: Number, required: true, min: 1 },
-  stock:       { type: Number, default: -1 },
-  activo:      { type: Boolean, default: true }
-}, { timestamps: true });
+const Premio = sequelize.define('Premio', {
+  id:          { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+  nombre:      { type: DataTypes.STRING, allowNull: false },
+  descripcion: { type: DataTypes.TEXT, defaultValue: '' },
+  icono:       { type: DataTypes.STRING, defaultValue: '' },
+  puntos:      { type: DataTypes.INTEGER, allowNull: false, validate: { min: 1 } },
+  stock:       { type: DataTypes.INTEGER, defaultValue: -1 },
+  activo:      { type: DataTypes.BOOLEAN, defaultValue: true }
+}, {
+  tableName: 'premios',
+  timestamps: true
+});
 
-module.exports = mongoose.model('Premio', premioSchema);
+module.exports = Premio;
