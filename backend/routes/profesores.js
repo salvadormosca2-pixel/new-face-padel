@@ -2,10 +2,39 @@ const express  = require('express');
 const router   = express.Router();
 const Profesor = require('../models/Profesor');
 
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 router.get('/api/profesores', async (req, res) => {
   try {
-    const profesores = await Profesor.find().sort({ createdAt: -1 }).lean();
+    const filtro = {};
+    if (req.query.nivel) {
+      filtro.niveles = { $regex: new RegExp(escapeRegex(req.query.nivel), 'i') };
+    }
+    if (req.query.edad) {
+      filtro.gruposEdad = { $regex: new RegExp(escapeRegex(req.query.edad), 'i') };
+    }
+    if (req.query.nombre) {
+      filtro.nombre = { $regex: new RegExp(escapeRegex(req.query.nombre), 'i') };
+    }
+    if (req.query.especialidad) {
+      filtro.especialidad = { $regex: new RegExp(escapeRegex(req.query.especialidad), 'i') };
+    }
+
+    const profesores = await Profesor.find(filtro).sort({ rating: -1 }).lean();
     res.json(profesores);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.get('/api/profesores/:id', async (req, res) => {
+  try {
+    if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
+    const profesor = await Profesor.findById(req.params.id).lean();
+    if (!profesor) return res.status(404).json({ error: 'Profesor no encontrado' });
+    res.json(profesor);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

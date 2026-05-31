@@ -8,27 +8,47 @@ const HORAS   = ['15:00','16:00','17:00','18:00','19:00','20:00','21:00','22:00'
 const CANCHAS = [1, 2, 3, 4];
 const TIPO    = { 1: 'Cubierta', 2: 'Cubierta', 3: 'Al aire libre', 4: 'Al aire libre' };
 
+// ── Público: disponibilidad ──
+
 router.get('/api/horarios/:fecha', async (req, res) => {
   try {
     const reservas = await Reserva.find({ fecha: req.params.fecha }).lean();
     const horarios = HORAS.map(hora => {
       const ocupadas = reservas.filter(r => r.hora === hora).map(r => r.cancha);
-      const libres   = CANCHAS.filter(c => !ocupadas.includes(c)).length;
-      return { hora, libres, total: 4 };
+      const libres   = CANCHAS.filter(c => !ocupadas.includes(c));
+      return {
+        hora,
+        libres: libres.length,
+        total: 4,
+        canchasLibres: libres.map(c => ({ cancha: c, tipo: TIPO[c] }))
+      };
     });
     res.json(horarios);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ── Público: reservar ──
+
 router.post('/api/reservar', async (req, res) => {
   try {
-    const { nombre, telefono, metodoPago, fecha, hora } = req.body;
+    const { nombre, telefono, metodoPago, fecha, hora, tipoCancha } = req.body;
     if (!nombre || !telefono || !metodoPago || !fecha || !hora)
       return res.status(400).json({ error: 'Todos los campos son obligatorios' });
 
     const ocupadas = (await Reserva.find({ fecha, hora }).lean()).map(r => r.cancha);
-    const libres   = CANCHAS.filter(c => !ocupadas.includes(c));
+    let libres = CANCHAS.filter(c => !ocupadas.includes(c));
     if (!libres.length) return res.status(400).json({ error: 'Horario completo' });
+
+    if (tipoCancha) {
+      const norm = tipoCancha.toLowerCase();
+      let preferidas;
+      if (norm.includes('cubier') || norm.includes('techad')) {
+        preferidas = libres.filter(c => TIPO[c] === 'Cubierta');
+      } else if (norm.includes('aire') || norm.includes('libre') || norm.includes('descubier')) {
+        preferidas = libres.filter(c => TIPO[c] === 'Al aire libre');
+      }
+      if (preferidas && preferidas.length > 0) libres = preferidas;
+    }
 
     const cancha     = libres[Math.floor(Math.random() * libres.length)];
     const claveUnica = uuidv4();
@@ -46,6 +66,106 @@ router.post('/api/reservar', async (req, res) => {
     if (err.code === 11000) return res.status(400).json({ error: 'Esa cancha ya está reservada en ese horario' });
     res.status(500).json({ error: err.message });
   }
+});
+
+// ── Público: mis reservas, verificar, cancelar ──
+
+router.get('/api/mis-reservas/verificar/:claveUnica', async (req, res) => {
+  try {
+    const r = await Reserva.findOne({ claveUnica: req.params.claveUnica }).lean();
+    if (!r) return res.status(404).json({ error: 'Reserva no encontrada' });
+    res.json({
+      claveUnica: r.claveUnica,
+      nombre: r.nombre,
+      fecha: r.fecha,
+      hora: r.hora,
+      cancha: r.cancha,
+      tipo: TIPO[r.cancha],
+      estado: r.estado,
+      metodoPago: r.metodoPago
+    });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.get('/api/mis-reservas/:telefono', async (req, res) => {
+  try {
+    const hoy = new Date().toISOString().split('T')[0];
+    const reservas = await Reserva.find({
+      telefono: req.params.telefono,
+      fecha: { $gte: hoy }
+    }).sort({ fecha: 1, hora: 1 }).lean();
+
+    res.json(reservas.map(r => ({
+      claveUnica: r.claveUnica,
+      fecha: r.fecha,
+      hora: r.hora,
+      cancha: r.cancha,
+      tipo: TIPO[r.cancha],
+      estado: r.estado,
+      metodoPago: r.metodoPago
+    })));
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.get('/api/mis-reservas/:telefono/historial', async (req, res) => {
+  try {
+    const tel = req.params.telefono;
+    const [total, reservas] = await Promise.all([
+      Reserva.countDocuments({ telefono: tel }),
+      Reserva.find({ telefono: tel }).sort({ fecha: -1, hora: -1 }).limit(50).lean()
+    ]);
+
+    res.json({
+      total,
+      mostrando: reservas.length,
+      reservas: reservas.map(r => ({
+        claveUnica: r.claveUnica,
+        fecha: r.fecha,
+        hora: r.hora,
+        cancha: r.cancha,
+        tipo: TIPO[r.cancha],
+        estado: r.estado,
+        metodoPago: r.metodoPago,
+        monto: r.monto
+      }))
+    });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.delete('/api/mis-reservas/cancelar', async (req, res) => {
+  try {
+    const { telefono, claveUnica } = req.body;
+    if (!telefono || !claveUnica) return res.status(400).json({ error: 'telefono y claveUnica son requeridos' });
+
+    const reserva = await Reserva.findOne({ claveUnica, telefono });
+    if (!reserva) return res.status(404).json({ error: 'Reserva no encontrada o el teléfono no coincide' });
+
+    const hoy = new Date().toISOString().split('T')[0];
+    if (reserva.fecha < hoy) return res.status(400).json({ error: 'No se puede cancelar una reserva pasada' });
+
+    await Reserva.deleteOne({ _id: reserva._id });
+    res.json({ ok: true, mensaje: `Reserva del ${reserva.fecha} a las ${reserva.hora} cancelada correctamente` });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── Admin ──
+
+router.get('/api/admin/reservas/recordatorios/:fecha', async (req, res) => {
+  try {
+    const reservas = await Reserva.find({ fecha: req.params.fecha })
+      .sort({ hora: 1, cancha: 1 }).lean();
+
+    res.json(reservas.map(r => ({
+      nombre: r.nombre,
+      telefono: r.telefono,
+      fecha: r.fecha,
+      hora: r.hora,
+      cancha: r.cancha,
+      tipo: TIPO[r.cancha],
+      estado: r.estado,
+      claveUnica: r.claveUnica
+    })));
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.get('/api/admin/reservas', async (req, res) => {

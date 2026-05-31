@@ -41,6 +41,9 @@ app.use('/', require('./routes/torneos'));
 app.use('/', require('./routes/profesores'));
 app.use('/', require('./routes/socios'));
 app.use('/', require('./routes/ingresos'));
+app.use('/', require('./routes/club'));
+app.use('/', require('./routes/premios'));
+app.use('/', require('./routes/bot'));
 
 app.get('/', (_req, res) => res.json({ status: 'ok', club: 'New Face Padel Club', version: '1.0.0' }));
 
