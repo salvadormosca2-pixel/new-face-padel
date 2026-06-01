@@ -57,7 +57,46 @@ app.use((err, _req, res, _next) => {
 
 const PORT = process.env.PORT || 3000;
 
-sequelize.sync({ alter: true }).then(async () => {
+async function migrateReservas() {
+  try {
+    const qi = sequelize.getQueryInterface();
+    const desc = await qi.describeTable('reservas').catch(() => null);
+    if (!desc) return;
+
+    if (desc.hora && !desc.hora_inicio) {
+      console.log('Migrando columnas de reservas...');
+      const q = (sql) => sequelize.query(sql).catch(() => {});
+      await q(`ALTER TABLE reservas ADD COLUMN IF NOT EXISTS hora_inicio VARCHAR(5) DEFAULT ''`);
+      await q(`ALTER TABLE reservas ADD COLUMN IF NOT EXISTS hora_fin VARCHAR(5) DEFAULT ''`);
+      await q(`ALTER TABLE reservas ADD COLUMN IF NOT EXISTS duracion_minutos INTEGER DEFAULT 60`);
+      await q(`ALTER TABLE reservas ADD COLUMN IF NOT EXISTS cancha_id INTEGER DEFAULT 1`);
+      await q(`ALTER TABLE reservas ADD COLUMN IF NOT EXISTS cliente_nombre VARCHAR(255) DEFAULT ''`);
+      await q(`ALTER TABLE reservas ADD COLUMN IF NOT EXISTS cliente_telefono VARCHAR(255) DEFAULT ''`);
+      await q(`ALTER TABLE reservas ADD COLUMN IF NOT EXISTS estado_pago VARCHAR(255) DEFAULT 'pendiente'`);
+      await q(`ALTER TABLE reservas ADD COLUMN IF NOT EXISTS estado_reserva VARCHAR(255) DEFAULT 'confirmada'`);
+      await q(`ALTER TABLE reservas ADD COLUMN IF NOT EXISTS metodo_pago VARCHAR(255) DEFAULT NULL`);
+      await q(`UPDATE reservas SET hora_inicio = hora WHERE hora IS NOT NULL AND (hora_inicio IS NULL OR hora_inicio = '')`);
+      await q(`UPDATE reservas SET hora_fin = hora WHERE hora IS NOT NULL AND (hora_fin IS NULL OR hora_fin = '')`);
+      await q(`UPDATE reservas SET cancha_id = cancha WHERE cancha IS NOT NULL`);
+      await q(`UPDATE reservas SET cliente_nombre = nombre WHERE nombre IS NOT NULL AND (cliente_nombre IS NULL OR cliente_nombre = '')`);
+      await q(`UPDATE reservas SET cliente_telefono = COALESCE(telefono, '') WHERE cliente_telefono IS NULL OR cliente_telefono = ''`);
+      await q(`UPDATE reservas SET estado_pago = COALESCE(estado, 'pendiente') WHERE estado_pago IS NULL OR estado_pago = 'pendiente'`);
+      await q(`UPDATE reservas SET metodo_pago = COALESCE("metodoPago", metodo_pago) WHERE "metodoPago" IS NOT NULL`);
+      await q(`ALTER TABLE reservas DROP COLUMN IF EXISTS hora`);
+      await q(`ALTER TABLE reservas DROP COLUMN IF EXISTS cancha`);
+      await q(`ALTER TABLE reservas DROP COLUMN IF EXISTS nombre`);
+      await q(`ALTER TABLE reservas DROP COLUMN IF EXISTS telefono`);
+      await q(`ALTER TABLE reservas DROP COLUMN IF EXISTS estado`);
+      await q(`ALTER TABLE reservas DROP COLUMN IF EXISTS "metodoPago"`);
+      await q(`ALTER TABLE reservas DROP COLUMN IF EXISTS "metodoCobro"`);
+      console.log('Migracion de reservas completada');
+    }
+  } catch (err) {
+    console.error('Error en migracion de reservas:', err.message);
+  }
+}
+
+migrateReservas().then(() => sequelize.sync({ alter: true })).then(async () => {
   console.log('PostgreSQL sincronizado');
   await seed();
   const server = app.listen(PORT, () => console.log(`API → puerto ${PORT}`));
