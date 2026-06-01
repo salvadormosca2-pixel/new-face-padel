@@ -5,11 +5,8 @@ const { getOrCreate } = require('./club');
 const Torneo     = require('../models/Torneo');
 const Profesor   = require('../models/Profesor');
 const Premio     = require('../models/Premio');
-const Reserva    = require('../models/Reserva');
-
-const HORAS   = ['15:00','16:00','17:00','18:00','19:00','20:00','21:00','22:00','23:00'];
-const CANCHAS = [1, 2, 3, 4];
-const TIPO    = { 1: 'Cubierta', 2: 'Cubierta', 3: 'Al aire libre', 4: 'Al aire libre' };
+const Socio      = require('../models/Socio');
+const { calcDisponibilidad, CANCHAS } = require('./reservas');
 
 function fechaStr(offset) {
   const d = new Date();
@@ -17,26 +14,12 @@ function fechaStr(offset) {
   return d.toISOString().split('T')[0];
 }
 
-async function disponibilidadFecha(fecha) {
-  const reservas = await Reserva.findAll({ where: { fecha }, raw: true });
-  return HORAS.map(hora => {
-    const ocupadas = reservas.filter(r => r.hora === hora).map(r => r.cancha);
-    const libres   = CANCHAS.filter(c => !ocupadas.includes(c));
-    return {
-      hora,
-      libres: libres.length,
-      total: 4,
-      canchasLibres: libres.map(c => ({ cancha: c, tipo: TIPO[c] }))
-    };
-  });
-}
-
 router.get('/api/bot/contexto', async (_req, res) => {
   try {
     const hoy    = fechaStr(0);
     const manana = fechaStr(1);
 
-    const [club, torneos, profesores, premios, dispHoy, dispManana] = await Promise.all([
+    const [club, torneos, profesores, premios, dispHoy, dispManana, ranking] = await Promise.all([
       getOrCreate(),
       Torneo.findAll({
         where: { estado: { [Op.in]: ['inscripcion', 'grupos', 'bracket'] } },
@@ -45,8 +28,9 @@ router.get('/api/bot/contexto', async (_req, res) => {
       }),
       Profesor.findAll({ raw: true }),
       Premio.findAll({ where: { activo: true }, order: [['puntos', 'ASC']], raw: true }),
-      disponibilidadFecha(hoy),
-      disponibilidadFecha(manana)
+      calcDisponibilidad(hoy, 60),
+      calcDisponibilidad(manana, 60),
+      Socio.findAll({ where: { activo: true }, order: [['puntos', 'DESC']], limit: 20, raw: true })
     ]);
 
     const torneosResumen = torneos.map(t => ({
@@ -70,13 +54,59 @@ router.get('/api/bot/contexto', async (_req, res) => {
       niveles: p.niveles
     }));
 
+    const rankingResumen = ranking.map((s, i) => ({
+      posicion: i + 1,
+      nombre: s.nombre,
+      telefono: s.telefono,
+      puntos: s.puntos,
+      totalGastado: s.totalGastado || 0
+    }));
+
     res.json({
       club,
       torneos_activos: torneosResumen,
       profesores: profesoresResumen,
       premios,
+      ranking: rankingResumen,
+      canchas: CANCHAS,
       horarios_hoy: { fecha: hoy, slots: dispHoy },
       horarios_manana: { fecha: manana, slots: dispManana }
+    });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Endpoint individual para ranking
+router.get('/api/ranking', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 50;
+    const socios = await Socio.findAll({
+      where: { activo: true, puntos: { [Op.gt]: 0 } },
+      order: [['puntos', 'DESC']],
+      limit,
+      raw: true
+    });
+    res.json(socios.map((s, i) => ({
+      posicion: i + 1,
+      nombre: s.nombre,
+      telefono: s.telefono,
+      puntos: s.puntos,
+      totalGastado: s.totalGastado || 0,
+      ultimaReserva: s.ultimaReserva
+    })));
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Endpoint individual de puntos por telefono
+router.get('/api/puntos/:telefono', async (req, res) => {
+  try {
+    const socio = await Socio.findOne({ where: { telefono: req.params.telefono }, raw: true });
+    if (!socio) return res.status(404).json({ error: 'No se encontro un socio con ese telefono' });
+    res.json({
+      nombre: socio.nombre,
+      telefono: socio.telefono,
+      puntos: socio.puntos,
+      totalGastado: socio.totalGastado || 0,
+      activo: socio.activo
     });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

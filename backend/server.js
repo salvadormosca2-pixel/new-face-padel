@@ -5,6 +5,7 @@ const helmet      = require('helmet');
 const compression = require('compression');
 const jwt         = require('jsonwebtoken');
 const { sequelize } = require('./models');
+const seed = require('./seed');
 
 const app = express();
 
@@ -56,8 +57,9 @@ app.use((err, _req, res, _next) => {
 
 const PORT = process.env.PORT || 3000;
 
-sequelize.sync({ alter: true }).then(() => {
+sequelize.sync({ alter: true }).then(async () => {
   console.log('PostgreSQL sincronizado');
+  await seed();
   const server = app.listen(PORT, () => console.log(`API → puerto ${PORT}`));
 
   const shutdown = () => {

@@ -631,10 +631,11 @@ async function ntConfirmar() {
 
   try {
     await api.agregarReservaAdmin({ canchaId, fecha: dateKey, hora_inicio: horaInicio, duracion_minutos: durMin, nombre, telefono });
+    if (_USE_API && typeof _syncReservasDesdeAPI === 'function') await _syncReservasDesdeAPI();
     cerrarNuevoTurno();
     renderTurnos();
     const horaFin = _minToTime(_timeToMin(horaInicio) + durMin);
-    toast(`✓ ${nombre} agendado ${horaInicio} — ${horaFin} — ${cc.nombre}`, 'green');
+    toast(`${nombre} agendado ${horaInicio} — ${horaFin} — ${cc.nombre}`, 'green');
   } catch (err) { toast(err.message || 'Error al agendar', 'red'); }
 }
 
@@ -826,17 +827,21 @@ async function agendarTurno(canchaId, inputId) {
 
   try {
     await api.agregarReservaAdmin({ canchaId, fecha:key, hora_inicio:horaInicio, duracion_minutos:dur, nombre, telefono:'' });
+    if (_USE_API && typeof _syncReservasDesdeAPI === 'function') await _syncReservasDesdeAPI();
     closeActivePanel(); renderTurnos();
-    toast(`✓ ${nombre} agendado ${horaInicio} — ${_minToTime(_timeToMin(horaInicio)+dur)} — ${cancha.nombre}`,'green');
+    toast(`${nombre} agendado ${horaInicio} — ${_minToTime(_timeToMin(horaInicio)+dur)} — ${cancha.nombre}`,'green');
   } catch (err) { toast(err.message||'Error al agendar','red'); }
 }
 
-function setEstado(reservaId, estado) {
+async function setEstado(reservaId, estado) {
   const r = _reservasDB.find(x => x.id === reservaId);
   if (!r) return;
   r.estado_pago = estado;
   if (estado === 'pendiente') r.metodo_pago = null;
   _saveReservasDB();
+  if (_USE_API && estado === 'pagado') {
+    try { await api.marcarPagado({ id: reservaId, metodoPago: r.metodo_pago }); } catch {}
+  }
   if (estado === 'pagado' && !r.metodo_pago && activePanelInfo) {
     activePanelInfo.panelEl.innerHTML = buildDetailPanel(activePanelInfo.canchaId || r.cancha_id, r);
     return;
@@ -844,18 +849,22 @@ function setEstado(reservaId, estado) {
   closeActivePanel(); renderTurnos();
 }
 
-function setMetodo(reservaId, metodo) {
+async function setMetodo(reservaId, metodo) {
   const r = _reservasDB.find(x => x.id === reservaId);
   if (!r) return;
   r.metodo_pago = metodo;
   _saveReservasDB();
+  if (_USE_API) {
+    try { await api.marcarPagado({ id: reservaId, metodoPago: metodo }); } catch {}
+  }
   closeActivePanel(); renderTurnos();
 }
 
 async function liberarTurno(reservaId, nombre) {
   await api.cancelarReserva({ id: reservaId });
+  if (_USE_API && typeof _syncReservasDesdeAPI === 'function') await _syncReservasDesdeAPI();
   closeActivePanel(); renderTurnos();
-  toast(`✕ Turno de ${nombre} liberado`,'red');
+  toast(`Turno de ${nombre} liberado`,'red');
 }
 
 /* ─── Dashboard stats ────────────────────────────────── */
@@ -1491,6 +1500,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   initPremios();
   tickClock();
   setInterval(tickClock, 10000);
+  if (typeof _syncReservasDesdeAPI === 'function') {
+    await _syncReservasDesdeAPI();
+  }
   renderTurnosView();
 });
 

@@ -895,18 +895,69 @@ const _apiDemo = {
 };
 
 const _apiReal = {
-  getHorarios:              (fecha) => _fetch('/api/horarios/' + (fecha || hoy())),
-  reservar:                 (datos) => _fetch('/api/reservar', { method: 'POST', body: JSON.stringify(datos) }),
-  getReservasAdmin:         (fecha) => _fetch('/api/admin/reservas/' + (fecha || hoy())),
-  marcarPagado:             (datos) => _fetch('/api/admin/pago', { method: 'PATCH', body: JSON.stringify(datos) }),
-  agregarTurnoAdmin:        (datos) => _fetch('/api/admin/reserva', { method: 'POST', body: JSON.stringify(datos) }),
-  quitarTurno:              (datos) => _fetch('/api/admin/reserva', { method: 'DELETE', body: JSON.stringify(datos) }),
 
-  getTorneos:               () => _fetch('/api/torneos'),
-  getTorneo:                (id) => _fetch('/api/torneos/' + id),
-  crearTorneo:              async (d) => { const t = await _fetch('/api/admin/torneos', { method: 'POST', body: JSON.stringify(d) }); toast('Torneo creado ✓', 'verde'); return t; },
-  eliminarTorneo:           async (id) => { const r = await _fetch('/api/admin/torneos/' + id, { method: 'DELETE' }); toast('Torneo eliminado', ''); return r; },
-  inscribirsePublico:       (tId, datos) => _fetch('/api/torneos/' + tId + '/inscripcion', { method: 'POST', body: JSON.stringify(datos) }),
+  /* ── Disponibilidad + Reservas ── */
+
+  getDisponibilidad: (fecha, duracionMinutos) =>
+    _fetch('/api/disponibilidad/' + (fecha || hoy()) + '?duracion=' + (duracionMinutos || 60)),
+
+  getHorarios: (fecha) =>
+    _fetch('/api/horarios/' + (fecha || hoy())),
+
+  reservar: (datos) =>
+    _fetch('/api/reservar', { method: 'POST', body: JSON.stringify(datos) }),
+
+  getReservasAdmin: (fecha) =>
+    _fetch('/api/admin/reservas/' + (fecha || hoy())),
+
+  agregarReservaAdmin: (datos) =>
+    _fetch('/api/admin/reserva', { method: 'POST', body: JSON.stringify(datos) }),
+
+  agregarTurnoAdmin: (datos) =>
+    _fetch('/api/admin/reserva', { method: 'POST', body: JSON.stringify(datos) }),
+
+  marcarPagado: async ({ id, metodoPago }) => {
+    const r = await _fetch('/api/admin/pago', { method: 'PATCH', body: JSON.stringify({ id, metodoPago }) });
+    toast('Pago registrado', 'verde');
+    return r;
+  },
+
+  cancelarReserva: async ({ id }) => {
+    const r = await _fetch('/api/admin/reserva', { method: 'DELETE', body: JSON.stringify({ id }) });
+    return r;
+  },
+
+  quitarTurno: (datos) =>
+    _fetch('/api/admin/reserva', { method: 'DELETE', body: JSON.stringify(datos) }),
+
+  /* ── Torneos ── */
+
+  getTorneos: async () => {
+    const list = await _fetch('/api/torneos');
+    return list.map(t => ({ ...t, _id: String(t.id) }));
+  },
+
+  getTorneo: async (id) => {
+    const t = await _fetch('/api/torneos/' + id);
+    if (t) t._id = String(t.id);
+    return t;
+  },
+
+  crearTorneo: async (d) => {
+    const t = await _fetch('/api/admin/torneos', { method: 'POST', body: JSON.stringify(d) });
+    t._id = String(t.id);
+    toast('Torneo creado', 'verde');
+    return t;
+  },
+
+  eliminarTorneo: async (id) => {
+    const r = await _fetch('/api/admin/torneos/' + id, { method: 'DELETE' });
+    toast('Torneo eliminado', '');
+    return r;
+  },
+
+  inscribirsePublico: (tId, datos) =>
+    _fetch('/api/torneos/' + tId + '/inscripcion', { method: 'POST', body: JSON.stringify(datos) }),
 
   agregarParejaAdmin: async (tId, datos) => {
     const torneo = await _fetch('/api/torneos/' + tId);
@@ -915,7 +966,8 @@ const _apiReal = {
     if (!Array.isArray(torneo.inscripciones)) torneo.inscripciones = [];
     torneo.inscripciones.push(nueva);
     const u = await _fetch('/api/admin/torneos/' + tId, { method: 'PUT', body: JSON.stringify(torneo) });
-    toast('Pareja agregada ✓', 'verde'); return u;
+    if (u) u._id = String(u.id);
+    toast('Pareja agregada', 'verde'); return u;
   },
 
   aceptarInscripcion: async (tId, iId) => {
@@ -923,13 +975,15 @@ const _apiReal = {
     const insc = (torneo.inscripciones || []).find(i => i.id === iId);
     if (insc) insc.estadoInscripcion = 'aceptada';
     const u = await _fetch('/api/admin/torneos/' + tId, { method: 'PUT', body: JSON.stringify(torneo) });
-    toast('Inscripción aceptada ✓', 'verde'); return u;
+    if (u) u._id = String(u.id);
+    toast('Inscripcion aceptada', 'verde'); return u;
   },
 
   eliminarInscripcion: async (tId, iId) => {
     const torneo = await _fetch('/api/torneos/' + tId);
     torneo.inscripciones = (torneo.inscripciones || []).filter(i => i.id !== iId);
     const u = await _fetch('/api/admin/torneos/' + tId, { method: 'PUT', body: JSON.stringify(torneo) });
+    if (u) u._id = String(u.id);
     toast('Pareja eliminada', ''); return u;
   },
 
@@ -949,7 +1003,8 @@ const _apiReal = {
     });
     torneo.estado = 'grupos'; torneo.bracket = []; torneo.campeon = null;
     const u = await _fetch('/api/admin/torneos/' + tId, { method: 'PUT', body: JSON.stringify(torneo) });
-    toast('Grupos generados ✓', 'verde'); return u;
+    if (u) u._id = String(u.id);
+    toast('Grupos generados', 'verde'); return u;
   },
 
   actualizarPartidoGrupo: async (tId, gl, pId, datos) => {
@@ -959,7 +1014,8 @@ const _apiReal = {
     if (datos.hora !== undefined) partido.hora = datos.hora;
     if (datos.resultado !== undefined && datos.ganador !== undefined) { partido.resultado = datos.resultado; partido.ganador = datos.ganador; _recalcularTabla(grupo); }
     const u = await _fetch('/api/admin/torneos/' + tId, { method: 'PUT', body: JSON.stringify(torneo) });
-    toast('Partido actualizado ✓', 'verde'); return u;
+    if (u) u._id = String(u.id);
+    toast('Partido actualizado', 'verde'); return u;
   },
 
   generarBracket: async (tId) => {
@@ -967,7 +1023,8 @@ const _apiReal = {
     for (const l of Object.keys(torneo.grupos || {}).sort()) { if ((torneo.grupos[l].partidos || []).some(p => !p.ganador)) throw new Error(`Hay partidos sin resultado en Grupo ${l}`); }
     _generarBracket(torneo);
     const u = await _fetch('/api/admin/torneos/' + tId, { method: 'PUT', body: JSON.stringify(torneo) });
-    toast('Cuadro eliminatorio generado ✓', 'verde'); return u;
+    if (u) u._id = String(u.id);
+    toast('Cuadro eliminatorio generado', 'verde'); return u;
   },
 
   actualizarPartidoBracket: async (tId, pId, datos) => {
@@ -976,23 +1033,63 @@ const _apiReal = {
     if (datos.hora !== undefined) partido.hora = datos.hora;
     if (datos.resultado !== undefined && datos.ganador !== undefined) { partido.resultado = datos.resultado; partido.ganador = datos.ganador; _avanzarBracket(torneo, partido); }
     const u = await _fetch('/api/admin/torneos/' + tId, { method: 'PUT', body: JSON.stringify(torneo) });
-    toast('Resultado cargado ✓', 'verde'); return u;
+    if (u) u._id = String(u.id);
+    toast('Resultado cargado', 'verde'); return u;
   },
 
+  /* ── Profesores ── */
+
   getProfesores:            () => _fetch('/api/profesores'),
-  agregarProfesor:          async (d) => { const p = await _fetch('/api/admin/profesores', { method: 'POST', body: JSON.stringify(d) }); toast('Profesor agregado ✓', 'verde'); return p; },
-  editarProfesor:           async (id, d) => { const p = await _fetch('/api/admin/profesores/' + id, { method: 'PATCH', body: JSON.stringify(d) }); toast('Profesor actualizado ✓', 'verde'); return p; },
+  agregarProfesor:          async (d) => { const p = await _fetch('/api/admin/profesores', { method: 'POST', body: JSON.stringify(d) }); toast('Profesor agregado', 'verde'); return p; },
+  editarProfesor:           async (id, d) => { const p = await _fetch('/api/admin/profesores/' + id, { method: 'PATCH', body: JSON.stringify(d) }); toast('Profesor actualizado', 'verde'); return p; },
   quitarProfesor:           async (id) => { const r = await _fetch('/api/admin/profesores/' + id, { method: 'DELETE' }); toast('Profesor eliminado', ''); return r; },
+
+  /* ── Socios ── */
 
   getSocios:                () => _fetch('/api/admin/socios'),
   getSocioPuntos:           (tel) => _fetch('/api/socios/' + tel),
-  ajustarPuntos:            async (id, pts) => { const s = await _fetch('/api/admin/socios/' + id + '/puntos', { method: 'PATCH', body: JSON.stringify({ puntos: pts }) }); toast('Puntos actualizados ✓', 'verde'); return s; },
-  editarSocio:              async (id, d) => { const s = await _fetch('/api/admin/socios/' + id, { method: 'PATCH', body: JSON.stringify(d) }); toast('Socio actualizado ✓', 'verde'); return s; },
+  ajustarPuntos:            async (id, pts) => { const s = await _fetch('/api/admin/socios/' + id + '/puntos', { method: 'PATCH', body: JSON.stringify({ puntos: pts }) }); toast('Puntos actualizados', 'verde'); return s; },
+  editarSocio:              async (id, d) => { const s = await _fetch('/api/admin/socios/' + id, { method: 'PATCH', body: JSON.stringify(d) }); toast('Socio actualizado', 'verde'); return s; },
+
+  /* ── Ingresos / Dashboard ── */
 
   getReporte:               () => _fetch('/api/admin/ingresos/reporte'),
-  getReporteMes:            (año, mes) => _fetch('/api/admin/ingresos/mes?año=' + año + '&mes=' + mes),
+  getReporteMes:            (year, mes) => _fetch('/api/admin/ingresos/mes?year=' + year + '&mes=' + mes),
   getDashboard:             () => _fetch('/api/admin/dashboard'),
 };
+
+/* ─── SYNC: cargar reservas desde API al formato local ─── */
+
+async function _syncReservasDesdeAPI() {
+  if (DEMO_MODE) return;
+  try {
+    const hoyStr = new Date().toISOString().split('T')[0];
+    const d = new Date(); d.setDate(d.getDate() - 60);
+    const desde = d.toISOString().split('T')[0];
+    const d2 = new Date(); d2.setDate(d2.getDate() + 7);
+    const hasta = d2.toISOString().split('T')[0];
+    const data = await _fetch('/api/admin/reservas?desde=' + desde + '&hasta=' + hasta);
+    if (!Array.isArray(data)) return;
+    _reservasDB = data.map(r => ({
+      id: r.claveUnica || String(r.id),
+      cancha_id: r.cancha_id,
+      fecha: r.fecha,
+      hora_inicio: r.hora_inicio,
+      hora_fin: r.hora_fin,
+      duracion_minutos: r.duracion_minutos || 60,
+      cliente_nombre: r.cliente_nombre,
+      cliente_telefono: r.cliente_telefono || '',
+      estado_pago: r.estado_pago || 'pendiente',
+      estado_reserva: r.estado_reserva || 'confirmada',
+      metodo_pago: r.metodo_pago || null,
+      monto: r.monto || 0,
+      created_at: r.createdAt || r.fecha
+    }));
+    _saveReservasDB();
+  } catch (e) {
+    console.warn('No se pudo sincronizar reservas desde API:', e.message);
+  }
+}
 
 /* ─── INIT RESERVAS ─────────────────────────────────────── */
 _loadReservasDB();
