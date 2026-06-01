@@ -22,10 +22,10 @@ router.get('/api/socios/:telefono', async (req, res) => {
     const hoy = new Date().toISOString().split('T')[0];
 
     const [totalReservas, proximaReserva, premiosActivos] = await Promise.all([
-      Reserva.count({ where: { telefono: req.params.telefono } }),
+      Reserva.count({ where: { cliente_telefono: req.params.telefono } }),
       Reserva.findOne({
-        where: { telefono: req.params.telefono, fecha: { [Op.gte]: hoy } },
-        order: [['fecha', 'ASC'], ['hora', 'ASC']],
+        where: { cliente_telefono: req.params.telefono, fecha: { [Op.gte]: hoy }, estado_reserva: 'confirmada' },
+        order: [['fecha', 'ASC'], ['hora_inicio', 'ASC']],
         raw: true
       }),
       Premio.findAll({ where: { activo: true }, order: [['puntos', 'ASC']], raw: true })
@@ -47,9 +47,10 @@ router.get('/api/socios/:telefono', async (req, res) => {
       activo: socio.activo,
       proximaReserva: proximaReserva ? {
         fecha: proximaReserva.fecha,
-        hora: proximaReserva.hora,
-        cancha: proximaReserva.cancha,
-        tipo: TIPO_CANCHA[proximaReserva.cancha],
+        hora_inicio: proximaReserva.hora_inicio,
+        hora_fin: proximaReserva.hora_fin,
+        cancha: proximaReserva.cancha_id,
+        tipo: TIPO_CANCHA[proximaReserva.cancha_id],
         claveUnica: proximaReserva.claveUnica
       } : null,
       premiosCanjeables,
