@@ -1502,6 +1502,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   setInterval(tickClock, 10000);
   if (typeof _syncReservasDesdeAPI === 'function') {
     await _syncReservasDesdeAPI();
+    setInterval(async () => {
+      await _syncReservasDesdeAPI();
+      renderTurnos();
+    }, 30000);
   }
   renderTurnosView();
 });
