@@ -100,6 +100,10 @@ router.get('/api/disponibilidad', async (req, res) => {
     if (!fecha) return res.status(400).json({ error: 'fecha es requerida (formato YYYY-MM-DD)' });
     const duracion = parseInt(req.query.duracion) || 60;
     const slots = await calcDisponibilidad(fecha, duracion);
+    const simple = req.query.simple === '1' || req.query.simple === 'true';
+    if (simple) {
+      return res.json(slots.map(s => `${s.hora_inicio}-${s.hora_fin} (${s.canchas_disponibles} canchas)`));
+    }
     res.json(slots);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
