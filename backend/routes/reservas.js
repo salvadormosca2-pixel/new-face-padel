@@ -122,11 +122,21 @@ router.get('/api/horarios/:fecha', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// -- Publico: reservar --
+// -- Publico: reservar (GET para n8n, POST para web) --
+
+router.get('/api/reservar', async (req, res) => {
+  req.body = req.query;
+  return reservarHandler(req, res);
+});
 
 router.post('/api/reservar', async (req, res) => {
+  return reservarHandler(req, res);
+});
+
+async function reservarHandler(req, res) {
   try {
-    const { nombre, telefono, metodoPago, fecha, hora_inicio, hora, duracion_minutos, tipoCancha } = req.body;
+    const data = { ...req.query, ...req.body };
+    const { nombre, telefono, metodoPago, fecha, hora_inicio, hora, duracion_minutos, tipoCancha } = data;
     const horaInicio = hora_inicio || hora;
     const durMin = duracion_minutos || 60;
 
@@ -181,7 +191,7 @@ router.post('/api/reservar', async (req, res) => {
       return res.status(400).json({ error: 'Esa cancha ya esta reservada en ese horario' });
     res.status(500).json({ error: err.message });
   }
-});
+}
 
 // -- Publico: mis reservas --
 
