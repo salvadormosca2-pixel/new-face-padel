@@ -94,6 +94,16 @@ async function calcDisponibilidad(fecha, duracionMinutos) {
 
 // -- Publico: disponibilidad con duracion --
 
+router.get('/api/disponibilidad', async (req, res) => {
+  try {
+    const fecha = req.query.fecha;
+    if (!fecha) return res.status(400).json({ error: 'fecha es requerida (formato YYYY-MM-DD)' });
+    const duracion = parseInt(req.query.duracion) || 60;
+    const slots = await calcDisponibilidad(fecha, duracion);
+    res.json(slots);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 router.get('/api/disponibilidad/:fecha', async (req, res) => {
   try {
     const duracion = parseInt(req.query.duracion) || 60;
