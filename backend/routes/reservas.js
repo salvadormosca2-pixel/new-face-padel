@@ -125,7 +125,11 @@ router.get('/api/horarios/:fecha', async (req, res) => {
 // -- Publico: reservar (GET para n8n, POST para web) --
 
 router.get('/api/reservar', async (req, res) => {
-  req.body = req.query;
+  if (req.query.datos) {
+    try { req.body = JSON.parse(req.query.datos); } catch { req.body = {}; }
+  } else {
+    req.body = req.query;
+  }
   return reservarHandler(req, res);
 });
 
