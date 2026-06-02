@@ -19,7 +19,10 @@ router.get('/api/bot/contexto', async (_req, res) => {
     const hoy    = fechaStr(0);
     const manana = fechaStr(1);
 
-    const [club, torneos, profesores, premios, dispHoy, dispManana, ranking] = await Promise.all([
+    const [club, torneos, profesores, premios,
+           dispHoy60, dispHoy90, dispHoy120,
+           dispManana60, dispManana90, dispManana120,
+           ranking] = await Promise.all([
       getOrCreate(),
       Torneo.findAll({
         where: { estado: { [Op.in]: ['inscripcion', 'grupos', 'bracket'] } },
@@ -29,7 +32,11 @@ router.get('/api/bot/contexto', async (_req, res) => {
       Profesor.findAll({ raw: true }),
       Premio.findAll({ where: { activo: true }, order: [['puntos', 'ASC']], raw: true }),
       calcDisponibilidad(hoy, 60),
+      calcDisponibilidad(hoy, 90),
+      calcDisponibilidad(hoy, 120),
       calcDisponibilidad(manana, 60),
+      calcDisponibilidad(manana, 90),
+      calcDisponibilidad(manana, 120),
       Socio.findAll({ where: { activo: true }, order: [['puntos', 'DESC']], limit: 20, raw: true })
     ]);
 
@@ -69,8 +76,18 @@ router.get('/api/bot/contexto', async (_req, res) => {
       premios,
       ranking: rankingResumen,
       canchas: CANCHAS,
-      horarios_hoy: { fecha: hoy, slots: dispHoy },
-      horarios_manana: { fecha: manana, slots: dispManana }
+      horarios_hoy: {
+        fecha: hoy,
+        turnos_1h:   dispHoy60,
+        turnos_1_5h: dispHoy90,
+        turnos_2h:   dispHoy120
+      },
+      horarios_manana: {
+        fecha: manana,
+        turnos_1h:   dispManana60,
+        turnos_1_5h: dispManana90,
+        turnos_2h:   dispManana120
+      }
     });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
