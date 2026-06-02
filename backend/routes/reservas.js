@@ -35,6 +35,36 @@ async function getReservasDia(fecha) {
   });
 }
 
+const MIN_TURNO = 60;
+
+function creaHuecoMuerto(reservas, canchaId, fecha, slotStart, slotEnd, apertura, cierre) {
+  const court = reservas
+    .filter(r => r.cancha_id === canchaId && r.fecha === fecha && r.estado_reserva !== 'cancelada')
+    .map(r => {
+      let s = timeToMin(r.hora_inicio);
+      let e = timeToMin(r.hora_fin);
+      if (e <= s) e += 1440;
+      return { start: s, end: e };
+    })
+    .sort((a, b) => a.start - b.start);
+
+  let prevEnd = apertura;
+  for (const r of court) {
+    if (r.end <= slotStart) prevEnd = r.end;
+  }
+  const gapBefore = slotStart - prevEnd;
+  if (gapBefore > 0 && gapBefore < MIN_TURNO) return true;
+
+  let nextStart = cierre;
+  for (const r of court) {
+    if (r.start >= slotEnd) { nextStart = r.start; break; }
+  }
+  const gapAfter = nextStart - slotEnd;
+  if (gapAfter > 0 && gapAfter < MIN_TURNO) return true;
+
+  return false;
+}
+
 async function calcDisponibilidad(fecha, duracionMinutos) {
   const reservas = await getReservasDia(fecha);
   const apertura = timeToMin(HORA_APERTURA);
@@ -45,7 +75,9 @@ async function calcDisponibilidad(fecha, duracionMinutos) {
     const canchasLibres = [];
     CANCHAS.forEach(cancha => {
       const hay = reservas.some(r => chocan(r, cancha.id, fecha, t, t + duracionMinutos));
-      if (!hay) canchasLibres.push({ id: cancha.id, nombre: cancha.nombre, tipo: cancha.tipo });
+      if (hay) return;
+      if (creaHuecoMuerto(reservas, cancha.id, fecha, t, t + duracionMinutos, apertura, cierre)) return;
+      canchasLibres.push({ id: cancha.id, nombre: cancha.nombre, tipo: cancha.tipo });
     });
     if (canchasLibres.length > 0) {
       resultados.push({

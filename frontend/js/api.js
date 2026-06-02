@@ -39,7 +39,32 @@ function _calcPrecio(canchaId, duracionMin) {
   return c ? Math.round(c.precioHora * duracionMin / 60) : 0;
 }
 
-/* ─── AVAILABILITY ALGORITHM ───────────────────────────── */
+/* ─── AVAILABILITY ALGORITHM (inteligente: evita huecos muertos) ── */
+const _MIN_TURNO = 60;
+
+function _creaHuecoMuerto(reservas, canchaId, slotStart, slotEnd, apertura, cierre) {
+  const court = reservas
+    .filter(r => r.cancha_id === canchaId)
+    .map(r => {
+      let s = _timeToMin(r.hora_inicio), e = _timeToMin(r.hora_fin);
+      if (e <= s) e += 1440;
+      return { start: s, end: e };
+    })
+    .sort((a, b) => a.start - b.start);
+
+  let prevEnd = apertura;
+  for (const r of court) { if (r.end <= slotStart) prevEnd = r.end; }
+  const gapBefore = slotStart - prevEnd;
+  if (gapBefore > 0 && gapBefore < _MIN_TURNO) return true;
+
+  let nextStart = cierre;
+  for (const r of court) { if (r.start >= slotEnd) { nextStart = r.start; break; } }
+  const gapAfter = nextStart - slotEnd;
+  if (gapAfter > 0 && gapAfter < _MIN_TURNO) return true;
+
+  return false;
+}
+
 function _calcDisponibilidad(fecha, duracionMinutos) {
   const resultados = [];
   const apertura = _timeToMin(HORA_APERTURA);
@@ -55,7 +80,9 @@ function _calcDisponibilidad(fecha, duracionMinutos) {
         _timeToMin(r.hora_inicio) < t + duracionMinutos &&
         _timeToMin(r.hora_fin) > t
       );
-      if (!chocan) canchasLibres.push({ id:cancha.id, nombre:cancha.nombre, tipo:cancha.tipo });
+      if (chocan) return;
+      if (_creaHuecoMuerto(reservas, cancha.id, t, t + duracionMinutos, apertura, cierre)) return;
+      canchasLibres.push({ id:cancha.id, nombre:cancha.nombre, tipo:cancha.tipo });
     });
     if (canchasLibres.length > 0) {
       resultados.push({
