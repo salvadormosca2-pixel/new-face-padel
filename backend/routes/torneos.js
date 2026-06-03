@@ -164,14 +164,6 @@ router.get('/api/torneos/detalle', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.get('/api/torneos/:id', async (req, res) => {
-  try {
-    const torneo = await Torneo.findByPk(req.params.id, { raw: true });
-    if (!torneo) return res.status(404).json({ error: 'Torneo no encontrado' });
-    res.json(torneo);
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
 async function inscripcionHandler(req, res) {
   try {
     const data = { ...req.query, ...req.body };
@@ -204,6 +196,14 @@ async function inscripcionHandler(req, res) {
 
 router.get('/api/torneos/inscripcion', inscripcionHandler);
 router.post('/api/torneos/inscripcion', inscripcionHandler);
+
+router.get('/api/torneos/:id', async (req, res) => {
+  try {
+    const torneo = await Torneo.findByPk(req.params.id, { raw: true });
+    if (!torneo) return res.status(404).json({ error: 'Torneo no encontrado' });
+    res.json(torneo);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
 
 router.post('/api/torneos/:id/inscripcion', async (req, res) => {
   try {
