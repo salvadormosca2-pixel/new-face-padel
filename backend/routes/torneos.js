@@ -162,6 +162,29 @@ router.get('/api/torneos/:id', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+router.post('/api/torneos/inscripcion', async (req, res) => {
+  try {
+    const id = req.body.torneoId || req.body.torneo_id;
+    if (!id) return res.status(400).json({ error: 'torneoId es requerido' });
+    const torneo = await Torneo.findByPk(id);
+    if (!torneo) return res.status(404).json({ error: 'Torneo no encontrado' });
+    if (torneo.estado !== 'inscripcion') return res.status(400).json({ error: 'El torneo ya no acepta inscripciones' });
+
+    const { jugador1, jugador2 } = req.body;
+    if (!jugador1?.nombre || !jugador2?.nombre) return res.status(400).json({ error: 'Datos de jugadores requeridos' });
+
+    const inId = 'insc-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);
+    const nombrePareja = `${jugador1.nombre.split(' ').pop()} / ${jugador2.nombre.split(' ').pop()}`;
+    const nueva = { id: inId, jugador1, jugador2, nombrePareja, estadoInscripcion: 'pendiente' };
+
+    const inscripciones = Array.isArray(torneo.inscripciones) ? [...torneo.inscripciones] : [];
+    inscripciones.push(nueva);
+    await torneo.update({ inscripciones });
+
+    res.json({ ok: true, inscripcion: nueva });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 router.post('/api/torneos/:id/inscripcion', async (req, res) => {
   try {
     const torneo = await Torneo.findByPk(req.params.id);

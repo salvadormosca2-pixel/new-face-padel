@@ -86,7 +86,7 @@ Usa tool `mis_reservas` con el telefono del cliente.
 ## Torneos
 Usa tool `torneos` para listar torneos activos.
 Para inscribir usa tool `inscribir_torneo` con:
-{"jugador1":{"nombre":"...","telefono":"..."},"jugador2":{"nombre":"...","telefono":"..."}}
+{"torneoId":1,"jugador1":{"nombre":"...","telefono":"..."},"jugador2":{"nombre":"...","telefono":"..."}}
 
 ## Contexto completo
 Usa tool `contexto_bot` SOLO si necesitas multiples datos a la vez (horarios+profesores+torneos).
