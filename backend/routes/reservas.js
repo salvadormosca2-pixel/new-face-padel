@@ -146,7 +146,7 @@ async function reservarHandler(req, res) {
     const data = { ...req.query, ...req.body };
     const { nombre, telefono, metodoPago, fecha, hora_inicio, hora, duracion_minutos, tipoCancha } = data;
     const horaInicio = hora_inicio || hora;
-    const durMin = duracion_minutos || 60;
+    const durMin = parseInt(duracion_minutos) || 60;
 
     if (!nombre || !telefono || !metodoPago || !fecha || !horaInicio)
       return res.status(400).json({ error: 'Todos los campos son obligatorios' });
