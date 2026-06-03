@@ -176,10 +176,10 @@ async function inscripcionHandler(req, res) {
     if (!torneo) return res.status(404).json({ error: 'Torneo no encontrado' });
     if (torneo.estado !== 'inscripcion') return res.status(400).json({ error: 'El torneo ya no acepta inscripciones' });
 
-    const jugador1 = data.jugador1 || {};
-    const jugador2 = data.jugador2 || {};
-    if (typeof jugador1 === 'string') try { Object.assign(jugador1, JSON.parse(data.jugador1)); } catch {}
-    if (typeof jugador2 === 'string') try { Object.assign(jugador2, JSON.parse(data.jugador2)); } catch {}
+    let jugador1 = data.jugador1 || {};
+    let jugador2 = data.jugador2 || {};
+    if (typeof jugador1 === 'string') try { jugador1 = JSON.parse(jugador1); } catch { jugador1 = {}; }
+    if (typeof jugador2 === 'string') try { jugador2 = JSON.parse(jugador2); } catch { jugador2 = {}; }
     if (!jugador1.nombre || !jugador2.nombre) return res.status(400).json({ error: 'Datos de jugadores requeridos' });
 
     const inId = 'insc-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);
