@@ -102,7 +102,8 @@ router.get('/api/disponibilidad', async (req, res) => {
     const slots = await calcDisponibilidad(fecha, duracion);
     const simple = req.query.simple === '1' || req.query.simple === 'true';
     if (simple) {
-      return res.json(slots.map(s => `${s.hora_inicio}-${s.hora_fin} (${s.canchas_disponibles} canchas)`));
+      const lineas = slots.map(s => `${s.hora_inicio} a ${s.hora_fin} - ${s.canchas_disponibles} canchas libres`);
+      return res.type('text').send(`Horarios disponibles para ${fecha} (${duracion} min):\n` + lineas.join('\n'));
     }
     res.json(slots);
   } catch (err) { res.status(500).json({ error: err.message }); }
