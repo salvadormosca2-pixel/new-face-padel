@@ -174,7 +174,8 @@ router.get('/api/torneos/:id', async (req, res) => {
 
 router.post('/api/torneos/inscripcion', async (req, res) => {
   try {
-    const id = req.body.torneoId || req.body.torneo_id;
+    const data = { ...req.query, ...req.body };
+    const id = data.torneoId || data.torneo_id || data.id;
     if (!id) return res.status(400).json({ error: 'torneoId es requerido' });
     const torneo = await Torneo.findByPk(id);
     if (!torneo) return res.status(404).json({ error: 'Torneo no encontrado' });
