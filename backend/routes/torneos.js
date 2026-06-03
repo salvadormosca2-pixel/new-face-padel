@@ -180,6 +180,8 @@ async function inscripcionHandler(req, res) {
     let jugador2 = data.jugador2 || {};
     if (typeof jugador1 === 'string') try { jugador1 = JSON.parse(jugador1); } catch { jugador1 = {}; }
     if (typeof jugador2 === 'string') try { jugador2 = JSON.parse(jugador2); } catch { jugador2 = {}; }
+    if (data.nombre1) jugador1 = { nombre: data.nombre1, telefono: data.telefono1 || '' };
+    if (data.nombre2) jugador2 = { nombre: data.nombre2, telefono: data.telefono2 || '' };
     if (!jugador1.nombre || !jugador2.nombre) return res.status(400).json({ error: 'Datos de jugadores requeridos' });
 
     const inId = 'insc-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);
