@@ -154,6 +154,16 @@ router.get('/api/torneos/mi-progreso/:telefono', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+router.get('/api/torneos/detalle', async (req, res) => {
+  try {
+    const id = parseInt(req.query.id || req.query.torneoId);
+    if (!id) return res.status(400).json({ error: 'id es requerido (ej: ?id=1)' });
+    const torneo = await Torneo.findByPk(id, { raw: true });
+    if (!torneo) return res.status(404).json({ error: 'Torneo no encontrado' });
+    res.json(torneo);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 router.get('/api/torneos/:id', async (req, res) => {
   try {
     const torneo = await Torneo.findByPk(req.params.id, { raw: true });
