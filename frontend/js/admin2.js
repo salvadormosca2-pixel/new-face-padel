@@ -737,7 +737,6 @@ function handleOcupadoClick(canchaId, reservaId, idx) {
 
 function closeActivePanel() {
   if (activePanelInfo) { activePanelInfo.panelEl.remove(); activePanelInfo=null; }
-  _pendingPagoId = null;
 }
 
 function buildAddForm(canchaId, desde, hasta, durDisponible) {
@@ -789,16 +788,22 @@ function buildDetailPanel(canchaId, r) {
   const durLabel = r.duracion_minutos >= 60 ? (r.duracion_minutos/60).toFixed(1).replace('.0','')+'h' : r.duracion_minutos+'min';
   const ml = {efectivo:'💵 Efectivo', transferencia:'🏦 Transferencia', mercadopago:'💳 MercadoPago', online:'🌐 Online'};
 
-  const showMetodoBtns = _pendingPagoId === r.id || (ip && !r.metodo_pago);
-  const metBtns = showMetodoBtns ? `
-    <div class="adm2-metodo-btns" style="margin-top:8px">
-      <div style="font-size:11px;color:#94a3b8;margin-bottom:6px;font-weight:600">Selecciona metodo de pago:</div>
-      <button class="adm2-metodo-btn" onclick="confirmarPago('${r.id}','efectivo')">💵 Efectivo</button>
-      <button class="adm2-metodo-btn" onclick="confirmarPago('${r.id}','transferencia')">🏦 Transferencia</button>
-      <button class="adm2-metodo-btn" onclick="confirmarPago('${r.id}','mercadopago')">💳 MercadoPago</button>
-    </div>` : ip && r.metodo_pago ? `<div style="font-size:11px;color:#64748b;margin-top:6px">${ml[r.metodo_pago]||r.metodo_pago}</div>` : '';
-
-  const isPending = _pendingPagoId === r.id;
+  let pagoSection;
+  if (ip && r.metodo_pago) {
+    pagoSection = `
+      <div class="adm2-payment-toggle">
+        <button class="adm2-toggle-btn" onclick="setEstado('${r.id}','pendiente')">PENDIENTE</button>
+        <button class="adm2-toggle-btn active-green" disabled>PAGADO</button>
+      </div>
+      <div style="font-size:11px;color:#64748b;margin-top:6px">${ml[r.metodo_pago]||r.metodo_pago}</div>`;
+  } else {
+    pagoSection = `
+      <div style="font-size:11px;color:#94a3b8;margin-bottom:8px;font-weight:600">Marcar como pagado:</div>
+      <div class="adm2-metodo-btns">
+        <button class="adm2-metodo-btn" onclick="confirmarPago('${r.id}','efectivo')">💵 Efectivo</button>
+        <button class="adm2-metodo-btn" onclick="confirmarPago('${r.id}','transferencia')">🏦 Transferencia</button>
+      </div>`;
+  }
 
   return `
     <div class="adm2-panel-inner">
@@ -809,11 +814,7 @@ function buildDetailPanel(canchaId, r) {
       <div class="adm2-panel-info-row"><b>${r.hora_inicio} — ${r.hora_fin}</b> · ${durLabel} · ${cancha.nombre} · $${precio.toLocaleString('es-AR')}</div>
       ${r.cliente_telefono ? `<div class="adm2-panel-info-row" style="font-size:12px;color:#64748b">Tel: ${r.cliente_telefono}</div>` : ''}
       <div class="adm2-panel-section">
-        <div class="adm2-payment-toggle">
-          <button class="adm2-toggle-btn ${!ip && !isPending?'active-red':''}" onclick="setEstado('${r.id}','pendiente')">PENDIENTE</button>
-          <button class="adm2-toggle-btn ${ip?'active-green':isPending?'active-yellow':''}" onclick="setEstado('${r.id}','pagado')">PAGADO</button>
-        </div>
-        ${metBtns}
+        ${pagoSection}
       </div>
       <div class="adm2-panel-danger">
         <button class="adm2-btn-liberar" onclick="liberarTurno('${r.id}','${r.cliente_nombre}')">Liberar turno</button>
@@ -838,22 +839,10 @@ async function agendarTurno(canchaId, inputId) {
   } catch (err) { toast(err.message||'Error al agendar','red'); }
 }
 
-let _pendingPagoId = null;
-
 async function setEstado(reservaId, estado) {
   const r = _reservasDB.find(x => x.id === reservaId);
   if (!r) return;
-
-  if (estado === 'pagado' && r.estado_pago !== 'pagado') {
-    _pendingPagoId = reservaId;
-    if (activePanelInfo) {
-      activePanelInfo.panelEl.innerHTML = buildDetailPanel(activePanelInfo.canchaId || r.cancha_id, r);
-    }
-    return;
-  }
-
   if (estado === 'pendiente') {
-    _pendingPagoId = null;
     r.estado_pago = 'pendiente';
     r.metodo_pago = null;
     _saveReservasDB();
