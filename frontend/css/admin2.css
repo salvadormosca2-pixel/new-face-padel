@@ -901,6 +901,11 @@
   border-color: rgba(239,68,68,.4);
   color: var(--a2-red);
 }
+.adm2-toggle-btn.active-yellow {
+  background: rgba(234,179,8,.15);
+  border-color: rgba(234,179,8,.4);
+  color: #eab308;
+}
 .adm2-toggle-btn.active-green {
   background: var(--a2-green-dim);
   border-color: var(--a2-green-border);
