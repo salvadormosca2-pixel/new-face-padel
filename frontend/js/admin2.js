@@ -737,6 +737,8 @@ function handleOcupadoClick(canchaId, reservaId, idx) {
 
 function closeActivePanel() {
   if (activePanelInfo) { activePanelInfo.panelEl.remove(); activePanelInfo=null; }
+  _showingMetodosFor = null;
+  _pagoMetodoSeleccionado = null;
 }
 
 function buildAddForm(canchaId, desde, hasta, durDisponible) {
@@ -781,12 +783,15 @@ function updateEndTime(canchaId) {
   if (precioEl) precioEl.textContent = '$' + _calcPrecio(canchaId, dur).toLocaleString('es-AR');
 }
 
+let _pagoMetodoSeleccionado = null;
+
 function buildDetailPanel(canchaId, r) {
   const cancha = CANCHAS.find(x=>x.id===canchaId);
   const ip = r.estado_pago === 'pagado';
   const precio = _calcPrecio(canchaId, r.duracion_minutos);
   const durLabel = r.duracion_minutos >= 60 ? (r.duracion_minutos/60).toFixed(1).replace('.0','')+'h' : r.duracion_minutos+'min';
-  const ml = {efectivo:'💵 Efectivo', transferencia:'🏦 Transferencia', mercadopago:'💳 MercadoPago', online:'🌐 Online'};
+  const ml = {efectivo:'💵 Efectivo', transferencia:'🏦 Transferencia'};
+  const showMetodos = _showingMetodosFor === r.id;
 
   let pagoSection;
   if (ip && r.metodo_pago) {
@@ -796,12 +801,27 @@ function buildDetailPanel(canchaId, r) {
         <button class="adm2-toggle-btn active-green" disabled>PAGADO</button>
       </div>
       <div style="font-size:11px;color:#64748b;margin-top:6px">${ml[r.metodo_pago]||r.metodo_pago}</div>`;
+  } else if (showMetodos) {
+    const selEf = _pagoMetodoSeleccionado === 'efectivo';
+    const selTr = _pagoMetodoSeleccionado === 'transferencia';
+    pagoSection = `
+      <div class="adm2-payment-toggle">
+        <button class="adm2-toggle-btn" onclick="setEstado('${r.id}','pendiente')">PENDIENTE</button>
+        <button class="adm2-toggle-btn active-yellow">PAGADO</button>
+      </div>
+      <div style="margin-top:10px">
+        <div style="font-size:11px;color:#94a3b8;margin-bottom:8px;font-weight:600">Selecciona metodo de pago:</div>
+        <div class="adm2-metodo-btns">
+          <button class="adm2-metodo-btn ${selEf?'selected':''}" onclick="seleccionarMetodo('${r.id}','efectivo')">💵 Efectivo</button>
+          <button class="adm2-metodo-btn ${selTr?'selected':''}" onclick="seleccionarMetodo('${r.id}','transferencia')">🏦 Transferencia</button>
+        </div>
+        <button class="adm2-btn-agendar" style="margin-top:10px;width:100%;opacity:${_pagoMetodoSeleccionado?'1':'.4'}" onclick="confirmarPago('${r.id}')" ${_pagoMetodoSeleccionado?'':'disabled'}>✓ Confirmar pago</button>
+      </div>`;
   } else {
     pagoSection = `
-      <div style="font-size:11px;color:#94a3b8;margin-bottom:8px;font-weight:600">Marcar como pagado:</div>
-      <div class="adm2-metodo-btns">
-        <button class="adm2-metodo-btn" onclick="confirmarPago('${r.id}','efectivo')">💵 Efectivo</button>
-        <button class="adm2-metodo-btn" onclick="confirmarPago('${r.id}','transferencia')">🏦 Transferencia</button>
+      <div class="adm2-payment-toggle">
+        <button class="adm2-toggle-btn active-red">PENDIENTE</button>
+        <button class="adm2-toggle-btn" onclick="mostrarMetodos('${r.id}')">PAGADO</button>
       </div>`;
   }
 
@@ -839,29 +859,53 @@ async function agendarTurno(canchaId, inputId) {
   } catch (err) { toast(err.message||'Error al agendar','red'); }
 }
 
+let _showingMetodosFor = null;
+
+function mostrarMetodos(reservaId) {
+  _showingMetodosFor = reservaId;
+  _pagoMetodoSeleccionado = null;
+  const r = _reservasDB.find(x => x.id === reservaId);
+  if (!r || !activePanelInfo) return;
+  activePanelInfo.panelEl.innerHTML = buildDetailPanel(activePanelInfo.canchaId || r.cancha_id, r);
+}
+
+function seleccionarMetodo(reservaId, metodo) {
+  _pagoMetodoSeleccionado = metodo;
+  const r = _reservasDB.find(x => x.id === reservaId);
+  if (!r || !activePanelInfo) return;
+  activePanelInfo.panelEl.innerHTML = buildDetailPanel(activePanelInfo.canchaId || r.cancha_id, r);
+}
+
 async function setEstado(reservaId, estado) {
   const r = _reservasDB.find(x => x.id === reservaId);
   if (!r) return;
   if (estado === 'pendiente') {
+    _showingMetodosFor = null;
+    _pagoMetodoSeleccionado = null;
     r.estado_pago = 'pendiente';
     r.metodo_pago = null;
     _saveReservasDB();
+    if (_USE_API) {
+      try { await api.marcarPagado({ id: reservaId, metodoPago: null, estado: 'pendiente' }); } catch {}
+    }
     closeActivePanel(); renderTurnos();
   }
 }
 
-async function confirmarPago(reservaId, metodo) {
+async function confirmarPago(reservaId) {
+  if (!_pagoMetodoSeleccionado) return;
   const r = _reservasDB.find(x => x.id === reservaId);
   if (!r) return;
+  const metodo = _pagoMetodoSeleccionado;
   r.estado_pago = 'pagado';
   r.metodo_pago = metodo;
-  _pendingPagoId = null;
   _saveReservasDB();
-  if (_USE_API) {
-    try { await api.marcarPagado({ id: reservaId, metodoPago: metodo }); } catch {}
-  }
+  try { await api.marcarPagado({ id: reservaId, metodoPago: metodo }); } catch {}
+  if (_USE_API && typeof _syncReservasDesdeAPI === 'function') await _syncReservasDesdeAPI();
+  _showingMetodosFor = null;
+  _pagoMetodoSeleccionado = null;
   closeActivePanel(); renderTurnos();
-  const ml = {efectivo:'Efectivo', transferencia:'Transferencia', mercadopago:'MercadoPago'};
+  const ml = {efectivo:'Efectivo', transferencia:'Transferencia'};
   toast(`Pago registrado — ${ml[metodo] || metodo}`, 'green');
 }
 

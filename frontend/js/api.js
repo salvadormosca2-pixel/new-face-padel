@@ -944,13 +944,18 @@ const _apiReal = {
     _fetch('/api/admin/reserva', { method: 'POST', body: JSON.stringify(datos) }),
 
   marcarPagado: async ({ id, metodoPago }) => {
-    const r = await _fetch('/api/admin/pago', { method: 'PATCH', body: JSON.stringify({ id, metodoPago }) });
-    toast('Pago registrado', 'verde');
+    const body = { metodoPago };
+    if (/^\d+$/.test(String(id))) body.id = parseInt(id);
+    else body.claveUnica = id;
+    const r = await _fetch('/api/admin/pago', { method: 'PATCH', body: JSON.stringify(body) });
     return r;
   },
 
   cancelarReserva: async ({ id }) => {
-    const r = await _fetch('/api/admin/reserva', { method: 'DELETE', body: JSON.stringify({ id }) });
+    const body = {};
+    if (/^\d+$/.test(String(id))) body.id = parseInt(id);
+    else body.claveUnica = id;
+    const r = await _fetch('/api/admin/reserva', { method: 'DELETE', body: JSON.stringify(body) });
     return r;
   },
 

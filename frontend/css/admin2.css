@@ -928,6 +928,11 @@
   color: var(--a2-text-dim);
   transition: all var(--a2-trans);
 }
+.adm2-metodo-btn.selected {
+  border-color: var(--a2-green);
+  color: var(--a2-green);
+  background: var(--a2-green-dim);
+}
 .adm2-metodo-btn:hover {
   border-color: var(--a2-green);
   color: var(--a2-green);
