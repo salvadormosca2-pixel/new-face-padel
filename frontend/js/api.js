@@ -52,15 +52,21 @@ function _creaHuecoMuerto(reservas, canchaId, slotStart, slotEnd, apertura, cier
     })
     .sort((a, b) => a.start - b.start);
 
-  let prevEnd = apertura;
-  for (const r of court) { if (r.end <= slotStart) prevEnd = r.end; }
-  const gapBefore = slotStart - prevEnd;
-  if (gapBefore > 0 && gapBefore < _MIN_TURNO) return true;
+  if (court.length === 0) return false;
 
-  let nextStart = cierre;
+  let prevEnd = null;
+  for (const r of court) { if (r.end <= slotStart) prevEnd = r.end; }
+  if (prevEnd !== null) {
+    const gapBefore = slotStart - prevEnd;
+    if (gapBefore > 0 && gapBefore < _MIN_TURNO) return true;
+  }
+
+  let nextStart = null;
   for (const r of court) { if (r.start >= slotEnd) { nextStart = r.start; break; } }
-  const gapAfter = nextStart - slotEnd;
-  if (gapAfter > 0 && gapAfter < _MIN_TURNO) return true;
+  if (nextStart !== null) {
+    const gapAfter = nextStart - slotEnd;
+    if (gapAfter > 0 && gapAfter < _MIN_TURNO) return true;
+  }
 
   return false;
 }
