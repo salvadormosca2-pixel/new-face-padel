@@ -24,7 +24,14 @@
       }
       window.addEventListener('error', function (ev) {
         var archivo = (ev.filename || '').split('/').pop() || (ev.target && ev.target.src ? 'no cargó ' + String(ev.target.src).split('/').pop() : 'página');
-        var txt = 'Error: ' + (ev.message || 'archivo no cargó') + ' — ' + archivo + (ev.lineno ? ':' + ev.lineno : '');
+        var txt = 'Error: ' + (ev.message || 'archivo no cargó') + ' — ' + archivo + (ev.lineno ? ':' + ev.lineno : '') + (ev.colno ? ':' + ev.colno : '');
+        /* Detalle para el servidor: qué scripts hay, cuánto pesa cada uno y cuáles definieron sus funciones */
+        try {
+          var det = [];
+          var sc = document.scripts; for (var i = 0; i < sc.length; i++) det.push((sc[i].src ? sc[i].src.split('/').pop().split('?')[0] : 'inline') + '=' + (sc[i].src ? '' : sc[i].text.length));
+          var res = performance.getEntriesByType('resource').filter(function (r) { return /\.js/.test(r.name); }).map(function (r) { return r.name.split('/').pop().split('?')[0] + ':' + r.transferSize + '/' + r.decodedBodySize; });
+          txt += ' | scripts ' + det.join(',') + ' | bytes ' + res.join(',') + ' | defs api=' + (typeof api) + ' staff=' + (typeof pedirFirma) + ' admin=' + (typeof adm2SwitchTab) + ' html=' + document.documentElement.outerHTML.length + ' | ' + (ev.error && ev.error.stack ? String(ev.error.stack).slice(0, 200) : 'sin stack');
+        } catch (e2) {}
         var run = function () { mostrar(txt); avisar(txt); };
         if (document.body) run(); else document.addEventListener('DOMContentLoaded', run);
       }, true);
