@@ -3696,3 +3696,4 @@ body.adm2-sin-scroll { overflow: hidden; }
   .adm2-modal-overlay { padding: 10px; align-items: center; }
   .adm2-modal-card { max-height: calc(100dvh - 20px); border-radius: 14px; }
 }
+.login-conexion { margin-top: 14px; text-align: center; font-size: 11px; color: rgba(255,255,255,.35); }

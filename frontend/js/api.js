@@ -267,14 +267,25 @@ async function _fetch(endpoint, opts = {}) {
   const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
   if (token) headers['Authorization'] = 'Bearer ' + token;
   const res = await fetch(API_URL + endpoint, { ...opts, headers });
+  /* Si llega HTML (página de error, cache viejo, URL equivocada) el error dice
+     de dónde vino, en vez de un "SyntaxError: Unexpected token" sin contexto. */
+  const texto = await res.text();
+  let body = {};
+  if (texto) {
+    try { body = JSON.parse(texto); }
+    catch {
+      const err = new Error(`El servidor ${API_URL || location.origin} respondió algo que no es JSON en ${endpoint} (HTTP ${res.status}): ${texto.replace(/\s+/g, ' ').slice(0, 80)}`);
+      err.status = res.status;
+      throw err;
+    }
+  }
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    const err = new Error(body.error || 'Error del servidor');
+    const err = new Error(body.error || `Error del servidor (HTTP ${res.status})`);
     err.status = res.status;
     Object.assign(err, body);
     throw err;
   }
-  return res.json();
+  return body;
 }
 
 /* ─── HELPERS DE TORNEOS (lógica WPT) ───────────────────── */
