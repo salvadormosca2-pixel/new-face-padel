@@ -2426,7 +2426,7 @@ function _pintarAsistente() {
 
   if (!_asisHistorial.length) {
     chat.innerHTML = `<div class="adm2-asis-vacio">Preguntá lo que quieras saber del negocio. Consulto la caja, la deuda, las ventas, la auditoría, el salón y la cocina.</div>`;
-    sug.innerHTML = SUGERENCIAS.map(t => `<button class="adm2-asis-chip" onclick="preguntarRapido(${JSON.stringify(t)})">${_esc(t)}</button>`).join('');
+    sug.innerHTML = SUGERENCIAS.map(t => `<button class="adm2-asis-chip" data-t="${_esc(t)}" onclick="preguntarRapido(this.dataset.t)">${_esc(t)}</button>`).join('');
   } else {
     chat.innerHTML = _asisHistorial.map(m => `
       <div class="adm2-asis-msg ${m.role}">
