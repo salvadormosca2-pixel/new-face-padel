@@ -145,7 +145,9 @@ async function migrarPagosHistoricos() {
   }
 }
 
-migrateReservas().then(() => sequelize.sync({ alter: true })).then(rellenarCamposNuevos).then(indiceCuentaUnica).then(migrarPagosHistoricos).then(async () => {
+const { sincronizarEsquema } = require('./lib/esquema');
+
+migrateReservas().then(() => sincronizarEsquema(sequelize)).then(rellenarCamposNuevos).then(indiceCuentaUnica).then(migrarPagosHistoricos).then(async () => {
   console.log('PostgreSQL sincronizado');
   await seed();
 
