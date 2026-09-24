@@ -44,6 +44,7 @@ async function ejecutar(def, args) {
 const GUION = [
   'Hola!',
   'Quiero reservar una cancha',
+  'Pádel',
   '1 hora y media',
   'Mañana',
   'Dale, el primer horario que me mostraste',
@@ -52,6 +53,7 @@ const GUION = [
   'Hay torneos próximamente? Cómo me anoto?',
   'Cuántos puntos tengo? Mi teléfono es 1145678901',
   'Dónde queda el club y cómo se puede pagar?',
+  'Y para pickleball, hay algo mañana a la tarde? 1 hora',
 ];
 
 (async () => {
