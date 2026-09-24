@@ -23,8 +23,8 @@ function renderStats(profs) {
     : '5.0';
   const niveles = new Set(profs.flatMap(p => p.niveles || [])).size || 3;
   c.innerHTML = `
-    <div class="stat-prem-item visible"><span class="spn">${profs.length}</span><span class="spl">Instructores</span></div>
-    <div class="stat-prem-item visible"><span class="spn">${totalAlumnos}+</span><span class="spl">Alumnos activos</span></div>
+    <div class="stat-prem-item visible"><span class="spn">${profs.length}</span><span class="spl">Profes</span></div>
+    <div class="stat-prem-item visible"><span class="spn">${totalAlumnos}+</span><span class="spl">Alumnos</span></div>
     <div class="stat-prem-item visible"><span class="spn">${avgRating}⭐</span><span class="spl">Rating promedio</span></div>
     <div class="stat-prem-item visible"><span class="spn">${niveles}</span><span class="spl">Niveles disponibles</span></div>
   `;

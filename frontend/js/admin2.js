@@ -6,7 +6,8 @@
 /* ─── AUTH ───────────────────────────────────────────── */
 const AUTH_KEY    = 'padelpro_token';
 const _ADM_API   = window.__API_URL__ || '';
-const _USE_API   = window.__DEMO_MODE__ === false && !!_ADM_API;
+/* API_URL vacío significa "mismo origen", no "sin backend": lo que manda es DEMO_MODE. */
+const _USE_API   = window.__DEMO_MODE__ === false;
 
 function _apiFetch(endpoint, opts = {}) {
   const token = localStorage.getItem(AUTH_KEY);
@@ -43,6 +44,9 @@ async function doLogin(e) {
       const data = await _apiFetch('/api/auth/login', { method: 'POST', body: JSON.stringify({ password: pass }) });
       localStorage.setItem(AUTH_KEY, data.token);
       document.getElementById('login-overlay').classList.add('hidden');
+      /* Recién ahora hay token: se cargan los datos que antes fallaban con 401 */
+      btn.textContent = 'Cargando…';
+      await cargarDatosIniciales();
       renderTurnosView();
     } catch (err) {
       errEl.textContent = err.message || 'Error al conectar';
@@ -61,6 +65,7 @@ async function doLogin(e) {
 
 function doLogout() {
   localStorage.removeItem(AUTH_KEY);
+  if (typeof bloquearTodo === 'function') bloquearTodo();
   document.getElementById('login-pass').value = '';
   document.getElementById('login-error').textContent = '';
   document.getElementById('login-overlay').classList.remove('hidden');
@@ -68,6 +73,56 @@ function doLogout() {
 
 /* ─── Config ─────────────────────────────────────────── */
 const CANCHAS = CANCHAS_CONFIG;
+
+/*
+  El club ya no es solo padel: la grilla muestra un deporte por vez.
+  canchasVisibles() es lo que se dibuja; CANCHAS sigue siendo todo el club.
+*/
+let _deporteActivo = 'padel';
+
+function canchasVisibles() {
+  const propias = espaciosDe(_deporteActivo);
+  return propias.length ? propias : CANCHAS;
+}
+
+function adm2SetDeporte(dep) {
+  _deporteActivo = dep;
+  dispFiltroMin = 0;
+  _altaRapida = null;
+  cerrarNuevoTurno();
+  renderTurnos();
+}
+
+function renderDeporteTabs() {
+  const el = document.getElementById('adm2-deporte-tabs');
+  if (!el) return;
+  const deportes = deportesConEspacios();
+  if (deportes.length <= 1) { el.innerHTML = ''; return; }
+  if (!deportes.includes(_deporteActivo)) _deporteActivo = deportes[0];
+  el.innerHTML = deportes.map(d => {
+    const info = deporteInfo(d);
+    const n = espaciosDe(d).length;
+    return `<button class="adm2-deporte-tab ${d === _deporteActivo ? 'active' : ''}"
+              style="--dep-color:${info.color}" onclick="adm2SetDeporte('${d}')">
+              <span>${info.nombre}</span>
+              <span class="adm2-deporte-count">${n}</span>
+            </button>`;
+  }).join('');
+}
+
+/* Leyenda de colores: que significa cada franja de la grilla. */
+function renderOrigenLeyenda() {
+  const el = document.getElementById('adm2-origen-leyenda');
+  if (!el) return;
+  el.innerHTML = `
+    <span class="adm2-leyenda-titulo">Cómo entró el turno</span>
+    ${Object.entries(ORIGENES).map(([id, o]) =>
+      `<span class="adm2-leyenda-item" title="${o.descripcion}">
+         <span class="adm2-origen-punto" style="background:${o.color}"></span>${o.nombre}
+       </span>`).join('')}
+    <span class="adm2-leyenda-sep"></span>
+    <span class="adm2-leyenda-item"><span class="adm2-origen-punto" style="background:rgba(200,255,0,.45)"></span>Libre</span>`;
+}
 const DIAS_CORTO  = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 const DIAS_LARGO  = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 const MESES       = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -113,21 +168,47 @@ function getReservasCancha(dateKey, canchaId) {
     .sort((a,b) => _timeToMin(a.hora_inicio) - _timeToMin(b.hora_inicio));
 }
 
+/*
+  La plata del dia sale de los pagos reales de cada turno, no de un precio teorico:
+  con cobros divididos (uno en efectivo y otro por transferencia) es la unica forma
+  de que el corte de caja cierre.
+*/
 function getDayData(dateKey) {
-  const reservas = getReservasDelDia(dateKey);
-  let ingresos=0, pendiente=0, efectivo=0, transferencia=0, online=0;
+  const reservas = getReservasDelDia(dateKey).filter(r => r.origen !== 'bloqueo');
+  let ingresos = 0, pendiente = 0, buffet = 0, faltas = 0;
+  const porMetodo = { efectivo: 0, transferencia: 0, mercadopago: 0, tarjeta: 0 };
+
   reservas.forEach(r => {
-    const precio = _calcPrecio(r.cancha_id, r.duracion_minutos);
-    if (r.estado_pago === 'pagado') {
+    buffet += r.total_consumiciones || 0;
+    if (r.asistencia === 'falta') faltas++;
+
+    if (r.por_metodo) {
+      /* El backend ya mandó el corte por método (lo manda siempre, con o sin detalle) */
+      Object.entries(r.por_metodo).forEach(([m, v]) => {
+        ingresos += v || 0;
+        if (porMetodo[m] !== undefined) porMetodo[m] += v || 0;
+      });
+    } else if ((r.pagos || []).length) {
+      r.pagos.forEach(pg => {
+        ingresos += pg.monto || 0;
+        if (porMetodo[pg.metodo] !== undefined) porMetodo[pg.metodo] += pg.monto || 0;
+      });
+    } else if (r.estado_pago === 'pagado') {
+      /* Turno cobrado antes de que existiera la caja: no tiene detalle de pagos. */
+      const precio = r.monto || _calcPrecio(r.cancha_id, r.duracion_minutos);
       ingresos += precio;
-      if (r.metodo_pago === 'efectivo') efectivo += precio;
-      else if (r.metodo_pago === 'transferencia') transferencia += precio;
-      else online += precio;
-    } else {
-      pendiente += precio;
+      if (porMetodo[r.metodo_pago] !== undefined) porMetodo[r.metodo_pago] += precio;
+      else porMetodo.mercadopago += precio;
     }
+    pendiente += Math.max(0, saldoDelTurno(r));
   });
-  return { reservas: reservas.length, ingresos, pendiente, efectivo, transferencia, online };
+
+  return {
+    reservas: reservas.length, ingresos, pendiente, buffet, faltas,
+    efectivo: porMetodo.efectivo,
+    transferencia: porMetodo.transferencia,
+    online: porMetodo.mercadopago + porMetodo.tarjeta
+  };
 }
 
 function getWeekData(monday) {
@@ -166,14 +247,32 @@ function getMonthData(year, month) {
 
 /* ─── CSV Export ─────────────────────────────────────── */
 function exportCSV() {
-  const rows = [['Fecha','Cancha','Tipo','Hora Inicio','Hora Fin','Duración','Cliente','Estado Pago','Método de pago','Precio']];
+  const rows = [['Fecha','Deporte','Cancha','Tipo','Hora Inicio','Hora Fin','Duración','Cliente','Origen','Asistencia',
+                 'Cancha $','Buffet $','Total $','Pagado $','Saldo $','Efectivo $','Transferencia $','Estado Pago','Cargado por','Cobró']];
   const fechas = [...new Set(_reservasDB.filter(r => r.estado_reserva !== 'cancelada').map(r => r.fecha))].sort();
   fechas.forEach(fecha => {
-    const reservas = getReservasDelDia(fecha);
-    reservas.forEach(r => {
+    getReservasDelDia(fecha).forEach(r => {
       const cancha = CANCHAS.find(c => c.id === r.cancha_id);
-      const precio = _calcPrecio(r.cancha_id, r.duracion_minutos);
-      rows.push([fecha, cancha?.nombre || r.cancha_id, cancha?.tipo || '', r.hora_inicio, r.hora_fin, r.duracion_minutos+'min', r.cliente_nombre, r.estado_pago, r.metodo_pago||'—', precio]);
+      const pagos  = r.pagos || [];
+      const efec   = pagos.filter(p => p.metodo === 'efectivo').reduce((a, p) => a + p.monto, 0);
+      const transf = pagos.filter(p => p.metodo === 'transferencia').reduce((a, p) => a + p.monto, 0);
+      const cobradores = [...new Set(pagos.map(p => p.usuarioNombre).filter(Boolean))].join(' / ');
+      rows.push([
+        fecha,
+        deporteInfo(r.deporte || cancha?.deporte || 'padel').nombre,
+        cancha?.nombre || r.cancha_id, cancha?.tipo || '',
+        r.hora_inicio, r.hora_fin, r.duracion_minutos + 'min',
+        r.cliente_nombre,
+        origenInfo(r.origen || 'mostrador').nombre,
+        { presente: 'Vino', falta: 'Faltó', pendiente: 'Sin marcar' }[r.asistencia || 'pendiente'],
+        Math.round(r.total_cancha ?? r.monto ?? 0),
+        Math.round(r.total_consumiciones || 0),
+        Math.round(totalDelTurno(r)),
+        Math.round(r.total_pagado || 0),
+        Math.round(saldoDelTurno(r)),
+        Math.round(efec), Math.round(transf),
+        r.estado_pago, r.creado_por || '—', cobradores || '—'
+      ]);
     });
   });
   const csv = '﻿' + rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
@@ -183,7 +282,7 @@ function exportCSV() {
   a.href = url; a.download = `padel-finanzas-${todayKey()}.csv`;
   document.body.appendChild(a); a.click();
   document.body.removeChild(a); URL.revokeObjectURL(url);
-  toast('✓ CSV exportado correctamente','green');
+  toast('✓ CSV exportado correctamente','verde');
 }
 
 /* ════════════════════════════════════════════════════
@@ -192,16 +291,57 @@ function exportCSV() {
 
 function adm2SwitchTab(nombre, el) {
   document.querySelectorAll('.adm2-view').forEach(v=>v.classList.remove('active'));
-  document.querySelectorAll('.adm2-tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('adm2-view-'+nombre)?.classList.add('active');
-  el?.classList.add('active');
+
+  /* Las dos barras (arriba en PC, abajo en el celular) marcan la misma sección */
+  document.querySelectorAll('[data-tab]').forEach(t => t.classList.toggle('active', t.dataset.tab === nombre));
+  const bnMas = document.getElementById('adm2-bn-mas');
+  if (bnMas) bnMas.classList.toggle('active', !document.querySelector('.adm2-bn-item[data-tab="' + nombre + '"]'));
+
+  /* Al cambiar de sección el foco vuelve arriba: en el celular es lo que se espera */
+  if (window.innerWidth < 768) window.scrollTo({ top: 0, behavior: 'instant' });
 
   if (nombre==='dashboard') renderDashboard();
   if (nombre==='turnos')    renderTurnosView();
   if (nombre==='torneos')   cargarTorneosAdmin();
+  if (nombre==='fijos')     renderFijos();
+  if (nombre==='salon')     renderSalon();
+  if (nombre==='cocina')    abrirCocina();
+  if (nombre==='caja')      abrirPantallaProtegida('caja.ver',      'Abrir la caja',        renderCaja,     'adm2-caja-cont');
+  if (nombre==='buffet')    renderBuffet();
+  if (nombre==='personal')  abrirPantallaProtegida('auditoria.ver', 'Abrir Personal',       renderPersonal, 'adm2-personal-cont');
   if (nombre==='finanzas')  renderFinanzas();
   if (nombre==='usuarios')  renderUsuarios();
   if (nombre==='premios')   renderPremios();
+}
+
+/*
+  Caja y Personal muestran plata y datos del equipo: se abren con el PIN de
+  alguien que tenga el permiso. Si cancela, vuelve a Turnos.
+*/
+async function abrirPantallaProtegida(permiso, titulo, render, contenedorId) {
+  const cont = document.getElementById(contenedorId);
+  if (typeof desbloquear !== 'function') { render(); return; }
+  if (estaDesbloqueado(permiso)) { render(); return; }
+
+  if (cont) cont.innerHTML = '<div class="adm2-cargando">🔒 Esperando el PIN…</div>';
+  const ok = await desbloquear(permiso, titulo);
+  if (!ok) {
+    if (cont) cont.innerHTML = '<div class="adm2-vacio">🔒 Pantalla bloqueada. Hace falta el PIN de un jefe o del dueño.</div>';
+    const tabTurnos = [...document.querySelectorAll('.adm2-tab')].find(t => t.textContent.trim() === 'Turnos');
+    if (tabTurnos) adm2SwitchTab('turnos', tabTurnos);
+    return;
+  }
+  render();
+}
+
+/* Menú "Más" del celular */
+function adm2MasMenu(abrir) {
+  const sheet = document.getElementById('adm2-mas-sheet');
+  if (!sheet) return;
+  const visible = abrir === undefined ? !sheet.classList.contains('visible') : !!abrir;
+  sheet.classList.toggle('visible', visible);
+  document.body.classList.toggle('adm2-sin-scroll', visible);
 }
 
 /* ─── Modales ────────────────────────────────────────── */
@@ -216,10 +356,11 @@ document.addEventListener('click', e => {
    ════════════════════════════════════════════════════ */
 
 function tickClock() {
-  const el = document.getElementById('adm2-clock');
-  if (!el) return;
   const now = new Date();
-  el.textContent = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  const el = document.getElementById('adm2-clock');
+  if (el) el.textContent = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  const f = document.getElementById('adm2-header-fecha');
+  if (f) f.textContent = `${DIAS_LARGO[now.getDay()]} ${now.getDate()} de ${MESES[now.getMonth()]}`;
 }
 
 /* ════════════════════════════════════════════════════
@@ -229,6 +370,7 @@ function tickClock() {
 function renderDashboard() {
   updateDashStats();
   buildChart(chartWeekOffset);
+  if (typeof renderDashSalon === 'function') renderDashSalon();
 }
 
 function renderTurnosView() {
@@ -364,13 +506,23 @@ function _renderChartTopbar(rangeLabel) {
 let currentDate     = new Date();
 let activePanelInfo = null;
 
-function adm2GoToday()       { currentDate=new Date(); renderTurnos(); }
-function adm2ChangeDate(d)   { currentDate=addDays(currentDate,d); renderTurnos(); }
-function adm2SetVista(tipo)  {
-  document.getElementById('btn-vista-dia').classList.toggle('active',tipo==='dia');
-  document.getElementById('btn-vista-sem').classList.toggle('active',tipo==='semana');
-}
+/*
+  Durante un redibujado la ventana del turno se repinta en lugar de cerrarse,
+  y la firma de quien está cargando se conserva.
+*/
+let _redibujando = false;
 
+function adm2GoToday()       { currentDate = new Date();            refrescarDiaVisible(); }
+function adm2ChangeDate(d)   { currentDate = addDays(currentDate, d); refrescarDiaVisible(); }
+
+/* Dibuja ya con lo que hay en memoria y actualiza cuando llega el día del servidor. */
+async function refrescarDiaVisible() {
+  renderTurnos();
+  if (!_USE_API || typeof _syncReservasDelDia !== 'function') return;
+  const key = getDateKey(currentDate);
+  await _syncReservasDelDia(key);
+  if (getDateKey(currentDate) === key && !activePanelInfo) renderTurnos();
+}
 function formatDateLabel(d) {
   return `📅 ${DIAS_LARGO[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]}`;
 }
@@ -399,13 +551,21 @@ function buildTimeline(canchaId, dateKey) {
 }
 
 function renderTurnos() {
-  closeActivePanel();
+  if (!_redibujando) closeActivePanel();
   const key = getDateKey(currentDate);
   const lbl = document.getElementById('adm2-date-label-turnos');
   if (lbl) lbl.textContent = formatDateLabel(currentDate);
+
+  renderDeporteTabs();
+  renderOrigenLeyenda();
+
   const grid = document.getElementById('adm2-canchas-grid');
   if (!grid) return;
-  grid.innerHTML = CANCHAS.map(c => buildCanchaCard(c, key)).join('');
+  const visibles = canchasVisibles();
+  grid.innerHTML = visibles.length
+    ? visibles.map(c => buildCanchaCard(c, key)).join('')
+    : '<div class="adm2-vacio">No hay canchas cargadas para este deporte.</div>';
+
   renderTurnosDisponibles(key);
   updateDashStats();
 }
@@ -435,7 +595,7 @@ function renderTurnosDisponibles(dateKey) {
     </div>`;
 
   if (dispFiltroMin > 0) {
-    const slots = _calcDisponibilidad(dateKey, dispFiltroMin);
+    const slots = _calcDisponibilidad(dateKey, dispFiltroMin, _deporteActivo);
     const durLabel = dispFiltroMin >= 60 ? (dispFiltroMin/60).toFixed(1).replace('.0','')+'h' : dispFiltroMin+'min';
     if (slots.length === 0) {
       html += `<p style="color:var(--a2-text-muted);padding:8px 0;font-size:12px">No hay turnos de ${durLabel} disponibles.</p>`;
@@ -447,7 +607,7 @@ function renderTurnosDisponibles(dateKey) {
       html += `</div>`;
     }
   } else {
-    const canchasData = CANCHAS.map(c => {
+    const canchasData = canchasVisibles().map(c => {
       const tl = buildTimeline(c.id, dateKey);
       const libres = tl.filter(s => s.tipo === 'libre' && s.duracion >= 60);
       return { cancha: c, libres };
@@ -488,19 +648,20 @@ function copiarDisponiblesWA() {
   const diaLabel = `${DIAS_CORTO[d.getDay()]} ${d.getDate()} ${MESES_CORTO[d.getMonth()]}`;
 
   if (dispFiltroMin > 0) {
-    const slots = _calcDisponibilidad(dateKey, dispFiltroMin);
+    const slots = _calcDisponibilidad(dateKey, dispFiltroMin, _deporteActivo);
     const durLabel = dispFiltroMin >= 60 ? (dispFiltroMin/60).toFixed(1).replace('.0','')+'h' : dispFiltroMin+'min';
     if (slots.length === 0) {
-      toast('No hay turnos de ' + durLabel + ' para copiar', 'red'); return;
+      toast('No hay turnos de ' + durLabel + ' para copiar', 'rojo'); return;
     }
-    let text = `🎾 *Turnos de ${durLabel} disponibles — ${diaLabel}*\n`;
+    let text = `${deporteInfo(_deporteActivo).emoji} *${deporteInfo(_deporteActivo).nombre} ${durLabel} — ${diaLabel}*\n`;
     slots.forEach(s => { text += `\n✅ ${s.hora_inicio} a ${s.hora_fin}`; });
     navigator.clipboard.writeText(text).then(() => {
-      toast('✓ Copiado — pegalo en WhatsApp', 'green');
-    }).catch(() => { toast('No se pudo copiar', 'red'); });
+      toast('✓ Copiado — pegalo en WhatsApp', 'verde');
+    }).catch(() => { toast('No se pudo copiar', 'rojo'); });
   } else {
-    let text = `🎾 *Turnos disponibles — ${diaLabel}*\n`;
-    CANCHAS.forEach(c => {
+    const dep = deporteInfo(_deporteActivo);
+    let text = `${dep.emoji} *${dep.nombre} — turnos disponibles ${diaLabel}*\n`;
+    canchasVisibles().forEach(c => {
       const tl = buildTimeline(c.id, dateKey);
       const libres = tl.filter(s => s.tipo === 'libre' && s.duracion >= 60);
       text += `\n*${c.nombre}* (${c.tipo})`;
@@ -508,8 +669,8 @@ function copiarDisponiblesWA() {
       else { libres.forEach(s => { text += `\n✅ ${s.desde} a ${s.hasta}`; }); }
     });
     navigator.clipboard.writeText(text).then(() => {
-      toast('✓ Copiado — pegalo en WhatsApp', 'green');
-    }).catch(() => { toast('No se pudo copiar', 'red'); });
+      toast('✓ Copiado — pegalo en WhatsApp', 'verde');
+    }).catch(() => { toast('No se pudo copiar', 'rojo'); });
   }
 }
 
@@ -523,16 +684,15 @@ function abrirNuevoTurno() {
   ntDuracion = 0;
   ntSeleccion = null;
   panel.style.display = 'block';
+  const dep = deporteInfo(_deporteActivo);
   panel.innerHTML = `
     <div class="adm2-nt-header">
-      <div class="adm2-nt-title">+ Nuevo turno</div>
+      <div class="adm2-nt-title">Nuevo turno · ${dep.nombre}</div>
       <button class="adm2-nt-close" onclick="cerrarNuevoTurno()">✕</button>
     </div>
     <div class="adm2-nt-step-label">¿Cuánto tiempo?</div>
     <div class="adm2-nt-dur-btns">
-      <button class="adm2-nt-dur-btn" onclick="ntElegirDuracion(60)">1h</button>
-      <button class="adm2-nt-dur-btn" onclick="ntElegirDuracion(90)">1.5h</button>
-      <button class="adm2-nt-dur-btn" onclick="ntElegirDuracion(120)">2h</button>
+      ${dep.duraciones.map(m => `<button class="adm2-nt-dur-btn" onclick="ntElegirDuracion(${m})">${m >= 60 ? (m/60).toFixed(1).replace('.0','')+'h' : m+'min'}</button>`).join('')}
     </div>
     <div id="adm2-nt-slots"></div>
     <div id="adm2-nt-form-area"></div>`;
@@ -556,7 +716,7 @@ function ntElegirDuracion(min) {
   });
 
   const dateKey = getDateKey(currentDate);
-  const slots = _calcDisponibilidad(dateKey, min);
+  const slots = _calcDisponibilidad(dateKey, min, _deporteActivo);
 
   const slotsEl = document.getElementById('adm2-nt-slots');
   const formEl = document.getElementById('adm2-nt-form-area');
@@ -578,7 +738,7 @@ function ntElegirDuracion(min) {
   let html = `<div class="adm2-nt-step-label">Elegí horario (${durLabel})</div>
     <div class="adm2-nt-slots-area">`;
   Object.values(porCancha).forEach(({ cancha, horas }) => {
-    const cc = CANCHAS.find(x => x.id === cancha.id);
+    const cc = CANCHAS.find(x => x.id === cancha.id) || cancha;
     const precio = _calcPrecio(cancha.id, min);
     html += `<div class="adm2-nt-cancha-block">
       <div class="adm2-nt-cancha-name">${cc.nombre} <span>${cc.tipo} · $${precio.toLocaleString('es-AR')}</span></div>
@@ -613,78 +773,357 @@ function ntElegirSlot(canchaId, horaInicio, durMin) {
       </div>
       <div class="adm2-nt-form-row">
         <input class="adm2-input" id="nt-nombre" type="text" placeholder="Nombre del cliente" autocomplete="off" style="flex:1">
-        <input class="adm2-input" id="nt-tel" type="text" placeholder="Teléfono (opcional)" autocomplete="off" style="flex:0 0 160px">
+        <input class="adm2-input" id="nt-tel" type="text" placeholder="Teléfono (opcional)" autocomplete="off" style="flex:0 0 150px">
+        <select class="adm2-select adm2-select-origen" id="nt-origen" onchange="ntToggleProfe()">
+          ${Object.entries(ORIGENES).filter(([id]) => id !== 'bloqueo')
+            .map(([id, o]) => `<option value="${id}" ${id === 'mostrador' ? 'selected' : ''}>${o.nombre}</option>`).join('')}
+        </select>
+        <select class="adm2-select" id="nt-profe" style="display:none">
+          <option value="">— Profesor —</option>
+          ${(_profesoresCache || []).map(pr => `<option value="${pr.id}">${_esc2(pr.nombre)}</option>`).join('')}
+        </select>
         <button class="adm2-btn-agendar" onclick="ntConfirmar()">✓ Agendar</button>
       </div>
     </div>`;
   setTimeout(() => document.getElementById('nt-nombre')?.focus(), 80);
 }
 
+function ntToggleProfe() {
+  const sel = document.getElementById('nt-profe');
+  if (sel) sel.style.display = document.getElementById('nt-origen')?.value === 'profesor' ? '' : 'none';
+}
+
 async function ntConfirmar() {
   if (!ntSeleccion) return;
   const nombre = (document.getElementById('nt-nombre')?.value || '').trim();
-  if (!nombre) { toast('Ingresá el nombre del cliente', 'red'); return; }
+  if (!nombre) { toast('Ingresá el nombre del cliente', 'rojo'); return; }
   const telefono = (document.getElementById('nt-tel')?.value || '').trim();
+  const origen = document.getElementById('nt-origen')?.value || 'mostrador';
+  const profesorId = document.getElementById('nt-profe')?.value || null;
   const { canchaId, horaInicio, durMin } = ntSeleccion;
   const dateKey = getDateKey(currentDate);
-  const cc = CANCHAS.find(x => x.id === canchaId);
+  const cc = CANCHAS.find(x => x.id === canchaId) || { nombre: 'Cancha ' + canchaId };
+  const horaFin = _minToTime(_timeToMin(horaInicio) + durMin);
+
+  const firma = await pedirFirma('reserva.crear', {
+    titulo: 'Cargar turno',
+    detalle: `${nombre} · ${cc.nombre} · ${horaInicio}—${horaFin} · ${origenInfo(origen).nombre}`
+  });
+  if (!firma) return;
 
   try {
-    await api.agregarReservaAdmin({ canchaId, fecha: dateKey, hora_inicio: horaInicio, duracion_minutos: durMin, nombre, telefono });
-    if (_USE_API && typeof _syncReservasDesdeAPI === 'function') await _syncReservasDesdeAPI();
+    await api.agregarReservaAdmin({
+      canchaId, fecha: dateKey, hora_inicio: horaInicio, duracion_minutos: durMin,
+      nombre, telefono, origen, profesorId
+    }, firma);
+    if (_USE_API && typeof _syncReservasDelDia === 'function') await _syncReservasDelDia(getDateKey(currentDate));
     cerrarNuevoTurno();
     renderTurnos();
-    const horaFin = _minToTime(_timeToMin(horaInicio) + durMin);
-    toast(`${nombre} agendado ${horaInicio} — ${horaFin} — ${cc.nombre}`, 'green');
-  } catch (err) { toast(err.message || 'Error al agendar', 'red'); }
+    toast(`${nombre} agendado ${horaInicio} — ${horaFin} — ${cc.nombre}`, 'verde');
+  } catch (err) { toast(err.message || 'Error al agendar', 'rojo'); }
+}
+
+/* ─── Bloquear una cancha (lluvia, mantenimiento, evento) ── */
+
+async function abrirBloqueo() {
+  const visibles = canchasVisibles();
+  if (!visibles.length) return;
+
+  const lista = visibles.map((c, i) => `${i + 1}. ${c.nombre}`).join('\n');
+  const elegida = parseInt(prompt(`¿Qué cancha bloqueás?\n\n${lista}`, '1') || '');
+  const cancha = visibles[elegida - 1];
+  if (!cancha) return;
+
+  const hora = (prompt('¿Desde qué hora? (HH:MM)', '15:00') || '').trim();
+  if (!/^\d{2}:\d{2}$/.test(hora)) { toast('Hora inválida, usá HH:MM', 'rojo'); return; }
+  const horas = parseFloat(prompt('¿Cuántas horas?', '2') || '');
+  if (!horas || horas <= 0) return;
+  const motivo = (prompt('Motivo (lluvia, mantenimiento, evento…)', 'Mantenimiento') || 'Bloqueado').trim();
+
+  const dur = Math.round(horas * 60);
+  const firma = await pedirFirma('reserva.crear', {
+    titulo: 'Bloquear cancha',
+    detalle: `${cancha.nombre} · ${hora} por ${horas}h · ${motivo}`
+  });
+  if (!firma) return;
+
+  try {
+    await api.agregarReservaAdmin({
+      canchaId: cancha.id, fecha: getDateKey(currentDate), hora_inicio: hora,
+      duracion_minutos: dur, nombre: motivo, origen: 'bloqueo', notas: motivo
+    }, firma);
+    if (_USE_API && typeof _syncReservasDelDia === 'function') await _syncReservasDelDia(getDateKey(currentDate));
+    renderTurnos();
+    toast(`${cancha.nombre} bloqueada: ${motivo}`, '');
+  } catch (err) { toast(err.message || 'No se pudo bloquear', 'rojo'); }
+}
+
+function _esc2(v) {
+  return String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+/* Lo que realmente hay que cobrar por este turno: cancha + buffet. */
+function totalDelTurno(r) {
+  if (r.total_a_pagar !== undefined && r.total_a_pagar !== null) return r.total_a_pagar;
+  return (r.monto || _calcPrecio(r.cancha_id, r.duracion_minutos)) + (r.total_consumiciones || 0);
+}
+function saldoDelTurno(r) {
+  if (r.saldo !== undefined && r.saldo !== null) return r.saldo;
+  return totalDelTurno(r) - (r.total_pagado || 0);
+}
+
+/* ═══════════════════════════════════════════════════════
+   TURNOS LIBRES DENTRO DEL CUADRANTE
+
+   Los huecos de cada cancha se ven arriba de su propio cuadrante y
+   se agendan de un toque, sin bajar a otra sección ni cambiar de
+   pantalla: el que atiende el mostrador está mirando esa cancha.
+   ═══════════════════════════════════════════════════════ */
+
+/* Duración elegida por cancha para ver sus huecos */
+const _durLibres = {};
+/* Cancha con el formulario rápido abierto */
+let _altaRapida = null;
+
+function durDeCancha(cancha) {
+  return _durLibres[cancha.id] || cancha.duracionMinima || deporteInfo(cancha.deporte).duraciones[0];
+}
+
+/* Horarios en los que esta cancha puntual acepta un turno de esa duración */
+function horariosLibresDe(cancha, dateKey, durMin) {
+  return _calcDisponibilidad(dateKey, durMin, cancha.deporte || 'padel')
+    .filter(s => s.canchas.some(c => c.id === cancha.id))
+    .map(s => s.hora_inicio);
+}
+
+function buildLibresStrip(cancha, dateKey) {
+  const dur    = durDeCancha(cancha);
+  const durs   = deporteInfo(cancha.deporte).duraciones;
+  const horas  = horariosLibresDe(cancha, dateKey, dur);
+  const label  = m => m >= 60 ? (m / 60).toFixed(1).replace('.0', '') + 'h' : m + 'min';
+
+  return `
+    <div class="adm2-libres">
+      <div class="adm2-libres-head">
+        <span class="adm2-libres-titulo">
+          ${horas.length ? `Libre para ${label(dur)}` : `Sin lugar para ${label(dur)}`}
+        </span>
+        <div class="adm2-libres-durs">
+          ${durs.map(m => `<button class="adm2-libres-dur ${m === dur ? 'active' : ''}"
+                             onclick="setDurLibres(${cancha.id},${m})">${label(m)}</button>`).join('')}
+        </div>
+      </div>
+      ${horas.length
+        ? `<div class="adm2-libres-chips">
+             ${horas.map(h => `<button class="adm2-libre-chip ${_altaRapida && _altaRapida.canchaId === cancha.id && _altaRapida.hora === h ? 'sel' : ''}"
+                                  onclick="abrirAltaRapida(${cancha.id},'${h}',${dur})">${h}</button>`).join('')}
+           </div>`
+        : `<div class="adm2-libres-vacio">Probá con otra duración o mirá otra cancha.</div>`}
+      <div id="alta-rapida-${cancha.id}">${_altaRapida && _altaRapida.canchaId === cancha.id ? buildAltaRapida(cancha) : ''}</div>
+    </div>`;
+}
+
+function setDurLibres(canchaId, min) {
+  _durLibres[canchaId] = min;
+  _altaRapida = null;
+  renderTurnos();
+}
+
+function abrirAltaRapida(canchaId, hora, durMin) {
+  if (_altaRapida && _altaRapida.canchaId === canchaId && _altaRapida.hora === hora) { _altaRapida = null; }
+  else { _altaRapida = { canchaId, hora, durMin }; }
+  renderTurnos();
+  if (_altaRapida) setTimeout(() => document.getElementById('ar-nombre-' + canchaId)?.focus(), 60);
+}
+
+function buildAltaRapida(cancha) {
+  const { hora, durMin } = _altaRapida;
+  const fin    = _minToTime(_timeToMin(hora) + durMin);
+  const precio = _calcPrecio(cancha.id, durMin);
+
+  return `
+    <div class="adm2-ar">
+      <div class="adm2-ar-info">
+        ${hora} — ${fin} · $${precio.toLocaleString('es-AR')}
+        <button class="adm2-ar-close" onclick="cerrarAltaRapida()">✕</button>
+      </div>
+      <div class="adm2-ar-row">
+        <input class="adm2-input" id="ar-nombre-${cancha.id}" type="text" placeholder="Nombre del cliente"
+               autocomplete="off" onkeydown="if(event.key==='Enter')confirmarAltaRapida(${cancha.id})">
+        <select class="adm2-select" id="ar-origen-${cancha.id}" onchange="arToggleProfe(${cancha.id})">
+          ${Object.entries(ORIGENES).filter(([id]) => id !== 'bloqueo')
+            .map(([id, o]) => `<option value="${id}" ${id === 'mostrador' ? 'selected' : ''}>${o.nombre}</option>`).join('')}
+        </select>
+      </div>
+      <select class="adm2-select adm2-ar-profe" id="ar-profe-${cancha.id}" style="display:none">
+        <option value="">— Elegí el profesor —</option>
+        ${(_profesoresCache || []).map(pr => `<option value="${pr.id}">${_esc2(pr.nombre)}</option>`).join('')}
+      </select>
+      <button class="adm2-btn-agendar adm2-ar-btn" onclick="confirmarAltaRapida(${cancha.id})">Agendar</button>
+    </div>`;
+}
+
+function arToggleProfe(canchaId) {
+  const sel = document.getElementById('ar-profe-' + canchaId);
+  if (sel) sel.style.display = document.getElementById('ar-origen-' + canchaId)?.value === 'profesor' ? '' : 'none';
+}
+
+function cerrarAltaRapida() { _altaRapida = null; renderTurnos(); }
+
+async function confirmarAltaRapida(canchaId) {
+  if (!_altaRapida) return;
+  const nombre = (document.getElementById('ar-nombre-' + canchaId)?.value || '').trim();
+  if (!nombre) { toast('Ingresá el nombre del cliente', 'rojo'); return; }
+
+  const { hora, durMin } = _altaRapida;
+  const origen     = document.getElementById('ar-origen-' + canchaId)?.value || 'mostrador';
+  const profesorId = document.getElementById('ar-profe-' + canchaId)?.value || null;
+  const cancha     = CANCHAS.find(c => c.id === canchaId) || { nombre: 'Cancha ' + canchaId };
+  const fin        = _minToTime(_timeToMin(hora) + durMin);
+
+  const firma = await pedirFirma('reserva.crear', {
+    titulo: 'Cargar turno',
+    detalle: `${nombre} · ${cancha.nombre} · ${hora}—${fin} · ${origenInfo(origen).nombre}`
+  });
+  if (!firma) return;
+
+  try {
+    await api.agregarReservaAdmin({
+      canchaId, fecha: getDateKey(currentDate), hora_inicio: hora,
+      duracion_minutos: durMin, nombre, telefono: '', origen, profesorId
+    }, firma);
+    _altaRapida = null;
+    if (_USE_API && typeof _syncReservasDelDia === 'function') await _syncReservasDelDia(getDateKey(currentDate));
+    renderTurnos();
+    toast(`${nombre} agendado ${hora} — ${fin} · ${cancha.nombre}`, 'verde');
+  } catch (err) { toast(err.message || 'Error al agendar', 'rojo'); }
+}
+
+/* ═══════════════════════════════════════════════════════
+   RESUMEN EN CASTELLANO
+
+   En la grilla no se leen tablas: se lee una frase.
+   "Jugó 1 hora, consumió 2 aguas y 1 coca".
+   ═══════════════════════════════════════════════════════ */
+
+/* "Agua 500ml" ×2 → "aguas"; "barrita de cereal" ×3 → "barritas de cereal" */
+function nombreConsumo(nombre, cantidad) {
+  let n = String(nombre || '').replace(/\s*\d+\s*(ml|cc|lt|l|gr|g|kg)\b\.?/i, '').trim().toLowerCase();
+  if (cantidad === 1) return n;
+
+  const partes = n.split(/\s+de\s+/);
+  let cabeza = partes[0];
+  if (/[aeiouáéíóú]$/.test(cabeza))      cabeza += 's';
+  else if (/z$/.test(cabeza))            cabeza = cabeza.slice(0, -1) + 'ces';
+  else if (!/s$/.test(cabeza))           cabeza += 'es';
+  return partes.length > 1 ? cabeza + ' de ' + partes.slice(1).join(' de ') : cabeza;
+}
+
+function duracionEnPalabras(min) {
+  if (min < 60) return `${min} minutos`;
+  const h = min / 60;
+  return h === 1 ? '1 hora' : `${h.toFixed(1).replace('.0', '').replace('.', ',')} horas`;
+}
+
+/* ['2 aguas','1 coca','1 alfajor'] → "2 aguas, 1 coca y 1 alfajor" */
+function unirEnumeracion(items) {
+  if (items.length === 0) return '';
+  if (items.length === 1) return items[0];
+  return items.slice(0, -1).join(', ') + ' y ' + items[items.length - 1];
+}
+
+function resumenTurno(r) {
+  const partes = [`Jugó ${duracionEnPalabras(r.duracion_minutos)}`];
+
+  /* Se suman las líneas repetidas del mismo producto: 1 agua + 1 agua = 2 aguas */
+  const porProducto = {};
+  (r.consumiciones || []).forEach(c => {
+    const clave = c.productoId || c.nombre;
+    if (!porProducto[clave]) porProducto[clave] = { nombre: c.nombre, cantidad: 0 };
+    porProducto[clave].cantidad += c.cantidad;
+  });
+  const lista = Object.values(porProducto).map(c => `${c.cantidad} ${nombreConsumo(c.nombre, c.cantidad)}`);
+  if (lista.length) partes.push(`consumió ${unirEnumeracion(lista)}`);
+
+  return partes.join(', ');
 }
 
 function buildCanchaCard(cancha, dateKey) {
   const reservas = getReservasCancha(dateKey, cancha.id);
   const timeline = buildTimeline(cancha.id, dateKey);
-  const totalMinLibres = timeline.filter(s => s.tipo === 'libre').reduce((a,s) => a + s.duracion, 0);
-  const horasLibres = (totalMinLibres / 60).toFixed(1).replace('.0','');
-  const precioFmt = '$' + cancha.precioHora.toLocaleString('es-AR');
+  const totalMinLibres = timeline.filter(s => s.tipo === 'libre').reduce((a, s) => a + s.duracion, 0);
+  const horasLibres = (totalMinLibres / 60).toFixed(1).replace('.0', '');
+  const precioFmt = '$' + (cancha.precioHora || 0).toLocaleString('es-AR');
+
+  /* Si es hoy, la franja que contiene la hora actual se marca: es a donde mira el mostrador */
+  const esHoy = dateKey === todayKey();
+  const ahoraMin = (() => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); })();
+  const contieneAhora = seg => {
+    if (!esHoy) return false;
+    const a = _timeToMin(seg.desde), b0 = _timeToMin(seg.hasta), b = b0 <= a ? b0 + 1440 : b0;
+    const n = ahoraMin < a && a > 12 * 60 ? ahoraMin + 1440 : ahoraMin;
+    return n >= a && n < b;
+  };
 
   const timelineHtml = timeline.map((seg, idx) => {
     if (seg.tipo === 'libre') {
-      const durLabel = seg.duracion >= 60 ? (seg.duracion/60).toFixed(1).replace('.0','') + 'h' : seg.duracion + 'min';
+      const durLabel = seg.duracion >= 60 ? (seg.duracion / 60).toFixed(1).replace('.0', '') + 'h' : seg.duracion + 'min';
       return `
-        <div class="adm2-tl-segment libre" data-cancha="${cancha.id}" data-desde="${seg.desde}" data-hasta="${seg.hasta}" data-dur="${seg.duracion}"
+        <div class="adm2-tl-segment libre ${contieneAhora(seg) ? 'ahora' : ''}" data-cancha="${cancha.id}" data-desde="${seg.desde}" data-hasta="${seg.hasta}" data-dur="${seg.duracion}"
              onclick="handleFreeClick(${cancha.id},'${seg.desde}','${seg.hasta}',${seg.duracion},${idx})">
           <div class="adm2-tl-time">${seg.desde} — ${seg.hasta}</div>
-          <div class="adm2-tl-label">LIBRE · ${durLabel}</div>
+          <div class="adm2-tl-label">Libre · ${durLabel}</div>
           <div class="adm2-tl-action">+ Agendar</div>
         </div>`;
-    } else {
-      const r = seg.reserva;
-      const durLabel = r.duracion_minutos >= 60 ? (r.duracion_minutos/60).toFixed(1).replace('.0','') + 'h' : r.duracion_minutos + 'min';
-      const isPagado = r.estado_pago === 'pagado';
-      const badgeCls = isPagado ? 'pagado' : 'pendiente';
-      const badgeTxt = isPagado ? 'PAGADO ✓' : 'PENDIENTE';
-      const precio = _calcPrecio(cancha.id, r.duracion_minutos);
-      return `
-        <div class="adm2-tl-segment ocupado" onclick="handleOcupadoClick(${cancha.id},'${r.id}',${idx})">
-          <div class="adm2-tl-time">${r.hora_inicio} — ${r.hora_fin}</div>
-          <div class="adm2-tl-cliente">${r.cliente_nombre}</div>
-          <div class="adm2-tl-meta">
-            <span class="adm2-tl-dur">${durLabel}</span>
-            <span class="adm2-pago-badge ${badgeCls}">${badgeTxt}</span>
-            <span class="adm2-tl-precio">$${precio.toLocaleString('es-AR')}</span>
-          </div>
-        </div>`;
     }
+
+    const r = seg.reserva;
+    const origen    = origenInfo(r.origen || 'mostrador');
+    const esBloqueo = r.origen === 'bloqueo';
+    const falta     = r.asistencia === 'falta';
+    const total     = totalDelTurno(r);
+    const saldo     = saldoDelTurno(r);
+
+    /* Estado del cobro en una palabra, sin gritar */
+    let badgeCls = 'pendiente', badgeTxt = 'Sin cobrar';
+    if (r.estado_pago === 'pagado')       { badgeCls = 'pagado';  badgeTxt = 'Cobrado'; }
+    else if (r.estado_pago === 'parcial') { badgeCls = 'parcial'; badgeTxt = 'Falta $' + Math.round(saldo).toLocaleString('es-AR'); }
+
+    return `
+      <div class="adm2-tl-segment ocupado ${falta ? 'falta' : ''} ${esBloqueo ? 'bloqueo' : ''} ${contieneAhora(seg) ? 'ahora' : ''}"
+           style="--origen:${origen.color}"
+           onclick="handleOcupadoClick(${cancha.id},'${_esc2(r.id)}',${idx})">
+        <span class="adm2-tl-origen-barra"></span>
+        <div class="adm2-tl-time">${r.hora_inicio} — ${r.hora_fin}</div>
+        <div class="adm2-tl-cliente">
+          ${falta ? '<span class="adm2-tl-falta">Faltó</span>' : ''}
+          ${_esc2(r.cliente_nombre)}
+        </div>
+        <div class="adm2-tl-meta">
+          <span class="adm2-tl-origen-chip" style="color:${origen.color};border-color:${origen.color}55">${origen.nombre}</span>
+          ${esBloqueo ? '<span class="adm2-pago-badge bloqueo">No se alquila</span>'
+                      : `<span class="adm2-pago-badge ${badgeCls}">${badgeTxt}</span>`}
+          ${esBloqueo ? '' : `<span class="adm2-tl-precio">$${Math.round(total).toLocaleString('es-AR')}</span>`}
+        </div>
+        ${esBloqueo ? '' : `<div class="adm2-tl-resumen">${_esc2(resumenTurno(r))}${r.profesor_nombre ? ' · con ' + _esc2(r.profesor_nombre) : ''}</div>`}
+        ${esBloqueo ? '' : `
+          <div class="adm2-tl-acciones">
+            <button class="adm2-tl-accion" onclick="event.stopPropagation();abrirBuffetDeTurno(${cancha.id},'${_esc2(r.id)}',${idx})">Agregar consumición</button>
+            ${saldo > 0 ? `<button class="adm2-tl-accion cobrar" onclick="event.stopPropagation();abrirCobroDeTurno(${cancha.id},'${_esc2(r.id)}',${idx})">Cobrar</button>` : ''}
+          </div>`}
+      </div>`;
   }).join('');
 
   return `
     <div class="adm2-cancha-card">
       <div class="adm2-cancha-card-header">
         <div>
-          <div class="adm2-cancha-card-nombre">${cancha.nombre}</div>
-          <div class="adm2-cancha-card-meta">${cancha.tipo} · <span>${precioFmt}/h</span></div>
+          <div class="adm2-cancha-card-nombre">${_esc2(cancha.nombre)}</div>
+          <div class="adm2-cancha-card-meta">${_esc2(cancha.tipo)} · <span>${precioFmt}/h</span></div>
         </div>
-        <div class="adm2-badge-libres">${reservas.length} turno${reservas.length!==1?'s':''} · ${horasLibres}h libres</div>
+        <div class="adm2-badge-libres">${reservas.length} turno${reservas.length !== 1 ? 's' : ''} · ${horasLibres}h libres</div>
       </div>
+      ${buildLibresStrip(cancha, dateKey)}
       <div class="adm2-timeline" id="timeline-${cancha.id}">${timelineHtml}</div>
     </div>`;
 }
@@ -697,49 +1136,67 @@ function handleFreeClick(canchaId, desde, hasta, durDisponible, idx) {
   }
   closeActivePanel();
 
-  const tlEl = document.getElementById('timeline-'+canchaId);
-  if (!tlEl) return;
-  const segments = [...tlEl.querySelectorAll('.adm2-tl-segment')];
-  const anchor = segments[idx];
-  if (!anchor) return;
+  /* Mismo recuadro centrado que el detalle del turno: nada se despliega abajo */
+  const el = _modalEl();
+  el.innerHTML = `<div class="adm2-modal-card">${buildAddForm(canchaId, desde, hasta, durDisponible)}</div>`;
+  el.classList.add('visible');
+  document.body.classList.add('adm2-sin-scroll');
+  activePanelInfo = { canchaId, idx, panelEl: el };
+  setTimeout(()=>el.querySelector('.adm2-input')?.focus(), 80);
+}
 
-  const panel = document.createElement('div');
-  panel.className = 'adm2-inline-panel';
-  panel.innerHTML = buildAddForm(canchaId, desde, hasta, durDisponible);
-  anchor.insertAdjacentElement('afterend', panel);
-  requestAnimationFrame(()=>panel.classList.add('visible'));
-  activePanelInfo = { canchaId, idx, panelEl:panel };
-  setTimeout(()=>panel.querySelector('.adm2-input')?.focus(), 80);
+/*
+  El detalle del turno se abre como ventana centrada, no desplegado abajo.
+  Desplegado obligaba a scrollear para llegar a los productos; así lo primero
+  que se ve al tocar "Agregar consumición" es la lista para tocar.
+*/
+function _modalEl() {
+  let el = document.getElementById('adm2-modal-turno');
+  if (el) return el;
+  el = document.createElement('div');
+  el.id = 'adm2-modal-turno';
+  el.className = 'adm2-modal-overlay';
+  el.addEventListener('click', ev => { if (ev.target === el) closeActivePanel(); });
+  document.body.appendChild(el);
+  return el;
 }
 
 function handleOcupadoClick(canchaId, reservaId, idx) {
-  if (activePanelInfo?.canchaId===canchaId && activePanelInfo?.idx===idx) {
-    closeActivePanel(); return;
-  }
-  closeActivePanel();
+  /* Tocar de nuevo el mismo turno cierra la ventana */
+  if (activePanelInfo && activePanelInfo.reservaId === reservaId) { closeActivePanel(); _panelSolapa = 'cuenta'; return; }
 
   const r = _reservasDB.find(x => x.id === reservaId);
   if (!r) return;
 
-  const tlEl = document.getElementById('timeline-'+canchaId);
-  if (!tlEl) return;
-  const segments = [...tlEl.querySelectorAll('.adm2-tl-segment')];
-  const anchor = segments[idx];
-  if (!anchor) return;
+  /* Si vino del rango largo le falta el detalle: se pide ese día y se repinta */
+  if (_USE_API && typeof _syncReservasDelDia === 'function' &&
+      ((r.total_consumiciones > 0 && !(r.consumiciones || []).length) ||
+       (r.total_pagado > 0 && !(r.pagos || []).length))) {
+    _syncReservasDelDia(r.fecha).then(() => { if (activePanelInfo) repintarPanel(reservaId); });
+  }
 
-  const panel = document.createElement('div');
-  panel.className = 'adm2-inline-panel';
-  panel.innerHTML = buildDetailPanel(canchaId, r);
-  anchor.insertAdjacentElement('afterend', panel);
-  requestAnimationFrame(()=>panel.classList.add('visible'));
-  activePanelInfo = { canchaId, idx, panelEl:panel, reservaId };
+  const el = _modalEl();
+  activePanelInfo = { canchaId, idx, reservaId, panelEl: el };
+  el.innerHTML = `<div class="adm2-modal-card">${buildDetailPanel(canchaId, r)}</div>`;
+  el.classList.add('visible');
+  document.body.classList.add('adm2-sin-scroll');
 }
 
 function closeActivePanel() {
-  if (activePanelInfo) { activePanelInfo.panelEl.remove(); activePanelInfo=null; }
-  _showingMetodosFor = null;
-  _pagoMetodoSeleccionado = null;
+  const el = document.getElementById('adm2-modal-turno');
+  if (el) { el.classList.remove('visible'); el.innerHTML = ''; }
+  document.body.classList.remove('adm2-sin-scroll');
+  activePanelInfo = null;
+  if (!_redibujando) {
+    olvidarFirmaTurno();
+    /* La solapa no se hereda: el próximo turno abre en Cobrar, no en lo que quedó del anterior */
+    _panelSolapa = 'cuenta';
+  }
 }
+
+document.addEventListener('keydown', ev => {
+  if (ev.key === 'Escape' && activePanelInfo && !document.querySelector('#nf-firma-overlay.visible')) closeActivePanel();
+});
 
 function buildAddForm(canchaId, desde, hasta, durDisponible) {
   const cancha = CANCHAS.find(x=>x.id===canchaId);
@@ -772,9 +1229,32 @@ function buildAddForm(canchaId, desde, hasta, durDisponible) {
           </select>
           <span class="adm2-add-precio" id="precio-${canchaId}">$${_calcPrecio(canchaId, durOptions[0]).toLocaleString('es-AR')}</span>
         </div>
+        <div class="adm2-add-row">
+          <select class="adm2-select adm2-select-origen" id="sel-origen-${canchaId}" onchange="toggleProfe(${canchaId})">
+            ${Object.entries(ORIGENES).filter(([id]) => id !== 'bloqueo')
+              .map(([id, o]) => `<option value="${id}" ${id === 'mostrador' ? 'selected' : ''}>${o.nombre}</option>`).join('')}
+          </select>
+          <select class="adm2-select" id="sel-profe-${canchaId}" style="display:none">
+            <option value="">— Profesor —</option>
+            ${(_profesoresCache || []).map(pr => `<option value="${pr.id}">${_esc2(pr.nombre)}</option>`).join('')}
+          </select>
+        </div>
         <button class="adm2-btn-agendar" onclick="agendarTurno(${canchaId},'${iid}')">✓ Agendar</button>
       </div>
     </div>`;
+}
+
+/* El selector de profesor solo aparece cuando el turno es una clase. */
+function toggleProfe(canchaId) {
+  const origen = document.getElementById('sel-origen-' + canchaId)?.value;
+  const sel = document.getElementById('sel-profe-' + canchaId);
+  if (sel) sel.style.display = origen === 'profesor' ? '' : 'none';
+}
+
+/* Profesores para el selector de clases */
+let _profesoresCache = [];
+async function cargarProfesoresCache() {
+  try { _profesoresCache = await api.getProfesores(); } catch { _profesoresCache = []; }
 }
 
 function updateEndTime(canchaId) {
@@ -783,137 +1263,393 @@ function updateEndTime(canchaId) {
   if (precioEl) precioEl.textContent = '$' + _calcPrecio(canchaId, dur).toLocaleString('es-AR');
 }
 
-let _pagoMetodoSeleccionado = null;
+/* ═══════════════════════════════════════════════════════
+   PANEL DEL TURNO — asistencia, consumiciones y cobros
+   ═══════════════════════════════════════════════════════ */
+
+/* Cobro que se está armando: quién paga, cuánto y cómo */
+let _cobro      = { reservaId: null, filas: [{ pagador: '', monto: '', metodo: 'efectivo' }] };
+let _panelSolapa = 'cuenta';
+
+/* El id que entiende el backend para esta reserva */
+function idBackend(r) { return r.dbId || r.id; }
+function refReserva(r) { return r.dbId ? { id: r.dbId } : { claveUnica: r.id }; }
+
+function reservaPorId(reservaId) { return _reservasDB.find(x => String(x.id) === String(reservaId)); }
+
+function _resetPanelState(reservaId) {
+  if (_cobro.reservaId !== reservaId) _cobro = { reservaId, filas: [_filaNueva()] };
+}
 
 function buildDetailPanel(canchaId, r) {
-  const cancha = CANCHAS.find(x=>x.id===canchaId);
-  const ip = r.estado_pago === 'pagado';
-  const precio = _calcPrecio(canchaId, r.duracion_minutos);
-  const durLabel = r.duracion_minutos >= 60 ? (r.duracion_minutos/60).toFixed(1).replace('.0','')+'h' : r.duracion_minutos+'min';
-  const ml = {efectivo:'💵 Efectivo', transferencia:'🏦 Transferencia'};
-  const showMetodos = _showingMetodosFor === r.id;
+  const cancha    = CANCHAS.find(x => x.id === canchaId) || { nombre: 'Cancha ' + canchaId };
+  const origen    = origenInfo(r.origen || 'mostrador');
+  const esBloqueo = r.origen === 'bloqueo';
+  const totalCancha = r.total_cancha ?? (r.monto || _calcPrecio(canchaId, r.duracion_minutos));
+  const consumos  = r.consumiciones || [];
+  const pagos     = r.pagos || [];
+  const totalConsumo = r.total_consumiciones || consumos.reduce((a, c) => a + (c.total || 0), 0);
+  const total     = totalDelTurno(r);
+  const pagado    = r.total_pagado || pagos.reduce((a, pg) => a + (pg.monto || 0), 0);
+  const saldo     = Math.round((total - pagado) * 100) / 100;
 
-  let pagoSection;
-  if (ip && r.metodo_pago) {
-    pagoSection = `
-      <div class="adm2-payment-toggle">
-        <button class="adm2-toggle-btn" onclick="setEstado('${r.id}','pendiente')">PENDIENTE</button>
-        <button class="adm2-toggle-btn active-green" disabled>PAGADO</button>
+  _resetPanelState(r.id);
+  const money = n => '$' + Math.round(n || 0).toLocaleString('es-AR');
+
+  const cabecera = `
+    <div class="adm2-panel-header">
+      <span class="adm2-panel-header-title">
+        <span class="adm2-origen-punto" style="background:${origen.color}"></span>
+        ${_esc2(r.cliente_nombre)}
+      </span>
+      <button class="adm2-panel-close" onclick="closeActivePanel()">✕</button>
+    </div>
+    <div class="adm2-panel-info-row">
+      <b>${r.hora_inicio} — ${r.hora_fin}</b> · ${_esc2(cancha.nombre)} · ${money(totalCancha)}
+    </div>
+    ${esBloqueo ? '' : `<div class="adm2-panel-resumen">${_esc2(resumenTurno(r))}</div>`}
+    <div class="adm2-panel-meta-row">
+      <span class="adm2-tl-origen-chip" style="color:${origen.color};border-color:${origen.color}55">${origen.nombre}</span>
+      ${r.profesor_nombre ? `<span class="adm2-panel-meta">Profesor: ${_esc2(r.profesor_nombre)}</span>` : ''}
+      ${r.cliente_telefono ? `<span class="adm2-panel-meta">Tel. ${_esc2(r.cliente_telefono)}</span>` : ''}
+      ${r.creado_por ? `<span class="adm2-panel-meta">Cargado por ${_esc2(r.creado_por)}</span>` : ''}
+    </div>`;
+
+  if (esBloqueo) {
+    return `<div class="adm2-panel-inner">
+      ${cabecera}
+      <div class="adm2-panel-section"><div class="adm2-bloqueo-aviso">Cancha bloqueada: no se alquila ni se cobra.</div></div>
+      <div class="adm2-panel-danger">
+        <button class="adm2-btn-liberar" onclick="liberarTurno('${_esc2(r.id)}','${_esc2(r.cliente_nombre)}')">Desbloquear</button>
+        <button class="adm2-btn-cancel-danger" onclick="closeActivePanel()">Cerrar</button>
       </div>
-      <div style="font-size:11px;color:#64748b;margin-top:6px">${ml[r.metodo_pago]||r.metodo_pago}</div>`;
-  } else if (showMetodos) {
-    const selEf = _pagoMetodoSeleccionado === 'efectivo';
-    const selTr = _pagoMetodoSeleccionado === 'transferencia';
-    pagoSection = `
-      <div class="adm2-payment-toggle">
-        <button class="adm2-toggle-btn" onclick="setEstado('${r.id}','pendiente')">PENDIENTE</button>
-        <button class="adm2-toggle-btn active-yellow">PAGADO</button>
-      </div>
-      <div style="margin-top:10px">
-        <div style="font-size:11px;color:#94a3b8;margin-bottom:8px;font-weight:600">Selecciona metodo de pago:</div>
-        <div class="adm2-metodo-btns">
-          <button class="adm2-metodo-btn ${selEf?'selected':''}" onclick="seleccionarMetodo('${r.id}','efectivo')">💵 Efectivo</button>
-          <button class="adm2-metodo-btn ${selTr?'selected':''}" onclick="seleccionarMetodo('${r.id}','transferencia')">🏦 Transferencia</button>
-        </div>
-        <button class="adm2-btn-agendar" style="margin-top:10px;width:100%;opacity:${_pagoMetodoSeleccionado?'1':'.4'}" onclick="confirmarPago('${r.id}')" ${_pagoMetodoSeleccionado?'':'disabled'}>✓ Confirmar pago</button>
-      </div>`;
-  } else {
-    pagoSection = `
-      <div class="adm2-payment-toggle">
-        <button class="adm2-toggle-btn active-red">PENDIENTE</button>
-        <button class="adm2-toggle-btn" onclick="mostrarMetodos('${r.id}')">PAGADO</button>
-      </div>`;
+    </div>`;
   }
+
+  const asis = r.asistencia || 'pendiente';
+  const asistencia = `
+    <div class="adm2-panel-section">
+      <div class="adm2-panel-label">¿Vino a jugar?</div>
+      <div class="adm2-asistencia-btns">
+        <button class="adm2-asis-btn ${asis === 'presente' ? 'sel-ok' : ''}" onclick="marcarAsistenciaTurno('${_esc2(r.id)}','presente')">Vino</button>
+        <button class="adm2-asis-btn ${asis === 'falta' ? 'sel-falta' : ''}" onclick="marcarAsistenciaTurno('${_esc2(r.id)}','falta')">Faltó</button>
+        ${asis !== 'pendiente' ? `<button class="adm2-asis-btn" onclick="marcarAsistenciaTurno('${_esc2(r.id)}','pendiente')">Sin marcar</button>` : ''}
+      </div>
+    </div>`;
+
+  const solapas = `
+    <div class="adm2-panel-solapas">
+      <button class="adm2-panel-solapa ${_panelSolapa === 'cuenta' ? 'active' : ''}" onclick="panelSolapa('cuenta','${_esc2(r.id)}')">
+        Cobrar ${saldo > 0 ? `<span class="adm2-solapa-badge">${money(saldo)}</span>` : '<span class="adm2-solapa-badge ok">al día</span>'}
+      </button>
+      <button class="adm2-panel-solapa ${_panelSolapa === 'buffet' ? 'active' : ''}" onclick="panelSolapa('buffet','${_esc2(r.id)}')">
+        Consumiciones ${totalConsumo > 0 ? `<span class="adm2-solapa-badge">${money(totalConsumo)}</span>` : ''}
+      </button>
+    </div>`;
+
+  /*
+    Un toque = una consumición cargada. No hay carrito ni confirmación:
+    el mostrador toca el producto y sigue atendiendo.
+  */
+  /* La carta es compartida con el salón; acá se le dice a qué turno cargar */
+  abrirCarta({
+    clave: 'turno:' + r.id,
+    donde: 'cancha',
+    repintar: () => repintarPanel(r.id),
+    firmaVigente: () => firmaVigente(r.id),
+    guardarFirma: f => { _firmaTurno = { reservaId: r.id, firma: f, desde: Date.now() }; },
+    olvidarFirma: olvidarFirmaTurno,
+    enviar: (items, firma) => api.cargarConsumiciones(idBackend(r), items, firma),
+    refrescar: (res) => { if (res && res.cuenta) aplicarCuentaEnReserva(r.id, res.cuenta); else recargarPanel(r.id); }
+  });
+
+  const consumicionesTab = `
+    <div class="adm2-panel-section">
+      ${cartaHTML()}
+
+      ${consumos.length ? `
+        <div class="adm2-consumos-cargados">
+          <div class="adm2-panel-label">Ya consumió · ${money(totalConsumo)}</div>
+          ${consumos.map(c => `
+            <div class="adm2-consumo-row">
+              <span>
+                ${c.cantidad} ${_esc2(nombreConsumo(c.nombre, c.cantidad))}
+                ${c.detalle ? `<i class="adm2-consumo-detalle">${_esc2(c.detalle)}</i>` : ''}
+                ${c.nota ? `<i class="adm2-consumo-detalle">“${_esc2(c.nota)}”</i>` : ''}
+              </span>
+              <span class="adm2-consumo-estado ${c.comandaId ? (c.estadoCocina === 'listo' ? 'listo' : 'cocina') : 'mozo'}">
+                ${c.comandaId ? (c.estadoCocina === 'listo' ? 'listo para servir' : 'en cocina') : 'entregado'}
+              </span>
+              <span class="adm2-consumo-quien">${_esc2(c.usuarioNombre || '')}</span>
+              <span class="adm2-consumo-monto">${money(c.total)}</span>
+              <button class="adm2-mini-btn peligro" title="Quitar" onclick="anularConsumicionTurno(${c.id},'${_esc2(r.id)}')">✕</button>
+            </div>`).join('')}
+        </div>` : ''}
+    </div>`;
+
+  const cuentaTab = `
+    <div class="adm2-panel-section">
+      <div class="adm2-cuenta">
+        <div class="adm2-cuenta-linea"><span>Cancha</span><span>${money(totalCancha)}</span></div>
+        ${totalConsumo > 0 ? `<div class="adm2-cuenta-linea"><span>Consumiciones</span><span>${money(totalConsumo)}</span></div>` : ''}
+        <div class="adm2-cuenta-linea total"><span>Total</span><span>${money(total)}</span></div>
+        ${pagado > 0 ? `<div class="adm2-cuenta-linea pagado"><span>Pagado</span><span>− ${money(pagado)}</span></div>` : ''}
+        <div class="adm2-cuenta-linea saldo ${saldo <= 0 ? 'ok' : ''}">
+          <span>${saldo <= 0 ? 'Saldado' : 'Falta cobrar'}</span><span>${money(Math.max(saldo, 0))}</span>
+        </div>
+      </div>
+
+      ${pagos.length ? `
+        <div class="adm2-pagos-lista">
+          <div class="adm2-panel-label">Ya pagaron</div>
+          ${pagos.map(pg => `
+            <div class="adm2-pago-row">
+              <span class="adm2-pago-pagador">${_esc2(pg.pagador || '—')}</span>
+              <span class="adm2-pago-metodo" style="color:${metodoInfo(pg.metodo).color}">${metodoInfo(pg.metodo).nombre}</span>
+              <span class="adm2-pago-cobrador">cobró ${_esc2(pg.usuarioNombre || '—')}</span>
+              <span class="adm2-pago-monto">${money(pg.monto)}</span>
+              <button class="adm2-mini-btn peligro" title="Anular cobro" onclick="anularPagoTurno(${pg.id},'${_esc2(r.id)}')">✕</button>
+            </div>`).join('')}
+        </div>` : ''}
+
+      ${saldo > 0 ? cobroFilasHTML(saldo, 'turno', r.id) : `<div class="adm2-cobro-ok">Este turno está cobrado por completo.</div>`}
+    </div>`;
 
   return `
     <div class="adm2-panel-inner">
-      <div class="adm2-panel-header">
-        <span class="adm2-panel-header-title">📋 ${r.cliente_nombre}</span>
-        <button class="adm2-panel-close" onclick="closeActivePanel()">✕</button>
-      </div>
-      <div class="adm2-panel-info-row"><b>${r.hora_inicio} — ${r.hora_fin}</b> · ${durLabel} · ${cancha.nombre} · $${precio.toLocaleString('es-AR')}</div>
-      ${r.cliente_telefono ? `<div class="adm2-panel-info-row" style="font-size:12px;color:#64748b">Tel: ${r.cliente_telefono}</div>` : ''}
-      <div class="adm2-panel-section">
-        ${pagoSection}
-      </div>
+      ${cabecera}
+      ${asistencia}
+      ${solapas}
+      ${_panelSolapa === 'buffet' ? consumicionesTab : cuentaTab}
       <div class="adm2-panel-danger">
-        <button class="adm2-btn-liberar" onclick="liberarTurno('${r.id}','${r.cliente_nombre}')">Liberar turno</button>
-        <button class="adm2-btn-cancel-danger" onclick="closeActivePanel()">Cancelar</button>
+        <button class="adm2-btn-liberar" onclick="liberarTurno('${_esc2(r.id)}','${_esc2(r.cliente_nombre)}')">Liberar turno</button>
+        <button class="adm2-btn-cancel-danger" onclick="closeActivePanel()">Cerrar</button>
       </div>
     </div>`;
 }
 
-async function agendarTurno(canchaId, inputId) {
-  const nombre = (document.getElementById(inputId)?.value||'').trim();
-  if (!nombre) { toast('Ingresá el nombre del cliente','red'); return; }
-  const key = getDateKey(currentDate);
-  const cancha = CANCHAS.find(x=>x.id===canchaId);
-  const horaInicio = document.getElementById('sel-inicio-'+canchaId)?.value;
-  const dur = parseInt(document.getElementById('sel-dur-'+canchaId)?.value || 60);
+/* ─── Redibujado del panel ──────────────────────────────── */
 
+function repintarPanel(reservaId) {
+  const r = reservaPorId(reservaId);
+  if (!r || !activePanelInfo) return;
+  const overlay = activePanelInfo.panelEl;
+  const scrollPrevio = overlay.scrollTop;
+  const card = overlay.querySelector('.adm2-modal-card');
+  const html = buildDetailPanel(activePanelInfo.canchaId || r.cancha_id, r);
+  if (card) card.innerHTML = html;
+  else overlay.innerHTML = `<div class="adm2-modal-card">${html}</div>`;
+  /* Misma regla que en la mesa: al reescribir, el scroll se queda donde estaba */
+  overlay.scrollTop = scrollPrevio;
+}
+
+/* Trae los datos frescos del servidor y deja el panel abierto donde estaba. */
+async function recargarPanel(reservaId) {
+  const ctx = activePanelInfo ? { canchaId: activePanelInfo.canchaId, idx: activePanelInfo.idx } : null;
+  _redibujando = true;
   try {
-    await api.agregarReservaAdmin({ canchaId, fecha:key, hora_inicio:horaInicio, duracion_minutos:dur, nombre, telefono:'' });
-    if (_USE_API && typeof _syncReservasDesdeAPI === 'function') await _syncReservasDesdeAPI();
-    closeActivePanel(); renderTurnos();
-    toast(`${nombre} agendado ${horaInicio} — ${_minToTime(_timeToMin(horaInicio)+dur)} — ${cancha.nombre}`,'green');
-  } catch (err) { toast(err.message||'Error al agendar','red'); }
-}
-
-let _showingMetodosFor = null;
-
-function mostrarMetodos(reservaId) {
-  _showingMetodosFor = reservaId;
-  _pagoMetodoSeleccionado = null;
-  const r = _reservasDB.find(x => x.id === reservaId);
-  if (!r || !activePanelInfo) return;
-  activePanelInfo.panelEl.innerHTML = buildDetailPanel(activePanelInfo.canchaId || r.cancha_id, r);
-}
-
-function seleccionarMetodo(reservaId, metodo) {
-  _pagoMetodoSeleccionado = metodo;
-  const r = _reservasDB.find(x => x.id === reservaId);
-  if (!r || !activePanelInfo) return;
-  activePanelInfo.panelEl.innerHTML = buildDetailPanel(activePanelInfo.canchaId || r.cancha_id, r);
-}
-
-async function setEstado(reservaId, estado) {
-  const r = _reservasDB.find(x => x.id === reservaId);
-  if (!r) return;
-  if (estado === 'pendiente') {
-    _showingMetodosFor = null;
-    _pagoMetodoSeleccionado = null;
-    r.estado_pago = 'pendiente';
-    r.metodo_pago = null;
-    _saveReservasDB();
-    if (_USE_API) {
-      try { await api.marcarPagado({ id: reservaId, metodoPago: null, estado: 'pendiente' }); } catch {}
+    if (_USE_API && typeof _syncReservasDelDia === 'function') await _syncReservasDelDia(getDateKey(currentDate));
+    /* La grilla se redibuja sin tocar la ventana, que se repinta con los datos nuevos */
+    const abierta = !!activePanelInfo;
+    renderTurnos();
+    if (ctx && abierta && reservaPorId(reservaId)) {
+      activePanelInfo = { ...ctx, reservaId, panelEl: _modalEl() };
+      repintarPanel(reservaId);
+      _modalEl().classList.add('visible');
+      document.body.classList.add('adm2-sin-scroll');
     }
-    closeActivePanel(); renderTurnos();
+  } finally { _redibujando = false; }
+}
+
+function panelSolapa(cual, reservaId) { _panelSolapa = cual; repintarPanel(reservaId); }
+
+/*
+  Atajos desde la grilla: abren el panel del turno ya parado en lo que se quiere
+  hacer, para no tener que abrir y después buscar la solapa.
+*/
+function abrirBuffetDeTurno(canchaId, reservaId, idx) {
+  const yaAbierto = activePanelInfo && activePanelInfo.reservaId === reservaId;
+  _panelSolapa = 'buffet';
+  if (yaAbierto) { repintarPanel(reservaId); return; }
+  handleOcupadoClick(canchaId, reservaId, idx);
+}
+
+function abrirCobroDeTurno(canchaId, reservaId, idx) {
+  const yaAbierto = activePanelInfo && activePanelInfo.reservaId === reservaId;
+  _panelSolapa = 'cuenta';
+  if (yaAbierto) { repintarPanel(reservaId); return; }
+  handleOcupadoClick(canchaId, reservaId, idx);
+}
+
+/* ─── Consumiciones: un toque y queda cargada ────────────
+   El PIN se pide una sola vez por turno. Mientras el panel siga
+   abierto con la misma persona, los toques siguientes entran
+   directo: en el mostrador nadie teclea un PIN por cada agua.
+   ──────────────────────────────────────────────────────── */
+
+let _firmaTurno = null;                 /* { reservaId, firma, desde } */
+const FIRMA_TURNO_MS = 5 * 60 * 1000;
+
+function firmaVigente(reservaId) {
+  return _firmaTurno
+      && _firmaTurno.reservaId === reservaId
+      && Date.now() - _firmaTurno.desde < FIRMA_TURNO_MS
+      ? _firmaTurno.firma : null;
+}
+
+function olvidarFirmaTurno() { _firmaTurno = null; }
+
+async function anularConsumicionTurno(consumicionId, reservaId) {
+  const firma = await pedirFirma('consumicion.anular', { titulo: 'Quitar consumición' });
+  if (!firma) return;
+  try {
+    await api.anularConsumicion(consumicionId, firma);
+    toast('Consumición quitada', '');
+    await cargarCarta('cancha', true);
+    await recargarPanel(reservaId);
+  } catch (err) { toast(err.message || 'No se pudo quitar', 'rojo'); }
+}
+
+/* ─── Cobros divididos ──────────────────────────────────── */
+
+/*
+  Cuando llega una cuenta nueva del servidor, se mete en la reserva en memoria
+  y se repinta la ventana en el lugar. Sin cerrar, sin volver a pedir el día,
+  sin que el mostrador vea parpadear la pantalla.
+*/
+function aplicarCuentaEnReserva(reservaId, cuenta) {
+  const r = reservaPorId(reservaId);
+  if (!r || !cuenta) return;
+  if (cuenta.consumiciones) r.consumiciones = cuenta.consumiciones;
+  if (cuenta.pagos)         r.pagos = cuenta.pagos;
+  r.total_cancha        = cuenta.totalCancha ?? r.total_cancha;
+  r.total_consumiciones = cuenta.totalConsumo ?? r.total_consumiciones;
+  r.total_a_pagar       = cuenta.totalAPagar ?? r.total_a_pagar;
+  r.total_pagado        = cuenta.totalPagado ?? r.total_pagado;
+  r.saldo               = cuenta.saldo ?? r.saldo;
+  if (cuenta.estado_pago) r.estado_pago = cuenta.estado_pago;
+  else r.estado_pago = r.saldo <= 0.009 && r.total_a_pagar > 0 ? 'pagado' : (r.total_pagado > 0 ? 'parcial' : 'pendiente');
+  _saveReservasDB();
+  repintarPanel(reservaId);
+  /* La grilla de atrás se redibuja sin tocar la ventana */
+  _redibujando = true;
+  try { renderTurnos(); } finally { _redibujando = false; }
+}
+
+async function confirmarCobro(reservaId) {
+  const r = reservaPorId(reservaId);
+  if (!r) return;
+  const pagos = _filasParaEnviar('turno');
+  if (!pagos.length) { toast('Anotá al menos un pago', 'rojo'); return; }
+  if (pagos.filter(p => p.monto !== '').some(p => !(p.monto > 0))) { toast('Hay un monto que no es válido', 'rojo'); return; }
+
+  const detalle = pagos.map(p => `${p.pagador || r.cliente_nombre} ${p.monto === '' ? 'el resto' : '$' + Math.round(p.monto).toLocaleString('es-AR')} ${metodoInfo(p.metodo).nombre}`).join(' · ');
+  const firma = await pedirFirma('cobro.registrar', { titulo: 'Registrar cobro', detalle });
+  if (!firma) return;
+
+  const btn = document.getElementById('cobro-btn-turno'); if (btn) { btn.disabled = true; btn.textContent = 'Cobrando…'; }
+  try {
+    const res = await api.registrarPagos(idBackend(r), pagos, firma);
+    _cobro = { reservaId, filas: [_filaNueva()] };
+    aplicarCuentaEnReserva(reservaId, res.cuenta);
+    const total = res.pagos.reduce((s, p) => s + p.monto, 0);
+    toast(res.vuelto > 0 ? `Cobrado. Vuelto $${Math.round(res.vuelto).toLocaleString('es-AR')}` : `Cobrado $${Math.round(total).toLocaleString('es-AR')}`, 'verde');
+  } catch (err) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Cobrar'; }
+    toast(err.message || 'No se pudo registrar el cobro', 'rojo');
   }
 }
 
-async function confirmarPago(reservaId) {
-  if (!_pagoMetodoSeleccionado) return;
-  const r = _reservasDB.find(x => x.id === reservaId);
+/* Compatibilidad con llamadas viejas: escriben en la primera fila */
+function setCobro(campo, valor, reservaId) {
+  const f = _cobro.filas[0];
+  if (campo in f) f[campo] = valor;
+  if (campo === 'metodo' && reservaId) repintarPanel(reservaId);
+}
+function limpiarCobro(reservaId) { _cobro = { reservaId, filas: [_filaNueva()] }; repintarPanel(reservaId); }
+
+async function anularPagoTurno(pagoId, reservaId) {
+  const firma = await pedirFirma('cobro.anular', { titulo: 'Anular cobro' });
+  if (!firma) return;
+  try {
+    await api.anularPago(pagoId, firma);
+    toast('Cobro anulado', '');
+    await recargarPanel(reservaId);
+  } catch (err) { toast(err.message || 'No se pudo anular', 'rojo'); }
+}
+
+/* ─── Asistencia (faltas) ───────────────────────────────── */
+
+async function marcarAsistenciaTurno(reservaId, estado) {
+  const r = reservaPorId(reservaId);
   if (!r) return;
-  const metodo = _pagoMetodoSeleccionado;
-  r.estado_pago = 'pagado';
-  r.metodo_pago = metodo;
-  _saveReservasDB();
-  try { await api.marcarPagado({ id: reservaId, metodoPago: metodo }); } catch {}
-  if (_USE_API && typeof _syncReservasDesdeAPI === 'function') await _syncReservasDesdeAPI();
-  _showingMetodosFor = null;
-  _pagoMetodoSeleccionado = null;
-  closeActivePanel(); renderTurnos();
-  const ml = {efectivo:'Efectivo', transferencia:'Transferencia'};
-  toast(`Pago registrado — ${ml[metodo] || metodo}`, 'green');
+  const etiqueta = { presente: 'Vino', falta: 'Faltó', pendiente: 'Sin marcar' }[estado];
+
+  const firma = await pedirFirma('reserva.asistencia', {
+    titulo: estado === 'falta' ? 'Marcar falta' : 'Marcar asistencia',
+    detalle: `${r.cliente_nombre} · ${r.hora_inicio} — ${etiqueta}`
+  });
+  if (!firma) return;
+
+  try {
+    await api.marcarAsistencia({ ...refReserva(r), asistencia: estado }, firma);
+    toast(estado === 'falta' ? `Falta registrada: ${r.cliente_nombre}` : `${r.cliente_nombre}: ${etiqueta}`,
+          estado === 'falta' ? 'rojo' : 'verde');
+    await recargarPanel(reservaId);
+  } catch (err) { toast(err.message || 'No se pudo marcar', 'rojo'); }
+}
+
+/* ─── Alta desde un hueco libre ─────────────────────────── */
+
+async function agendarTurno(canchaId, inputId) {
+  const nombre = (document.getElementById(inputId)?.value || '').trim();
+  if (!nombre) { toast('Ingresá el nombre del cliente', 'rojo'); return; }
+  const key = getDateKey(currentDate);
+  const cancha = CANCHAS.find(x => x.id === canchaId);
+  const horaInicio = document.getElementById('sel-inicio-' + canchaId)?.value;
+  const dur = parseInt(document.getElementById('sel-dur-' + canchaId)?.value || 60);
+  const origen = document.getElementById('sel-origen-' + canchaId)?.value || 'mostrador';
+  const profesorId = document.getElementById('sel-profe-' + canchaId)?.value || null;
+  const horaFin = _minToTime(_timeToMin(horaInicio) + dur);
+
+  const firma = await pedirFirma('reserva.crear', {
+    titulo: 'Cargar turno',
+    detalle: `${nombre} · ${cancha.nombre} · ${horaInicio}—${horaFin} · ${origenInfo(origen).nombre}`
+  });
+  if (!firma) return;
+
+  try {
+    await api.agregarReservaAdmin({
+      canchaId, fecha: key, hora_inicio: horaInicio, duracion_minutos: dur,
+      nombre, telefono: '', origen, profesorId
+    }, firma);
+    if (_USE_API && typeof _syncReservasDelDia === 'function') await _syncReservasDelDia(getDateKey(currentDate));
+    closeActivePanel(); renderTurnos();
+    toast(`${nombre} agendado ${horaInicio} — ${horaFin} — ${cancha.nombre}`, 'verde');
+  } catch (err) { toast(err.message || 'Error al agendar', 'rojo'); }
 }
 
 async function liberarTurno(reservaId, nombre) {
-  await api.cancelarReserva({ id: reservaId });
-  if (_USE_API && typeof _syncReservasDesdeAPI === 'function') await _syncReservasDesdeAPI();
-  closeActivePanel(); renderTurnos();
-  toast(`Turno de ${nombre} liberado`,'red');
+  const r = reservaPorId(reservaId);
+  if (!r) return;
+  const pagado = r.total_pagado || 0;
+  const aviso = pagado > 0
+    ? `${nombre} ya pagó $${Math.round(pagado).toLocaleString('es-AR')}. Si liberás el turno, ese cobro queda registrado igual.\n\n¿Liberar de todas formas?`
+    : `¿Liberar el turno de ${nombre}?`;
+  if (!confirm(aviso)) return;
+
+  const firma = await pedirFirma('reserva.liberar', {
+    titulo: 'Liberar turno',
+    detalle: `${nombre} · ${r.hora_inicio}—${r.hora_fin}`
+  });
+  if (!firma) return;
+
+  try {
+    await api.cancelarReserva({ id: reservaId }, firma);
+    if (_USE_API && typeof _syncReservasDelDia === 'function') await _syncReservasDelDia(getDateKey(currentDate));
+    closeActivePanel(); renderTurnos();
+    toast(`Turno de ${nombre} liberado`, 'rojo');
+  } catch (err) { toast(err.message || 'No se pudo liberar', 'rojo'); }
 }
 
 /* ─── Dashboard stats ────────────────────────────────── */
@@ -938,9 +1674,9 @@ function updateDashStats() {
   set('dash-cobrado-hoy',   formatArs(dd.ingresos));
   set('dash-cobrado-sub',   `${pagados} turno${pagados!==1?'s':''} cobrado${pagados!==1?'s':''}`);
   set('dash-pendiente',     formatArs(dd.pendiente));
-  set('dash-pendiente-sub', `${pendientesCount} sin cobrar`);
+  set('dash-pendiente-sub', `${pendientesCount} sin cobrar${dd.faltas ? ' · ' + dd.faltas + ' falta' + (dd.faltas !== 1 ? 's' : '') : ''}`);
   set('dash-turnos-hoy',    reservas.length);
-  set('dash-canchas-con-turnos', `${canchasConTurnos.size}/4 canchas activas`);
+  set('dash-canchas-con-turnos', `${canchasConTurnos.size}/${CANCHAS.length} canchas activas`);
   set('dash-hora-pico',     horaPico);
 
   const total = dd.efectivo + dd.transferencia + dd.online;
@@ -959,9 +1695,9 @@ function updateDashStats() {
       <span class="adm2-metodo-monto">${formatArsLong(v)}</span>
     </div>`).join('');
 
-  const colors = {1:'#22c55e',2:'#3b82f6',3:'#eab308',4:'#a855f7'};
   const estEl  = document.getElementById('dash-estado-canchas');
   if(estEl) estEl.innerHTML = CANCHAS.map(c => {
+    const colorCancha = deporteInfo(c.deporte || 'padel').color;
     const cReservas = getReservasCancha(key, c.id);
     const ocu = cReservas.length;
     const pag = cReservas.filter(r=>r.estado_pago==='pagado').length;
@@ -971,12 +1707,12 @@ function updateDashStats() {
     return `
       <div class="adm2-cancha-week-item">
         <div class="adm2-cancha-week-header">
-          <div class="adm2-cancha-week-dot" style="background:${colors[c.id]}"></div>
-          <span class="adm2-cancha-week-name">${c.nombre} · ${c.tipo}</span>
+          <div class="adm2-cancha-week-dot" style="background:${colorCancha}"></div>
+          <span class="adm2-cancha-week-name">${deporteInfo(c.deporte || 'padel').emoji} ${c.nombre} · ${c.tipo}</span>
           <span class="adm2-cancha-week-count">${pag}✓${pen>0?' '+pen+'⏳':''} · ${((totalHoras-totalMin)/60).toFixed(1).replace('.0','')}h lib.</span>
         </div>
         <div class="adm2-cancha-week-track">
-          <div class="adm2-cancha-week-fill" style="background:${colors[c.id]};width:${(totalMin/totalHoras*100).toFixed(0)}%"></div>
+          <div class="adm2-cancha-week-fill" style="background:${colorCancha};width:${(totalMin/totalHoras*100).toFixed(0)}%"></div>
         </div>
       </div>`;
   }).join('');
@@ -1001,6 +1737,8 @@ function calChangeMonth(d) {
 }
 
 function renderFinanzas() {
+  if (typeof renderFinConsumo   === 'function') renderFinConsumo(finYear, finMonth);
+  if (typeof renderFinSinCobrar === 'function') renderFinSinCobrar(finYear, finMonth);
   renderResumenMes();
   renderCalendario();
   renderHistorial();
@@ -1544,20 +2282,54 @@ function toast(msg, tipo='green') {
    INIT
    ════════════════════════════════════════════════════ */
 
+/*
+  Todo lo que el panel necesita del servidor. Se llama al arrancar si ya hay
+  sesión, y otra vez después de loguearse: si se pide antes del login, cada
+  pedido vuelve 401 y el panel quedaba con la carta vacía y la grilla en blanco
+  hasta el próximo refresco.
+*/
+async function cargarDatosIniciales() {
+  if (!_USE_API) return;
+  if (typeof _syncEspacios === 'function') await _syncEspacios();
+  await Promise.all([
+    typeof cargarPersonal === 'function' ? cargarPersonal(true) : null,
+    typeof cargarCarta === 'function' ? cargarCarta('cancha', true) : null,
+    typeof cargarCarta === 'function' ? cargarCarta('mesa', true) : null,
+    cargarProfesoresCache()
+  ]);
+  if (typeof _syncReservasDesdeAPI === 'function') {
+    /* El rango largo viene sin el detalle de consumos y pagos (son megas de más);
+       el día que se está mirando sí se trae completo. */
+    await _syncReservasDesdeAPI();
+    await _syncReservasDelDia(getDateKey(currentDate));
+  }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   await authCheck();
   initPremios();
   tickClock();
   setInterval(tickClock, 10000);
+
+  /* authCheck ya validó el token contra el servidor: si escondió el login, hay sesión */
+  const conSesion = document.getElementById('login-overlay')?.classList.contains('hidden');
+  if (conSesion) await cargarDatosIniciales();
+
   if (typeof _syncReservasDesdeAPI === 'function') {
-    await _syncReservasDesdeAPI();
     setInterval(async () => {
-      await _syncReservasDesdeAPI();
+      /* No se refresca con un panel abierto: se perderia lo que se está cargando. */
+      if (activePanelInfo || _firmaAbierta()) return;
+      /* Solo el día que se está mirando: bajar dos meses cada 30s es un disparate. */
+      await _syncReservasDelDia(getDateKey(currentDate));
       renderTurnos();
     }, 30000);
   }
   renderTurnosView();
 });
+
+function _firmaAbierta() {
+  return !!document.querySelector('#nf-firma-overlay.visible');
+}
 
 /* ════════════════════════════════════════════════════
    PREMIOS — STORE COMPARTIDO

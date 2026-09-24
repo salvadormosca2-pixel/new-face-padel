@@ -4,31 +4,35 @@
 
 /* ─── 1. VARIABLES ─────────────────────────────────────────────── */
 :root {
-  --verde:          #1D9E75;
-  --verde-dk:       #178A64;
-  --verde-lt:       #E8F8F3;
-  --amarillo:       #EF9F27;
-  --amarillo-lt:    #FEF3E2;
-  --rojo:           #E24B4A;
-  --rojo-lt:        #FDEDED;
-  --gris:           #9CA3AF;
-  --gris-lt:        #F3F4F6;
-  --gris-borde:     #E5E7EB;
-  --negro:          #0F1117;
-  --sidebar-bg:     #111827;
-  --sidebar-hover:  #1F2937;
-  --sidebar-active: #1D9E75;
-  --blanco:         #FFFFFF;
-  --fondo:          #F9FAFB;
-  --texto:          #111827;
-  --texto-suave:    #6B7280;
-  --texto-xs:       #9CA3AF;
-  --radio:          12px;
-  --radio-sm:       8px;
-  --radio-lg:       16px;
-  --sombra-sm:      0 1px 3px rgba(0,0,0,.08);
-  --sombra:         0 4px 12px rgba(0,0,0,.08);
-  --sombra-lg:      0 8px 24px rgba(0,0,0,.12);
+  /*
+    Paleta de marca New Face. style.css es la base de todas las páginas;
+    el panel de administración redefine estos mismos tokens en .adm2-body.
+  */
+  --verde:          #C8FF00;
+  --verde-dk:       #A8D800;
+  --verde-lt:       rgba(200,255,0,0.10);
+  --amarillo:       #F5C242;
+  --amarillo-lt:    rgba(245,194,66,0.14);
+  --rojo:           #F26D6D;
+  --rojo-lt:        rgba(242,109,109,0.14);
+  --gris:           rgba(237,241,247,0.46);
+  --gris-lt:        rgba(255,255,255,0.05);
+  --gris-borde:     rgba(255,255,255,0.09);
+  --negro:          #07090F;
+  --sidebar-bg:     #0B0F17;
+  --sidebar-hover:  #111827;
+  --sidebar-active: #C8FF00;
+  --blanco:         #EDF1F7;
+  --fondo:          #0B0F17;
+  --texto:          #EDF1F7;
+  --texto-suave:    rgba(237,241,247,0.70);
+  --texto-xs:       rgba(237,241,247,0.46);
+  --radio:          14px;
+  --radio-sm:       10px;
+  --radio-lg:       18px;
+  --sombra-sm:      0 1px 3px rgba(0,0,0,.35);
+  --sombra:         0 6px 18px rgba(0,0,0,.35);
+  --sombra-lg:      0 16px 40px rgba(0,0,0,.5);
   --trans:          .18s ease;
 }
 
@@ -36,7 +40,7 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background: var(--fondo);
   color: var(--texto);
   font-size: 15px;
@@ -229,7 +233,7 @@ input, select, textarea { font-family: inherit; font-size: 15px; }
 .hero {
   margin-top: 68px;
   min-height: calc(100vh - 68px);
-  background: linear-gradient(135deg, #0c2940 0%, #0d3b2e 60%, #1D9E75 100%);
+  background: linear-gradient(135deg, #0F1B31 0%, #16264A 60%, rgba(200,255,0,0.35) 100%);
   display: flex; align-items: center; justify-content: center;
   text-align: center; padding: 60px 24px;
   position: relative; overflow: hidden;
@@ -316,7 +320,7 @@ input, select, textarea { font-family: inherit; font-size: 15px; }
   height: 140px; display: flex; align-items: center; justify-content: center;
   font-size: 52px;
 }
-.cancha-cubierta .cancha-card-header { background: linear-gradient(135deg, #0d3b2e, #1D9E75); }
+.cancha-cubierta .cancha-card-header { background: linear-gradient(135deg, #0F1B31, rgba(200,255,0,0.30)); }
 .cancha-libre    .cancha-card-header { background: linear-gradient(135deg, #14532d, #4ade80); }
 .cancha-card-body { padding: 20px; }
 .cancha-num { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
@@ -630,7 +634,7 @@ footer {
 /* Campeón */
 .campeon-display {
   text-align: center; padding: 48px 24px;
-  background: linear-gradient(135deg, var(--negro), #0d3b2e);
+  background: linear-gradient(135deg, var(--negro), #16264A);
   border-radius: var(--radio-lg); margin-top: 40px; color: white;
 }
 .campeon-trofeo { font-size: 64px; margin-bottom: 16px; }
@@ -1390,3 +1394,7 @@ details summary::-webkit-details-marker { display: none; }
   .prof-admin-grid { grid-template-columns: 1fr; }
   .profesores-grid { grid-template-columns: 1fr; }
 }
+
+
+/* Sobre lima, el texto va negro: blanco sobre lima no se lee */
+.btn-verde, .btn.btn-verde, .toast.toast-verde, .nav-logo-icon { color: #07090F !important; }

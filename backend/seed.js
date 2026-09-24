@@ -1,23 +1,23 @@
 const { Profesor, Torneo, Socio, Premio, ClubConfig } = require('./models');
+const { seedEspacios, seedUsuarios, seedProductos, seedMesas } = require('./lib/seed-nuevos');
 
 async function seedClub() {
   const count = await ClubConfig.count();
   if (count > 0) return;
   await ClubConfig.create({
-    nombre: 'New Face Padel Club',
-    direccion: 'Buenos Aires, Argentina',
-    telefono: '5491145678900',
-    whatsapp: '5491145678900',
-    email: 'info@newfacepadel.com',
-    redes: { instagram: '@newfacepadel', facebook: 'newfacepadel', tiktok: '' },
-    horarios: { lunesViernes: '15:00 a 00:00', sabados: '09:00 a 00:00', domingos: '09:00 a 00:00', feriados: '09:00 a 00:00' },
+    nombre: 'New Face Pádel Club',
+    direccion: 'Av. Ocampo 2100 (esq. Ojo de Agua), San Fernando del Valle de Catamarca',
+    telefono: '5493834406990',
+    whatsapp: '5493834406990',
+    email: '',
+    redes: { instagram: '@newface.ok', facebook: '', tiktok: '' },
+    horarios: { lunesViernes: 'Consultar', sabados: 'Consultar', domingos: 'Consultar', feriados: 'Consultar' },
     canchas: [
-      { numero: 1, tipo: 'Cubierta', techada: true },
-      { numero: 2, tipo: 'Cubierta', techada: true },
-      { numero: 3, tipo: 'Al aire libre', techada: false },
-      { numero: 4, tipo: 'Al aire libre', techada: false }
+      { numero: 1, tipo: 'Pádel', techada: false },
+      { numero: 2, tipo: 'Pádel', techada: false },
+      { numero: 3, tipo: 'Pádel', techada: false }
     ],
-    servicios: ['Estacionamiento', 'Vestuarios', 'Buffet', 'Pro Shop'],
+    servicios: ['Academia de pádel', 'Buffet', 'Clínicas', 'Tenis de mesa'],
     metodosPago: ['Efectivo', 'MercadoPago', 'Transferencia bancaria'],
     sistemaPuntos: { puntosPorReserva: 10, descripcion: 'Ganas puntos por cada reserva y los canjeas por premios.' }
   });
@@ -28,41 +28,12 @@ async function seedProfesores() {
   const count = await Profesor.count();
   if (count > 0) { console.log('Seed: profesores ya existen (' + count + ')'); return; }
   await Profesor.bulkCreate([
-    {
-      nombre: 'Carlos Rodriguez',
-      especialidad: 'Entrenamiento competitivo',
-      experiencia: '10 anos de trayectoria en torneos nacionales',
-      horarios: 'Lun a Vie 16:00-22:00',
-      whatsapp: '5491145678901',
-      alumnos: 24,
-      niveles: ['Intermedio', 'Avanzado'],
-      gruposEdad: ['Adultos', 'Senior'],
-      rating: 4.9
-    },
-    {
-      nombre: 'Valentina Lopez',
-      especialidad: 'Iniciacion y tecnica de base',
-      experiencia: '6 anos formando jugadores desde cero',
-      horarios: 'Mar, Jue y Sab 15:00-20:00',
-      whatsapp: '5491156781234',
-      alumnos: 18,
-      niveles: ['Principiante', 'Intermedio'],
-      gruposEdad: ['Ninos', 'Adultos'],
-      rating: 4.8
-    },
-    {
-      nombre: 'Javier Mendez',
-      especialidad: 'Tactica y juego en pareja',
-      experiencia: '8 anos como entrenador de dobles',
-      horarios: 'Lun, Mie y Vie 18:00-23:00',
-      whatsapp: '5491167891234',
-      alumnos: 15,
-      niveles: ['Intermedio', 'Avanzado'],
-      gruposEdad: ['Adultos'],
-      rating: 4.7
-    }
+    { nombre: 'Seba Bursi',           especialidad: 'Profe de pádel y amante del aire libre', experiencia: 'Academia New Face', horarios: 'Consultá por WhatsApp', whatsapp: '5493834351935', alumnos: 60, rating: 5, niveles: ['Principiante', 'Intermedio', 'Avanzado'], gruposEdad: ['Niños', 'Adultos'] },
+    { nombre: 'Valeria Sánchez Ruiz', especialidad: 'La profe',                                experiencia: 'Academia New Face', horarios: 'Consultá por WhatsApp', whatsapp: '5493834351935', alumnos: 55, rating: 5, niveles: ['Principiante', 'Intermedio'], gruposEdad: ['Niños', 'Adultos'] },
+    { nombre: 'Seba López Acuña',     especialidad: 'Un grande',                               experiencia: 'Academia New Face', horarios: 'Consultá por WhatsApp', whatsapp: '5493834351935', alumnos: 45, rating: 5, niveles: ['Intermedio', 'Avanzado'], gruposEdad: ['Adultos'] },
+    { nombre: 'Mario Galletti',       especialidad: 'El profe',                                experiencia: 'Academia New Face', horarios: 'Consultá por WhatsApp', whatsapp: '5493834351935', alumnos: 40, rating: 5, niveles: ['Principiante', 'Intermedio', 'Avanzado'], gruposEdad: ['Adultos'] }
   ]);
-  console.log('Seed: 3 profesores creados');
+  console.log('Seed: 4 profesores creados');
 }
 
 async function seedSocios() {
@@ -151,6 +122,10 @@ async function seedPremios() {
 
 async function seed() {
   const steps = [
+    ['Espacios',   seedEspacios],
+    ['Usuarios',   seedUsuarios],
+    ['Productos',  seedProductos],
+    ['Mesas',      seedMesas],
     ['ClubConfig', seedClub],
     ['Profesores', seedProfesores],
     ['Socios', seedSocios],

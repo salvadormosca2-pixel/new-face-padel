@@ -13,15 +13,81 @@ function _timeToMin(t) { const [h,m]=t.split(':').map(Number); return h*60+m; }
 function _minToTime(m) { const h=Math.floor(m/60)%24; return String(h).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); }
 function _cierreMin() { const c=_timeToMin(HORA_CIERRE); return c<=_timeToMin(HORA_APERTURA)?c+1440:c; }
 
-/* ─── CANCHAS CONFIG ────────────────────────────────────── */
+/* ─── ESPACIOS (canchas, mesas, pickleball, beach volley) ──
+   Se llena desde /api/espacios al arrancar. El array se muta en el lugar
+   para que quien lo haya capturado por referencia siga viendo lo mismo.
+   ──────────────────────────────────────────────────────────── */
 const CANCHAS_CONFIG = [
-  { id:1, nombre:'Cancha 1', tipo:'Interior', precioHora:5000, activa:true },
-  { id:2, nombre:'Cancha 2', tipo:'Interior', precioHora:5000, activa:true },
-  { id:3, nombre:'Cancha 3', tipo:'Exterior', precioHora:4000, activa:true },
-  { id:4, nombre:'Cancha 4', tipo:'Exterior', precioHora:4000, activa:true },
+  { id:1, nombre:'Cancha 1', tipo:'Pádel',         deporte:'padel', precioHora:5000, duracionMinima:60, activa:true },
+  { id:2, nombre:'Cancha 2', tipo:'Pádel',         deporte:'padel', precioHora:5000, duracionMinima:60, activa:true },
+  { id:3, nombre:'Cancha 3', tipo:'Pádel',         deporte:'padel', precioHora:4000, duracionMinima:60, activa:true },
 ];
 const HORA_APERTURA = '15:00';
 const HORA_CIERRE   = '00:00';
+
+/* Deportes del club. El lima #C8FF00 es la marca: solo el padel, que es el club. */
+const DEPORTES = {
+  padel:        { nombre:'Pádel',         emoji:'🎾', color:'#C8FF00', duraciones:[60,90,120] },
+  tenis_mesa:   { nombre:'Tenis de mesa', emoji:'🏓', color:'#FF8A3D', duraciones:[30,60,90] },
+  pickleball:   { nombre:'Pickleball',    emoji:'🥒', color:'#00D4E5', duraciones:[60,90,120] },
+  beach_volley: { nombre:'Beach vóley',   emoji:'🏐', color:'#FFC53D', duraciones:[60,90,120] },
+};
+
+/*
+  De donde salio el turno: define el color de la franja en la grilla.
+  Son colores de dato, no de marca: ninguno usa lima, para que el acento
+  de la marca no se diluya entre siete tonos.
+*/
+const ORIGENES = {
+  mostrador: { nombre:'Mostrador', emoji:'🏠', color:'#7DD3FC', descripcion:'Cargado a mano en el club' },
+  profesor:  { nombre:'Profesor',  emoji:'🎓', color:'#B57BFF', descripcion:'Clase con profesor' },
+  online:    { nombre:'Online',    emoji:'🌐', color:'#4DA3FF', descripcion:'Reserva desde la web' },
+  whatsapp:  { nombre:'WhatsApp',  emoji:'💬', color:'#25D366', descripcion:'Entró por el bot de WhatsApp' },
+  fijo:      { nombre:'Fijo',      emoji:'🔁', color:'#FFC53D', descripcion:'Grupo fijo / abonado semanal' },
+  torneo:    { nombre:'Torneo',    emoji:'🏆', color:'#FF5A5A', descripcion:'Cancha tomada por torneo o evento' },
+  bloqueo:   { nombre:'Bloqueado', emoji:'🚧', color:'#8296B0', descripcion:'Mantenimiento, lluvia, fuera de servicio' },
+};
+
+const METODOS_PAGO = {
+  efectivo:      { nombre:'Efectivo',      emoji:'💵', color:'#00E58A' },
+  transferencia: { nombre:'Transferencia', emoji:'🏦', color:'#4DA3FF' },
+  mercadopago:   { nombre:'MercadoPago',   emoji:'💳', color:'#B57BFF' },
+  tarjeta:       { nombre:'Tarjeta',       emoji:'🪪', color:'#FF8A3D' },
+};
+
+function origenInfo(id)  { return ORIGENES[id]     || { nombre:id||'—', emoji:'📌', color:'#64748b' }; }
+function deporteInfo(id) { return DEPORTES[id]     || { nombre:id||'—', emoji:'🎯', color:'#64748b', duraciones:[60,90,120] }; }
+function metodoInfo(id)  { return METODOS_PAGO[id] || { nombre:id||'—', emoji:'💰', color:'#64748b' }; }
+
+function espaciosDe(deporte) {
+  return CANCHAS_CONFIG.filter(e => !deporte || (e.deporte || 'padel') === deporte);
+}
+function deportesConEspacios() {
+  const vistos = [];
+  CANCHAS_CONFIG.forEach(e => { const d = e.deporte || 'padel'; if (!vistos.includes(d)) vistos.push(d); });
+  return vistos;
+}
+
+/* Trae los espacios reales del backend y reemplaza el contenido del array. */
+async function _syncEspacios() {
+  if (DEMO_MODE) return CANCHAS_CONFIG;
+  try {
+    const lista = await _fetch('/api/espacios');
+    if (Array.isArray(lista) && lista.length) {
+      CANCHAS_CONFIG.length = 0;
+      lista.forEach(e => CANCHAS_CONFIG.push({
+        id: e.id, nombre: e.nombre, tipo: e.tipo,
+        deporte: e.deporte || 'padel',
+        precioHora: e.precioHora,
+        duracionMinima: e.duracionMinima || 60,
+        activa: true
+      }));
+    }
+  } catch (e) {
+    console.warn('No se pudieron cargar los espacios, se usan los de fábrica:', e.message);
+  }
+  return CANCHAS_CONFIG;
+}
 
 /* ─── RESERVATIONS DB (localStorage) ───────────────────── */
 const RESERVAS_DB_KEY = 'nf_padel_reservas_v3';
@@ -42,7 +108,8 @@ function _calcPrecio(canchaId, duracionMin) {
 /* ─── AVAILABILITY ALGORITHM (inteligente: evita huecos muertos) ── */
 const _MIN_TURNO = 60;
 
-function _creaHuecoMuerto(reservas, canchaId, slotStart, slotEnd, apertura, cierre) {
+function _creaHuecoMuerto(reservas, canchaId, slotStart, slotEnd, minTurno) {
+  const min = minTurno || _MIN_TURNO;
   const court = reservas
     .filter(r => r.cancha_id === canchaId)
     .map(r => {
@@ -58,49 +125,59 @@ function _creaHuecoMuerto(reservas, canchaId, slotStart, slotEnd, apertura, cier
   for (const r of court) { if (r.end <= slotStart) prevEnd = r.end; }
   if (prevEnd !== null) {
     const gapBefore = slotStart - prevEnd;
-    if (gapBefore > 0 && gapBefore < _MIN_TURNO) return true;
+    if (gapBefore > 0 && gapBefore < min) return true;
   }
 
   let nextStart = null;
   for (const r of court) { if (r.start >= slotEnd) { nextStart = r.start; break; } }
   if (nextStart !== null) {
     const gapAfter = nextStart - slotEnd;
-    if (gapAfter > 0 && gapAfter < _MIN_TURNO) return true;
+    if (gapAfter > 0 && gapAfter < min) return true;
   }
 
   return false;
 }
 
-function _calcDisponibilidad(fecha, duracionMinutos) {
-  const resultados = [];
+/*
+  Disponibilidad calculada en el navegador sobre las reservas ya sincronizadas,
+  para que la grilla responda al toque sin esperar al backend.
+  Cada espacio usa su propio turno minimo: una mesa de ping pong ofrece 30'.
+*/
+function _calcDisponibilidad(fecha, duracionMinutos, deporte) {
+  const porHora  = new Map();
   const apertura = _timeToMin(HORA_APERTURA);
-  const cierre = _cierreMin();
+  const cierre   = _cierreMin();
   const reservas = _reservasDB.filter(r => r.fecha === fecha && r.estado_reserva !== 'cancelada');
 
-  for (let t = apertura; t + duracionMinutos <= cierre; t += 30) {
-    const canchasLibres = [];
-    CANCHAS_CONFIG.forEach(cancha => {
-      if (!cancha.activa) return;
+  espaciosDe(deporte).forEach(cancha => {
+    if (cancha.activa === false) return;
+    const minTurno = cancha.duracionMinima || 60;
+    if (duracionMinutos < minTurno) return;
+
+    for (let t = apertura; t + duracionMinutos <= cierre; t += 30) {
       const chocan = reservas.some(r =>
         r.cancha_id === cancha.id &&
         _timeToMin(r.hora_inicio) < t + duracionMinutos &&
         _timeToMin(r.hora_fin) > t
       );
-      if (chocan) return;
-      if (_creaHuecoMuerto(reservas, cancha.id, t, t + duracionMinutos, apertura, cierre)) return;
-      canchasLibres.push({ id:cancha.id, nombre:cancha.nombre, tipo:cancha.tipo });
-    });
-    if (canchasLibres.length > 0) {
-      resultados.push({
-        hora_inicio: _minToTime(t),
-        hora_fin: _minToTime(t + duracionMinutos),
-        canchas_disponibles: canchasLibres.length,
-        canchas: canchasLibres,
-        precio_total: _calcPrecio(canchasLibres[0].id, duracionMinutos)
-      });
+      if (chocan) continue;
+      if (_creaHuecoMuerto(reservas, cancha.id, t, t + duracionMinutos, minTurno)) continue;
+
+      if (!porHora.has(t)) porHora.set(t, []);
+      porHora.get(t).push({ id:cancha.id, nombre:cancha.nombre, tipo:cancha.tipo, deporte:cancha.deporte || 'padel' });
     }
-  }
-  return resultados;
+  });
+
+  return [...porHora.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([t, canchas]) => ({
+      hora_inicio: _minToTime(t),
+      hora_fin: _minToTime(t + duracionMinutos),
+      canchas_disponibles: canchas.length,
+      canchas,
+      deporte: deporte || null,
+      precio_total: _calcPrecio(canchas[0].id, duracionMinutos)
+    }));
 }
 
 /* ─── DEMO RESERVATIONS GENERATOR ──────────────────────── */
@@ -192,7 +269,10 @@ async function _fetch(endpoint, opts = {}) {
   const res = await fetch(API_URL + endpoint, { ...opts, headers });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || 'Error del servidor');
+    const err = new Error(body.error || 'Error del servidor');
+    err.status = res.status;
+    Object.assign(err, body);
+    throw err;
   }
   return res.json();
 }
@@ -425,45 +505,10 @@ const _demo = {
   ],
 
   profesores: [
-    {
-      _id: 'prof-1',
-      nombre: 'Carlos Rodríguez',
-      especialidad: 'Entrenamiento competitivo',
-      experiencia: '10 años de trayectoria en torneos nacionales',
-      horarios: 'Lun a Vie 16:00–22:00',
-      alumnos: 24,
-      whatsapp: '5491145678901',
-      niveles: ['Intermedio', 'Avanzado'],
-      gruposEdad: ['Adultos', 'Senior'],
-      rating: 4.9,
-      imagen: '',
-    },
-    {
-      _id: 'prof-2',
-      nombre: 'Valentina López',
-      especialidad: 'Iniciación y técnica de base',
-      experiencia: '6 años formando jugadores desde cero',
-      horarios: 'Mar, Jue y Sáb 15:00–20:00',
-      alumnos: 18,
-      whatsapp: '5491156781234',
-      niveles: ['Principiante', 'Intermedio'],
-      gruposEdad: ['Niños', 'Adultos'],
-      rating: 4.8,
-      imagen: '',
-    },
-    {
-      _id: 'prof-3',
-      nombre: 'Javier Méndez',
-      especialidad: 'Táctica y juego en pareja',
-      experiencia: '8 años como entrenador de dobles',
-      horarios: 'Lun, Mié y Vie 18:00–23:00',
-      alumnos: 15,
-      whatsapp: '5491167891234',
-      niveles: ['Intermedio', 'Avanzado'],
-      gruposEdad: ['Adultos'],
-      rating: 4.7,
-      imagen: '',
-    },
+    { _id: 'prof-1', nombre: 'Seba Bursi', especialidad: 'Profe de pádel y amante del aire libre', experiencia: 'Academia New Face', horarios: 'Consultá por WhatsApp', alumnos: 60, whatsapp: '5493834351935', niveles: ['Principiante', 'Intermedio', 'Avanzado'], gruposEdad: ['Adultos'], rating: 5, imagen: '' },
+    { _id: 'prof-2', nombre: 'Valeria Sánchez Ruiz', especialidad: 'La profe', experiencia: 'Academia New Face', horarios: 'Consultá por WhatsApp', alumnos: 55, whatsapp: '5493834351935', niveles: ['Principiante', 'Intermedio'], gruposEdad: ['Adultos'], rating: 5, imagen: '' },
+    { _id: 'prof-3', nombre: 'Seba López Acuña', especialidad: 'Un grande', experiencia: 'Academia New Face', horarios: 'Consultá por WhatsApp', alumnos: 45, whatsapp: '5493834351935', niveles: ['Intermedio', 'Avanzado'], gruposEdad: ['Adultos'], rating: 5, imagen: '' },
+    { _id: 'prof-4', nombre: 'Mario Galletti', especialidad: 'El profe', experiencia: 'Academia New Face', horarios: 'Consultá por WhatsApp', alumnos: 40, whatsapp: '5493834351935', niveles: ['Principiante', 'Intermedio', 'Avanzado'], gruposEdad: ['Adultos'], rating: 5, imagen: '' },
   ],
 
   socios: [
@@ -485,7 +530,6 @@ const _demo = {
       { num: 1, tipo: 'Cubierta', jugando: true, jugadores: 'Martín G. / Lucas H.', prox: '19:00 — Sebastián M.' },
       { num: 2, tipo: 'Cubierta', jugando: false, jugadores: null, prox: '16:00 — Carla M.' },
       { num: 3, tipo: 'Aire libre', jugando: true, jugadores: 'Roberto D. / Gustavo R.', prox: '17:00 — Gustavo R.' },
-      { num: 4, tipo: 'Aire libre', jugando: false, jugadores: null, prox: '16:00 — Fernando C.' },
     ],
     metodos: [
       { nombre: 'Efectivo', monto: 14000, porcentaje: 51 },
@@ -638,6 +682,51 @@ const _apiDemo = {
   quitarTurno: async ({ id }) => {
     return _apiDemo.cancelarReserva({ id });
   },
+
+  /* ── Modo demo: lo nuevo es de solo lectura ──
+     El panel real corre con __DEMO_MODE__ = false; esto evita que una pagina
+     sin backend rompa al tocar una pantalla nueva. */
+
+  getUsuarios: async () => {
+    await _delay(200);
+    return [{ id: 1, nombre: 'Demo (dueño)', rol: 'dueno', rolNombre: 'Dueño', nivel: 3, activo: true, color: '#f59e0b', permisos: ['*'], tienePin: true }];
+  },
+  getRoles: async () => ({ roles: [], acciones: {} }),
+  getProductos: async () => {
+    await _delay(200);
+    return [
+      { id: 1, nombre: 'Agua 500ml', categoria: 'bebida', emoji: '💧', precio: 1500, stock: 48, stockMinimo: 12, controlaStock: true, activo: true },
+      { id: 2, nombre: 'Gatorade',   categoria: 'bebida', emoji: '🧃', precio: 2500, stock: 24, stockMinimo: 6,  controlaStock: true, activo: true },
+      { id: 3, nombre: 'Alfajor',    categoria: 'comida', emoji: '🍫', precio: 1800, stock: 30, stockMinimo: 8,  controlaStock: true, activo: true },
+    ];
+  },
+  getEspacios: async () => CANCHAS_CONFIG.map(c => ({ ...c, deporteNombre: deporteInfo(c.deporte).nombre })),
+  getCategoriasProducto: async () => [{ id: 'bebida', nombre: 'Bebidas' }, { id: 'comida', nombre: 'Comida' }],
+  getMetodosPago: async () => Object.entries(METODOS_PAGO).map(([id, m]) => ({ id, ...m })),
+  getAuditoria: async () => [],
+  getAuditoriaResumen: async () => ({ personas: [] }),
+  getCaja: async () => ({ cobrado: 0, facturado: 0, porCobrar: 0, efectivo: 0, transferencia: 0, porMetodo: [], porUsuario: [], porOrigen: [], movimientos: [], faltasDetalle: [], turnos: 0, faltas: 0, totalCanchas: 0, totalBuffet: 0 }),
+  getCajaRango: async () => _apiDemo.getCaja(),
+  getVentasBuffet: async () => ({ total: 0, costo: 0, ganancia: 0, margen: 0, unidades: 0, anulado: 0, anuladasCantidad: 0, porProducto: [], porCategoria: [], porUsuario: [], sinStock: [], stockBajo: [] }),
+  getFijos: async () => [],
+  estadoAsistente: async () => ({ disponible: false, modelo: '' }),
+  preguntarAsistente: async () => { throw new Error('El asistente necesita el servidor'); },
+  getCocina: async () => ({ comandas: [], resumen: { nuevas:0, preparando:0, listas:0, platos:0, demoradas:0 } }),
+  getMesas: async () => [],
+  getHistorialMesas: async () => ({ cuentas: [], facturado: 0, cobrado: 0, cerradasSinCobrar: [] }),
+  getSinCobrar: async () => ({ totalSinCobrar: 0, perdidoEnFaltas: 0, cantidadFaltas: 0, cantidadSinCobrar: 0, faltas: [], jugadosSinCobrar: [], porCliente: [] }),
+  getCuenta: async (rid) => {
+    const r = _reservasDB.find(x => String(x.id) === String(rid)) || {};
+    return { totalCancha: r.monto || 0, totalConsumo: 0, totalAPagar: r.monto || 0, totalPagado: 0, saldo: r.monto || 0, consumiciones: [], pagos: [], porMetodo: {} };
+  },
+  getConsumiciones: async () => [],
+  verificarPin: async () => ({ ok: true, usuario: { id: 1, nombre: 'Demo (dueño)', rol: 'dueno', permisos: ['*'] } }),
+  marcarAsistencia: async ({ id, asistencia }) => {
+    const r = _reservasDB.find(x => x.id === id);
+    if (r) { r.asistencia = asistencia; _saveReservasDB(); }
+    return r || { ok: true };
+  },
+  _demoNoDisponible: () => { throw new Error('Esta función necesita el servidor (modo demo)'); },
 
   /* ── Torneos ── */
 
@@ -943,30 +1032,121 @@ const _apiReal = {
   getReservasAdmin: (fecha) =>
     _fetch('/api/admin/reservas/' + (fecha || hoy())),
 
-  agregarReservaAdmin: (datos) =>
-    _fetch('/api/admin/reserva', { method: 'POST', body: JSON.stringify(datos) }),
+  agregarReservaAdmin: (datos, firma) =>
+    _fetch('/api/admin/reserva', { method: 'POST', body: JSON.stringify({ ...datos, ...firma }) }),
 
-  agregarTurnoAdmin: (datos) =>
-    _fetch('/api/admin/reserva', { method: 'POST', body: JSON.stringify(datos) }),
+  agregarTurnoAdmin: (datos, firma) =>
+    _fetch('/api/admin/reserva', { method: 'POST', body: JSON.stringify({ ...datos, ...firma }) }),
 
-  marcarPagado: async ({ id, metodoPago }) => {
-    const body = { metodoPago };
+  marcarPagado: async ({ id, metodoPago, estado, monto }, firma) => {
+    const body = { metodoPago, estado, monto, ...firma };
     if (/^\d+$/.test(String(id))) body.id = parseInt(id);
     else body.claveUnica = id;
-    const r = await _fetch('/api/admin/pago', { method: 'PATCH', body: JSON.stringify(body) });
-    return r;
+    return _fetch('/api/admin/pago', { method: 'PATCH', body: JSON.stringify(body) });
   },
 
-  cancelarReserva: async ({ id }) => {
-    const body = {};
+  cancelarReserva: async ({ id, motivo }, firma) => {
+    const body = { motivo, ...firma };
     if (/^\d+$/.test(String(id))) body.id = parseInt(id);
     else body.claveUnica = id;
-    const r = await _fetch('/api/admin/reserva', { method: 'DELETE', body: JSON.stringify(body) });
-    return r;
+    return _fetch('/api/admin/reserva', { method: 'DELETE', body: JSON.stringify(body) });
   },
 
   quitarTurno: (datos) =>
     _fetch('/api/admin/reserva', { method: 'DELETE', body: JSON.stringify(datos) }),
+
+  /* ── Personal, PIN y auditoria ──
+     Toda mutacion sensible viaja firmada: { usuarioId, pin } se mezcla en el body.
+     El panel pide el PIN DESPUES de armar la accion. */
+
+  getUsuarios:      (todos)       => _fetch('/api/admin/usuarios' + (todos ? '?todos=1' : '')),
+  getRoles:         ()            => _fetch('/api/admin/roles'),
+  verificarPin:     (d)           => _fetch('/api/admin/usuarios/verificar', { method: 'POST', body: JSON.stringify(d) }),
+  crearUsuario:     (d, f)        => _fetch('/api/admin/usuarios', { method: 'POST', body: JSON.stringify({ ...d, ...f }) }),
+  editarUsuario:    (id, d, f)    => _fetch('/api/admin/usuarios/' + id, { method: 'PATCH', body: JSON.stringify({ ...d, ...f }) }),
+  bajaUsuario:      (id, f)       => _fetch('/api/admin/usuarios/' + id, { method: 'DELETE', body: JSON.stringify({ ...f }) }),
+
+  getAuditoria:     (params = {}) => _fetch('/api/admin/auditoria?' + new URLSearchParams(params)),
+  getAuditoriaResumen: (desde, hasta) => _fetch(`/api/admin/auditoria/resumen?desde=${desde}&hasta=${hasta}`),
+
+  /* ── Espacios (canchas, mesas, pickleball, beach volley) ── */
+
+  getEspacios:      (todos)       => _fetch('/api/admin/espacios' + (todos ? '?todos=1' : '')),
+  crearEspacio:     (d, f)        => _fetch('/api/admin/espacios', { method: 'POST', body: JSON.stringify({ ...d, ...f }) }),
+  editarEspacio:    (id, d, f)    => _fetch('/api/admin/espacios/' + id, { method: 'PATCH', body: JSON.stringify({ ...d, ...f }) }),
+  bajaEspacio:      (id, f)       => _fetch('/api/admin/espacios/' + id, { method: 'DELETE', body: JSON.stringify({ ...f }) }),
+
+  /* ── Buffet ── */
+
+  getProductos:     (todos, donde) => {
+    const q = [];
+    if (todos) q.push('todos=1');
+    if (donde) q.push('donde=' + donde);
+    return _fetch('/api/admin/productos' + (q.length ? '?' + q.join('&') : ''));
+  },
+  getCategoriasProducto: ()       => _fetch('/api/admin/productos/categorias'),
+  crearProducto:    (d, f)        => _fetch('/api/admin/productos', { method: 'POST', body: JSON.stringify({ ...d, ...f }) }),
+  editarProducto:   (id, d, f)    => _fetch('/api/admin/productos/' + id, { method: 'PATCH', body: JSON.stringify({ ...d, ...f }) }),
+  reponerStock:     (id, d, f)    => _fetch('/api/admin/productos/' + id + '/stock', { method: 'POST', body: JSON.stringify({ ...d, ...f }) }),
+  bajaProducto:     (id, f)       => _fetch('/api/admin/productos/' + id, { method: 'DELETE', body: JSON.stringify({ ...f }) }),
+  getVentasBuffet:  (desde, hasta) => _fetch(`/api/admin/buffet/ventas?desde=${desde}&hasta=${hasta}`),
+  getSinCobrar:     (desde, hasta) => _fetch(`/api/admin/sin-cobrar?desde=${desde}&hasta=${hasta}`),
+
+  /* ── Consumiciones del turno ── */
+
+  getConsumiciones: (rid)         => _fetch('/api/admin/reserva/' + rid + '/consumiciones'),
+  cargarConsumiciones: (rid, items, f) =>
+    _fetch('/api/admin/reserva/' + rid + '/consumiciones', { method: 'POST', body: JSON.stringify({ items, ...f }) }),
+  anularConsumicion: (id, f)      => _fetch('/api/admin/consumicion/' + id, { method: 'DELETE', body: JSON.stringify({ ...f }) }),
+
+  /* ── Cuenta y cobros divididos ── */
+
+  getCuenta:        (rid)         => _fetch('/api/admin/reserva/' + rid + '/pagos'),
+  registrarPago:    (rid, d, f)   => _fetch('/api/admin/reserva/' + rid + '/pago', { method: 'POST', body: JSON.stringify({ ...d, ...f }) }),
+  registrarPagos:   (rid, pagos, f) => _fetch('/api/admin/reserva/' + rid + '/pagos', { method: 'POST', body: JSON.stringify({ pagos, ...f }) }),
+  anularPago:       (id, f)       => _fetch('/api/admin/pago/' + id, { method: 'DELETE', body: JSON.stringify({ ...f }) }),
+  getMetodosPago:   ()            => _fetch('/api/admin/metodos-pago'),
+
+  /* ── Turnos fijos ── */
+
+  getFijos:      (todos)     => _fetch('/api/admin/fijos' + (todos ? '?todos=1' : '')),
+  crearFijo:     (d, f)      => _fetch('/api/admin/fijos', { method: 'POST', body: JSON.stringify({ ...d, ...f }) }),
+  editarFijo:    (id, d, f)  => _fetch('/api/admin/fijos/' + id, { method: 'PATCH', body: JSON.stringify({ ...d, ...f }) }),
+  borrarFijo:    (id, f)     => _fetch('/api/admin/fijos/' + id, { method: 'DELETE', body: JSON.stringify({ ...f }) }),
+  regenerarFijo: (id, f)     => _fetch('/api/admin/fijos/' + id + '/regenerar', { method: 'POST', body: JSON.stringify({ ...f }) }),
+
+  /* ── Asistente del dueño ── */
+  estadoAsistente:  ()                    => _fetch('/api/admin/asistente/estado'),
+  preguntarAsistente:(mensaje, historial) => _fetch('/api/admin/asistente', { method: 'POST', body: JSON.stringify({ mensaje, historial }) }),
+
+  /* ── Cocina ── */
+
+  getCocina:        (fecha, entregadas) => _fetch('/api/admin/cocina?fecha=' + (fecha || hoy()) + (entregadas ? '&entregadas=1' : '')),
+  estadoComanda:    (id, estado, quien) => _fetch('/api/admin/comanda/' + id + '/estado', { method: 'PATCH', body: JSON.stringify({ estado, quien }) }),
+  estadoItemComanda:(id, estadoCocina)  => _fetch('/api/admin/comanda/item/' + id, { method: 'PATCH', body: JSON.stringify({ estadoCocina }) }),
+  getCocinaHistorial: (fecha)           => _fetch('/api/admin/cocina/historial?fecha=' + (fecha || hoy())),
+
+  /* ── Salón: mesas y cuentas ── */
+
+  getMesas:          (todas)        => _fetch('/api/admin/mesas' + (todas ? '?todas=1' : '')),
+  getCuenta:         (id)           => _fetch('/api/admin/cuenta/' + id),
+  abrirMesa:         (id, d, f)     => _fetch('/api/admin/mesas/' + id + '/abrir', { method: 'POST', body: JSON.stringify({ ...d, ...f }) }),
+  cerrarCuenta:      (id, d, f)     => _fetch('/api/admin/cuenta/' + id + '/cerrar', { method: 'POST', body: JSON.stringify({ ...d, ...f }) }),
+  cargarEnMesa:      (id, items, f) => _fetch('/api/admin/cuenta/' + id + '/consumiciones', { method: 'POST', body: JSON.stringify({ items, ...f }) }),
+  cobrarEnMesa:      (id, d, f)     => _fetch('/api/admin/cuenta/' + id + '/pago', { method: 'POST', body: JSON.stringify({ ...d, ...f }) }),
+  cobrarVariosEnMesa:(id, pagos, f) => _fetch('/api/admin/cuenta/' + id + '/pagos', { method: 'POST', body: JSON.stringify({ pagos, ...f }) }),
+  getHistorialMesas: (desde, hasta) => _fetch(`/api/admin/mesas/historial?desde=${desde}&hasta=${hasta}`),
+
+  /* ── Caja ── */
+
+  getCaja:          (fecha)       => _fetch('/api/admin/caja/' + fecha),
+  getCajaRango:     (desde, hasta) => _fetch(`/api/admin/caja?desde=${desde}&hasta=${hasta}`),
+  cerrarCaja:       (d, f)        => _fetch('/api/admin/caja/cerrar', { method: 'POST', body: JSON.stringify({ ...d, ...f }) }),
+
+  /* ── Turno: asistencia y edicion ── */
+
+  marcarAsistencia: (d, f)        => _fetch('/api/admin/reserva/asistencia', { method: 'PATCH', body: JSON.stringify({ ...d, ...f }) }),
+  editarReserva:    (d, f)        => _fetch('/api/admin/reserva', { method: 'PATCH', body: JSON.stringify({ ...d, ...f }) }),
 
   /* ── Torneos ── */
 
@@ -1098,6 +1278,59 @@ const _apiReal = {
 
 /* ─── SYNC: cargar reservas desde API al formato local ─── */
 
+/* Una fila del backend al formato que usa el panel */
+function _normalizarReserva(r) {
+  return {
+    id: r.claveUnica || String(r.id),
+    dbId: r.id,
+    cancha_id: r.cancha_id,
+    cancha_nombre: r.cancha_nombre || '',
+    deporte: r.deporte || 'padel',
+    fecha: r.fecha,
+    hora_inicio: r.hora_inicio,
+    hora_fin: r.hora_fin,
+    duracion_minutos: r.duracion_minutos || 60,
+    cliente_nombre: r.cliente_nombre,
+    cliente_telefono: r.cliente_telefono || '',
+    estado_pago: r.estado_pago || 'pendiente',
+    estado_reserva: r.estado_reserva || 'confirmada',
+    metodo_pago: r.metodo_pago || null,
+    monto: r.monto || 0,
+    origen: r.origen || 'mostrador',
+    asistencia: r.asistencia || 'pendiente',
+    profesor_id: r.profesor_id || null,
+    profesor_nombre: r.profesor_nombre || '',
+    notas: r.notas || '',
+    creado_por: r.creado_por || '',
+    consumiciones: r.consumiciones || [],
+    pagos: r.pagos || [],
+    por_metodo: r.por_metodo || null,
+    total_cancha: r.total_cancha ?? (r.monto || 0),
+    total_consumiciones: r.total_consumiciones || 0,
+    total_a_pagar: r.total_a_pagar ?? (r.monto || 0),
+    total_pagado: r.total_pagado || 0,
+    saldo: r.saldo ?? (r.monto || 0),
+    created_at: r.createdAt || r.fecha
+  };
+}
+
+/*
+  Refresco del dia que se esta mirando: trae ese dia completo, con consumiciones y
+  pagos. Es lo que corre cada 30 segundos, en vez de bajar dos meses de historial.
+*/
+async function _syncReservasDelDia(fecha) {
+  if (DEMO_MODE) return;
+  try {
+    const data = await _fetch('/api/admin/reservas/' + fecha);
+    if (!Array.isArray(data)) return;
+    _reservasDB = _reservasDB.filter(r => r.fecha !== fecha).concat(data.map(_normalizarReserva));
+    _saveReservasDB();
+  } catch (e) {
+    console.warn('No se pudo refrescar el día:', e.message);
+  }
+}
+
+
 async function _syncReservasDesdeAPI() {
   if (DEMO_MODE) return;
   try {
@@ -1108,35 +1341,43 @@ async function _syncReservasDesdeAPI() {
     const hasta = d2.toISOString().split('T')[0];
     const data = await _fetch('/api/admin/reservas?desde=' + desde + '&hasta=' + hasta);
     if (!Array.isArray(data)) return;
-    _reservasDB = data.map(r => ({
-      id: r.claveUnica || String(r.id),
-      cancha_id: r.cancha_id,
-      fecha: r.fecha,
-      hora_inicio: r.hora_inicio,
-      hora_fin: r.hora_fin,
-      duracion_minutos: r.duracion_minutos || 60,
-      cliente_nombre: r.cliente_nombre,
-      cliente_telefono: r.cliente_telefono || '',
-      estado_pago: r.estado_pago || 'pendiente',
-      estado_reserva: r.estado_reserva || 'confirmada',
-      metodo_pago: r.metodo_pago || null,
-      monto: r.monto || 0,
-      created_at: r.createdAt || r.fecha
-    }));
+    _reservasDB = data.map(_normalizarReserva);
     _saveReservasDB();
   } catch (e) {
     console.warn('No se pudo sincronizar reservas desde API:', e.message);
   }
 }
 
-/* ─── INIT RESERVAS ─────────────────────────────────────── */
+/* ─── INIT ──────────────────────────────────────────────── */
 _loadReservasDB();
+if (!DEMO_MODE) _syncEspacios();
 if (DEMO_MODE && _reservasDB.length === 0) {
   _reservasDB = [..._generarReservasDemo(), ..._generarHistorialReservas()];
   _saveReservasDB();
 }
 
+['crearUsuario','editarUsuario','bajaUsuario','crearEspacio','editarEspacio','bajaEspacio',
+ 'crearProducto','editarProducto','reponerStock','bajaProducto','cargarConsumiciones',
+ 'anularConsumicion','registrarPago','anularPago','cerrarCaja','editarReserva',
+ 'abrirMesa','cerrarCuenta','cargarEnMesa','cobrarEnMesa','cobrarVariosEnMesa','registrarPagos',
+ 'crearFijo','editarFijo','borrarFijo','regenerarFijo']
+  .forEach(m => { if (!_apiDemo[m]) _apiDemo[m] = _apiDemo._demoNoDisponible; });
+
 const api = DEMO_MODE ? _apiDemo : _apiReal;
+
+/* ─── ERRORES VISIBLES ───────────────────────────────────────
+   Un error de JavaScript no puede quedar mudo en la consola: el que atiende
+   el mostrador tiene que ver un cartel con el motivo, y el dueño poder
+   decir "me salió tal cosa". */
+window.addEventListener('error', ev => {
+  const msg = (ev && ev.message) ? ev.message : 'Error inesperado';
+  if (typeof toast === 'function') toast('Error: ' + msg.slice(0, 140), 'rojo');
+});
+window.addEventListener('unhandledrejection', ev => {
+  const r = ev && ev.reason;
+  const msg = r && r.message ? r.message : String(r || 'Error inesperado');
+  if (typeof toast === 'function') toast('Error: ' + msg.slice(0, 140), 'rojo');
+});
 
 /* ─── UTILIDADES GLOBALES ─────────────────────────────────── */
 

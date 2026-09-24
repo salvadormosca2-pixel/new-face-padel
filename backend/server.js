@@ -36,17 +36,10 @@ app.use('/api/admin', (req, res, next) => {
   }
 });
 
-app.use('/', require('./routes/auth'));
-app.use('/', require('./routes/reservas'));
-app.use('/', require('./routes/torneos'));
-app.use('/', require('./routes/profesores'));
-app.use('/', require('./routes/socios'));
-app.use('/', require('./routes/ingresos'));
-app.use('/', require('./routes/club'));
-app.use('/', require('./routes/premios'));
-app.use('/', require('./routes/bot'));
+require('./routes')
+  .forEach(nombre => app.use('/', require('./routes/' + nombre)));
 
-app.get('/', (_req, res) => res.json({ status: 'ok', club: 'New Face Padel Club', version: '2.0.0' }));
+app.get('/', (_req, res) => res.json({ status: 'ok', club: 'New Face Padel Club', version: '3.0.0' }));
 
 app.use((_req, res) => res.status(404).json({ error: 'Ruta no encontrada' }));
 
@@ -96,9 +89,70 @@ async function migrateReservas() {
   }
 }
 
-migrateReservas().then(() => sequelize.sync({ alter: true })).then(async () => {
+/*
+  Las reservas que ya estaban cobradas no tienen fila en pagos: sin esto la caja
+  arrancaria en cero y se perderia el historial de efectivo/transferencia.
+*/
+/* Por si el ALTER dejó nulos en las columnas nuevas de reservas ya cargadas. */
+/*
+  Una mesa no puede tener dos cuentas abiertas. Sequelize no sabe expresar un
+  índice parcial, así que va a mano: sin esto dos mozos abren la misma mesa dos
+  veces y la mitad del consumo queda en una cuenta que nadie cobra.
+*/
+async function indiceCuentaUnica() {
+  try {
+    await sequelize.query(
+      `CREATE UNIQUE INDEX IF NOT EXISTS cuentas_una_abierta_por_mesa
+       ON cuentas ("mesaId") WHERE estado = 'abierta'`
+    );
+  } catch (err) {
+    console.error('Indice de cuentas abiertas:', err.message);
+  }
+}
+
+async function rellenarCamposNuevos() {
+  const q = (sql) => sequelize.query(sql).catch(err => console.error('Backfill:', err.message));
+  await q(`UPDATE reservas SET origen     = 'mostrador' WHERE origen IS NULL`);
+  await q(`UPDATE reservas SET asistencia = 'pendiente' WHERE asistencia IS NULL`);
+  await q(`UPDATE reservas SET deporte    = COALESCE((SELECT e.deporte FROM espacios e WHERE e.id = reservas.cancha_id), 'padel') WHERE deporte IS NULL`);
+}
+
+async function migrarPagosHistoricos() {
+  try {
+    const [pendiente] = await sequelize.query(`
+      SELECT COUNT(*)::int AS n FROM reservas r
+      WHERE r.estado_pago = 'pagado' AND r.monto > 0
+        AND NOT EXISTS (SELECT 1 FROM pagos p WHERE p."reservaId" = r.id)
+    `);
+    const cuantas = pendiente?.[0]?.n || 0;
+    if (cuantas === 0) return;
+
+    await sequelize.query(`
+      INSERT INTO pagos ("reservaId", pagador, monto, metodo, concepto, fecha,
+                         "usuarioId", "usuarioNombre", anulado, nota, "createdAt", "updatedAt")
+      SELECT r.id, r.cliente_nombre, r.monto,
+             CASE WHEN r.metodo_pago IN ('efectivo','transferencia','mercadopago','tarjeta')
+                  THEN r.metodo_pago ELSE 'efectivo' END,
+             'cancha', r.fecha, NULL, 'Migración', false,
+             'Cobro anterior al sistema de caja', NOW(), NOW()
+      FROM reservas r
+      WHERE r.estado_pago = 'pagado' AND r.monto > 0
+        AND NOT EXISTS (SELECT 1 FROM pagos p WHERE p."reservaId" = r.id)
+    `);
+    console.log(`Migracion: ${cuantas} cobro(s) historico(s) cargados en la caja`);
+  } catch (err) {
+    console.error('Error migrando pagos historicos:', err.message);
+  }
+}
+
+migrateReservas().then(() => sequelize.sync({ alter: true })).then(rellenarCamposNuevos).then(indiceCuentaUnica).then(migrarPagosHistoricos).then(async () => {
   console.log('PostgreSQL sincronizado');
   await seed();
+
+  /* Los turnos fijos se materializan al arrancar y una vez por día */
+  const { extenderTodos } = require('./lib/fijos');
+  await extenderTodos();
+  setInterval(extenderTodos, 24 * 60 * 60 * 1000).unref?.();
   const server = app.listen(PORT, () => console.log(`API → puerto ${PORT}`));
 
   const shutdown = () => {

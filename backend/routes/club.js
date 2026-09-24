@@ -3,16 +3,19 @@ const router     = express.Router();
 const ClubConfig = require('../models/ClubConfig');
 
 const DEFAULTS = {
-  nombre: 'New Face Padel Club',
-  direccion: 'Buenos Aires, Argentina',
-  horarios: { lunesViernes: '15:00 a 23:00', sabados: '09:00 a 23:00', domingos: '09:00 a 23:00', feriados: '09:00 a 23:00' },
+  nombre: 'New Face Pádel Club',
+  direccion: 'Av. Ocampo 2100 (esq. Ojo de Agua), San Fernando del Valle de Catamarca',
+  telefono: '5493834406990',
+  whatsapp: '5493834406990',
+  email: '',
+  redes: { instagram: '@newface.ok', facebook: '', tiktok: '' },
+  horarios: { lunesViernes: 'Consultar', sabados: 'Consultar', domingos: 'Consultar', feriados: 'Consultar' },
   canchas: [
-    { numero: 1, tipo: 'Cubierta', techada: true },
-    { numero: 2, tipo: 'Cubierta', techada: true },
-    { numero: 3, tipo: 'Al aire libre', techada: false },
-    { numero: 4, tipo: 'Al aire libre', techada: false }
+    { numero: 1, tipo: 'Pádel', techada: false },
+    { numero: 2, tipo: 'Pádel', techada: false },
+    { numero: 3, tipo: 'Pádel', techada: false }
   ],
-  servicios: ['Estacionamiento', 'Vestuarios', 'Buffet'],
+  servicios: ['Academia de pádel', 'Buffet', 'Clínicas', 'Tenis de mesa'],
   metodosPago: ['Efectivo', 'MercadoPago', 'Transferencia bancaria'],
   sistemaPuntos: { puntosPorReserva: 10, descripcion: 'Ganás puntos por cada reserva y los canjeás por premios.' }
 };

@@ -1,5 +1,9 @@
-[start]
-cmd = "node server.js"
-
 [phases.setup]
 nixPkgs = ["nodejs_20"]
+
+# Los tests usan jsdom y pg-mem (devDependencies pesadas): en el deploy no van.
+[phases.install]
+cmds = ["npm ci --omit=dev"]
+
+[start]
+cmd = "node server.js"

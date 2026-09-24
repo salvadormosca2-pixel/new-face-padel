@@ -4,12 +4,27 @@
    ═══════════════════════════════════════════════════════════ */
 
 :root {
-  --prem-verde:   #00E87A;
-  --prem-dark:    #050C10;
-  --prem-dark2:   #080E14;
-  --prem-dark3:   #0C1520;
-  --prem-border:  rgba(255,255,255,0.07);
-  --prem-text:    rgba(255,255,255,0.55);
+  /* Marca New Face */
+  --nf-lima:      #C8FF00;
+  --nf-lima-dk:   #A8D800;
+  --nf-navy:      #0B1B33;
+
+  /* Acento. Ocupa el rol que antes tenía el verde menta. */
+  --prem-verde:   var(--nf-lima);
+
+  /* Superficies: negro azulado, no #000 — el lima sobre negro puro cansa. */
+  --prem-dark:    #07090F;
+  --prem-dark2:   #0B0F17;
+  --prem-dark3:   #111827;
+  --prem-navy:    #0F1B31;
+  --prem-border:  rgba(255,255,255,0.08);
+
+  /* Texto: blanco roto, no #FFF */
+  --prem-blanco:  #EDF1F7;
+  --prem-text:    rgba(237,241,247,0.62);
+
+  --prem-font:    'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --prem-display: 'Outfit', var(--prem-font);
 }
 
 .premium-body {
@@ -113,8 +128,8 @@
 }
 
 .btn-nav-cta:hover {
-  background: #00ff87;
-  box-shadow: 0 4px 20px rgba(0, 232, 122, 0.4);
+  background: var(--prem-verde);
+  box-shadow: 0 4px 20px rgba(200,255,0,0.28);
   transform: translateY(-1px);
 }
 
@@ -283,9 +298,9 @@
 }
 
 .btn-prem-primary:hover {
-  background: #00ff87;
+  background: var(--prem-verde);
   transform: translateY(-2px);
-  box-shadow: 0 12px 40px rgba(0, 232, 122, 0.45);
+  box-shadow: 0 12px 40px rgba(200,255,0,0.315);
 }
 
 .btn-prem-primary svg {
@@ -486,7 +501,7 @@
   font-size: 13px;
   font-weight: 700;
   line-height: 1.4;
-  box-shadow: 0 8px 32px rgba(0, 232, 122, 0.4);
+  box-shadow: 0 8px 32px rgba(200,255,0,0.28);
 }
 
 .cb-big {
@@ -563,8 +578,8 @@
 .cancha-card-prem:nth-child(4) { transition-delay: 0.24s; }
 
 .cancha-card-prem:hover {
-  background: rgba(0,232,122,0.06);
-  border-color: rgba(0,232,122,0.25);
+  background: rgba(200,255,0,0.042);
+  border-color: rgba(200,255,0,0.175);
   transform: translateX(4px);
 }
 
@@ -603,7 +618,7 @@
 
 .ccp-dot.disponible {
   background: var(--prem-verde);
-  box-shadow: 0 0 0 4px rgba(0,232,122,0.15);
+  box-shadow: 0 0 0 4px rgba(200,255,0,0.105);
 }
 
 /* ══════════════════════════════════════════════════════
@@ -674,8 +689,8 @@
 .feat-prem:nth-child(6) { transition-delay: 0.35s; }
 
 .feat-prem:hover {
-  background: rgba(0,232,122,0.06);
-  border-color: rgba(0,232,122,0.2);
+  background: rgba(200,255,0,0.042);
+  border-color: rgba(200,255,0,0.14);
 }
 
 .feat-prem-icon {
@@ -746,7 +761,7 @@
 .prof-prem-card:hover {
   transform: translateY(-6px);
   box-shadow: 0 24px 60px rgba(0,0,0,0.5);
-  border-color: rgba(0,232,122,0.2);
+  border-color: rgba(200,255,0,0.14);
 }
 
 .prof-prem-visual {
@@ -825,7 +840,7 @@
   top: 50%; left: 50%;
   transform: translate(-50%, -50%);
   width: 700px; height: 700px;
-  background: radial-gradient(circle, rgba(0,232,122,0.10) 0%, transparent 65%);
+  background: radial-gradient(circle, rgba(200,255,0,0.07) 0%, transparent 65%);
   pointer-events: none;
 }
 
@@ -1014,7 +1029,7 @@
   top: -160px; left: 50%;
   transform: translateX(-50%);
   width: 900px; height: 600px;
-  background: radial-gradient(ellipse, rgba(0,232,122,0.07) 0%, transparent 65%);
+  background: radial-gradient(ellipse, rgba(200,255,0,0.049) 0%, transparent 65%);
   pointer-events: none;
 }
 
@@ -1080,7 +1095,7 @@
 .prof-page-card:hover {
   transform: translateY(-8px);
   box-shadow: 0 32px 80px rgba(0,0,0,0.6);
-  border-color: rgba(0,232,122,0.22);
+  border-color: rgba(200,255,0,0.154);
 }
 
 /* Nombre superpuesto sobre imagen */
@@ -1165,8 +1180,8 @@
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.3px;
-  background: rgba(0,232,122,0.10);
-  border: 1px solid rgba(0,232,122,0.22);
+  background: rgba(200,255,0,0.07);
+  border: 1px solid rgba(200,255,0,0.154);
   color: var(--prem-verde);
 }
 
@@ -1188,8 +1203,8 @@
 }
 
 .prof-wa-btn:hover {
-  background: #00ff87;
-  box-shadow: 0 8px 28px rgba(0,232,122,0.4);
+  background: var(--prem-verde);
+  box-shadow: 0 8px 28px rgba(200,255,0,0.28);
   transform: translateY(-2px);
 }
 
@@ -1291,7 +1306,7 @@
 }
 
 .steps-prem .step-circle.completo {
-  background: rgba(0,232,122,0.15);
+  background: rgba(200,255,0,0.105);
   border-color: var(--prem-verde);
   color: var(--prem-verde);
 }
@@ -1350,8 +1365,8 @@
   font-size: 13px;
   font-weight: 900;
   color: var(--prem-verde);
-  background: rgba(0,232,122,0.1);
-  border: 1px solid rgba(0,232,122,0.2);
+  background: rgba(200,255,0,0.07);
+  border: 1px solid rgba(200,255,0,0.14);
   width: 36px; height: 36px;
   border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
@@ -1407,9 +1422,9 @@
 }
 
 .dias-scroll-prem .dia-btn:hover {
-  border-color: rgba(0,232,122,0.4);
+  border-color: rgba(200,255,0,0.28);
   color: white;
-  background: rgba(0,232,122,0.06);
+  background: rgba(200,255,0,0.042);
 }
 
 .dias-scroll-prem .dia-btn.seleccionado {
@@ -1445,8 +1460,8 @@
 }
 
 .duracion-btn:hover {
-  border-color: rgba(0,232,122,0.4);
-  background: rgba(0,232,122,0.06);
+  border-color: rgba(200,255,0,0.28);
+  background: rgba(200,255,0,0.042);
 }
 
 .duracion-btn.seleccionado {
@@ -1491,8 +1506,8 @@
 }
 
 .horarios-prem-grid .horario-btn:hover:not(:disabled) {
-  border-color: rgba(0,232,122,0.4);
-  background: rgba(0,232,122,0.06);
+  border-color: rgba(200,255,0,0.28);
+  background: rgba(200,255,0,0.042);
 }
 
 .horarios-prem-grid .horario-btn.seleccionado {
@@ -1593,13 +1608,13 @@
 }
 
 .pago-prem-opcion:hover {
-  border-color: rgba(0,232,122,0.35);
-  background: rgba(0,232,122,0.05);
+  border-color: rgba(200,255,0,0.245);
+  background: rgba(200,255,0,0.035);
 }
 
 .pago-prem-opcion:has(input:checked) {
   border-color: var(--prem-verde);
-  background: rgba(0,232,122,0.08);
+  background: rgba(200,255,0,0.056);
 }
 
 .pago-prem-opcion input[type="radio"] {
@@ -1663,8 +1678,8 @@
 
 .confirmacion-check {
   width: 80px; height: 80px; border-radius: 50%;
-  background: rgba(0,232,122,0.12);
-  border: 1px solid rgba(0,232,122,0.3);
+  background: rgba(200,255,0,0.084);
+  border: 1px solid rgba(200,255,0,0.21);
   display: flex; align-items: center; justify-content: center;
   margin: 0 auto 24px;
   animation: popIn .4s cubic-bezier(.175,.885,.32,1.275);
@@ -1674,12 +1689,12 @@
 .confirmacion > p { color: var(--prem-text); margin-bottom: 32px; }
 
 .cancha-asignada {
-  border: 1.5px solid rgba(0,232,122,0.3);
+  border: 1.5px solid rgba(200,255,0,0.21);
   border-radius: 12px;
   padding: 28px;
   margin: 0 auto 28px;
   max-width: 360px;
-  background: rgba(0,232,122,0.06);
+  background: rgba(200,255,0,0.042);
 }
 
 .cancha-asignada .label {
@@ -1688,7 +1703,7 @@
 }
 
 .cancha-num-grande { font-size: 72px; font-weight: 900; color: var(--prem-verde); line-height: 1; }
-.cancha-tipo-conf  { font-size: 18px; font-weight: 600; color: rgba(0,232,122,0.7); margin-top: 4px; }
+.cancha-tipo-conf  { font-size: 18px; font-weight: 600; color: rgba(200,255,0,0.49); margin-top: 4px; }
 
 .resumen-reserva {
   background: rgba(255,255,255,0.04);
@@ -1775,7 +1790,7 @@
 }
 
 .torneo-tabs-prem .torneo-tab:hover {
-  border-color: rgba(0,232,122,0.35);
+  border-color: rgba(200,255,0,0.245);
   color: white;
 }
 
@@ -1851,7 +1866,7 @@
 
 .grupo-tabla td:first-child { text-align: left; font-weight: 600; color: white; }
 .grupo-tabla tr:last-child td { border-bottom: none; }
-.grupo-tabla tr.clasifica { background: rgba(0,232,122,0.06); }
+.grupo-tabla tr.clasifica { background: rgba(200,255,0,0.042); }
 
 .clasifica-badge {
   display: inline-block;
@@ -1904,7 +1919,7 @@
 .bracket-jugador:last-child { border-bottom: none; }
 
 .bracket-jugador.ganador {
-  background: rgba(0,232,122,0.1);
+  background: rgba(200,255,0,0.07);
   color: var(--prem-verde);
 }
 
@@ -1914,8 +1929,8 @@
 .campeon-display {
   text-align: center;
   padding: 56px 24px;
-  background: linear-gradient(135deg, rgba(0,232,122,0.08), rgba(0,232,122,0.03));
-  border: 1px solid rgba(0,232,122,0.2);
+  background: linear-gradient(135deg, rgba(200,255,0,0.056), rgba(200,255,0,0.021));
+  border: 1px solid rgba(200,255,0,0.14);
   border-radius: 16px;
   margin-top: 40px;
 }
@@ -2008,7 +2023,7 @@
 }
 .pareja-pub-num {
   width: 28px; height: 28px; border-radius: 50%;
-  background: var(--prem-verde); color: #050C10;
+  background: var(--prem-verde); color: var(--prem-dark);
   display: flex; align-items: center; justify-content: center;
   font-size: 12px; font-weight: 900; flex-shrink: 0;
 }
@@ -2026,12 +2041,12 @@
 }
 .grupo-pub-header {
   display: flex; align-items: center; gap: 12px;
-  padding: 14px 16px; background: rgba(0,232,122,0.06);
+  padding: 14px 16px; background: rgba(200,255,0,0.042);
   border-bottom: 1px solid var(--prem-border);
 }
 .grupo-pub-letra {
   width: 36px; height: 36px; border-radius: 8px;
-  background: var(--prem-verde); color: #050C10;
+  background: var(--prem-verde); color: var(--prem-dark);
   display: flex; align-items: center; justify-content: center;
   font-size: 18px; font-weight: 900;
 }
@@ -2052,9 +2067,9 @@
   border-bottom: 1px solid var(--prem-border);
 }
 .grupo-pub-tabla tr:last-child td { border-bottom: none; }
-.grupo-pub-tabla tr.clasifica td { background: rgba(0,232,122,0.05); color: white; }
+.grupo-pub-tabla tr.clasifica td { background: rgba(200,255,0,0.035); color: white; }
 .clasifica-badge {
-  background: var(--prem-verde); color: #050C10;
+  background: var(--prem-verde); color: var(--prem-dark);
   font-size: 9px; font-weight: 900; padding: 2px 6px;
   border-radius: 20px; margin-left: 6px; text-transform: uppercase; letter-spacing: .3px;
 }
@@ -2105,7 +2120,7 @@
   border-radius: 12px; padding: 12px; margin-bottom: 12px;
   transition: border-color .2s;
 }
-.bracket-pub-match.terminado { border-color: rgba(0,232,122,0.3); }
+.bracket-pub-match.terminado { border-color: rgba(200,255,0,0.21); }
 .bracket-pub-match.listo     { border-color: rgba(251,191,36,0.3); }
 .bracket-pub-match.esperando { opacity: .5; }
 .bracket-pub-hora {
@@ -2119,7 +2134,7 @@
   font-size: 13px; font-weight: 600;
   margin-bottom: 4px;
 }
-.bracket-pub-pareja.ganador { background: rgba(0,232,122,0.15); color: var(--prem-verde); }
+.bracket-pub-pareja.ganador { background: rgba(200,255,0,0.105); color: var(--prem-verde); }
 .bracket-pub-pareja.perdedor { opacity: .5; }
 .bracket-pub-vs {
   text-align: center; font-size: 10px; font-weight: 700;
@@ -2142,7 +2157,7 @@
   cursor: pointer; transition: all .2s;
 }
 .torneo-tab:hover { color: white; background: rgba(255,255,255,0.08); }
-.torneo-tab.activo { background: var(--prem-verde); color: #050C10; border-color: var(--prem-verde); }
+.torneo-tab.activo { background: var(--prem-verde); color: var(--prem-dark); border-color: var(--prem-verde); }
 
 @media (max-width: 768px) {
   .inscripcion-form-cols { grid-template-columns: 1fr; }
@@ -2158,14 +2173,14 @@
 /* ══ PROGRAMA DE PUNTOS (sección pública) ══════════ */
 .puntos-prem {
   padding: 100px 0;
-  background: linear-gradient(180deg, #050812 0%, #070b14 100%);
+  background: linear-gradient(180deg, var(--prem-dark) 0%, var(--prem-dark2) 100%);
 }
 .puntos-prem-inner {
   max-width: 1100px; margin: 0 auto; padding: 0 24px;
 }
 .puntos-prem-header { text-align: center; margin-bottom: 48px; }
-.puntos-prem-title  { font-size: clamp(28px, 4vw, 42px); font-weight: 900; color: #fff; margin-bottom: 12px; }
-.puntos-green       { color: #22c55e; }
+.puntos-prem-title  { font-size: clamp(28px, 4vw, 42px); font-weight: 900; color: var(--prem-blanco); margin-bottom: 12px; }
+.puntos-green       { color: var(--prem-verde); }
 .puntos-prem-sub    { font-size: 17px; color: rgba(255,255,255,.5); max-width: 500px; margin: 0 auto; }
 
 .puntos-como {
@@ -2179,12 +2194,12 @@
 }
 .puntos-paso-num {
   width: 32px; height: 32px; border-radius: 50%;
-  background: #22c55e; color: #000;
+  background: var(--prem-verde); color: #000;
   display: flex; align-items: center; justify-content: center;
   font-size: 14px; font-weight: 800; flex-shrink: 0;
 }
 .puntos-paso-txt { font-size: 14px; color: rgba(255,255,255,.75); }
-.puntos-paso-txt strong { color: #fff; }
+.puntos-paso-txt strong { color: var(--prem-blanco); }
 .puntos-flecha { color: rgba(255,255,255,.2); font-size: 20px; }
 
 .puntos-premios-grid {
@@ -2197,11 +2212,11 @@
   transition: border-color .2s, background .2s;
 }
 .puntos-premio-card:hover {
-  border-color: rgba(34,197,94,.35); background: rgba(34,197,94,.05);
+  border-color: rgba(200,255,0,0.245); background: rgba(200,255,0,0.035);
 }
 .puntos-premio-ico  { font-size: 36px; margin-bottom: 12px; }
-.puntos-premio-pts  { font-size: 13px; font-weight: 700; color: #22c55e; margin-bottom: 8px; }
-.puntos-premio-nom  { font-size: 18px; font-weight: 800; color: #fff; margin-bottom: 6px; }
+.puntos-premio-pts  { font-size: 13px; font-weight: 700; color: var(--prem-verde); margin-bottom: 8px; }
+.puntos-premio-nom  { font-size: 18px; font-weight: 800; color: var(--prem-blanco); margin-bottom: 6px; }
 .puntos-premio-desc { font-size: 13px; color: rgba(255,255,255,.45); }
 
 /* ── PREMIOS PAGE EXTENSIONS ─────────────────────────── */
@@ -2219,17 +2234,17 @@
 }
 
 .premios-puede {
-  border-color: rgba(34,197,94,.4) !important;
-  background: rgba(34,197,94,.07) !important;
+  border-color: rgba(200,255,0,0.28) !important;
+  background: rgba(200,255,0,0.049) !important;
 }
 
 .premios-pts-banner {
   display: flex; align-items: center; gap: 20px;
-  background: rgba(34,197,94,.08); border: 1px solid rgba(34,197,94,.25);
+  background: rgba(200,255,0,0.056); border: 1px solid rgba(200,255,0,0.175);
   border-radius: 16px; padding: 20px 28px;
 }
-.premios-pts-ico  { font-size: 32px; color: #22c55e; font-weight: 900; }
-.premios-pts-val  { font-size: 36px; font-weight: 900; color: #22c55e; line-height: 1; }
+.premios-pts-ico  { font-size: 32px; color: var(--prem-verde); font-weight: 900; }
+.premios-pts-val  { font-size: 36px; font-weight: 900; color: var(--prem-verde); line-height: 1; }
 .premios-pts-lbl  { font-size: 13px; color: rgba(255,255,255,.5); margin-top: 2px; font-family: 'Outfit', sans-serif; }
 
 @media (max-width: 600px) {
@@ -2268,7 +2283,7 @@
 
 .torneo-portada-nombre {
   font-size: clamp(26px, 4vw, 40px); font-weight: 900;
-  color: #fff; margin: 0 0 10px; line-height: 1.1;
+  color: var(--prem-blanco); margin: 0 0 10px; line-height: 1.1;
   text-shadow: 0 2px 12px rgba(0,0,0,.4);
 }
 
@@ -2291,9 +2306,154 @@
   font-family: inherit; cursor: pointer;
   transition: background .2s, transform .15s;
 }
-.torneo-portada-btn:hover { background: #00ff87; transform: translateY(-1px); }
+.torneo-portada-btn:hover { background: var(--prem-verde); transform: translateY(-1px); }
 
 @media (max-width: 600px) {
   .torneo-portada-content { padding: 24px 20px; }
   .torneo-portada-card    { min-height: 280px; }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   Marca New Face — tipografía y detalles
+   ══════════════════════════════════════════════════════════ */
+.premium-body {
+  font-family: var(--prem-font);
+  background: var(--prem-dark2);
+  color: var(--prem-blanco);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.004em;
+}
+.premium-body h1, .premium-body h2, .premium-body h3,
+.premium-body .hero-prem-title, .premium-body .logo-text-prem span:first-child {
+  font-family: var(--prem-display);
+  letter-spacing: -0.025em;
+}
+
+/* Texto sobre lima siempre negro: es la única combinación legible */
+.premium-body .btn-nav-cta,
+.premium-body .btn-prem-primary,
+.premium-body .logo-icon-prem {
+  color: #07090F !important;
+}
+
+/* Logo: hoy es el monograma NF; cuando llegue el archivo entra acá */
+.logo-icon-prem {
+  font-family: var(--prem-display);
+  font-weight: 800;
+  background: var(--nf-lima);
+  border-radius: 10px;
+}
+.logo-img-prem { height: 36px; width: auto; display: block; }
+.logo-img-prem + .logo-icon-prem { display: none; }
+
+/* ══════════════════════════════════════════════════════════
+   Logo New Face
+
+   Dos versiones del mismo archivo:
+   · la insignia (cuadrado lima, tal como vino) para el nav y el favicon —
+     chica, funciona como ícono de app;
+   · el wordmark invertido (letras lima sobre transparente) para el hero,
+     el footer y el login — es la versión "acento" que pide el brief:
+     lima sobre oscuro, no un bloque de lima.
+   ══════════════════════════════════════════════════════════ */
+.nav-prem-logo { display: flex; align-items: center; gap: 10px; }
+.logo-badge {
+  width: 42px; height: 42px; border-radius: 11px; display: block;
+  box-shadow: 0 0 0 1px rgba(200,255,0,.25);
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+.nav-prem-logo:hover .logo-badge { transform: scale(1.04); box-shadow: 0 0 0 1px rgba(200,255,0,.5), 0 6px 18px rgba(200,255,0,.18); }
+.logo-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.hero-wordmark {
+  display: block; width: 220px; height: auto; margin: 0 auto 22px;
+  filter: drop-shadow(0 8px 28px rgba(200,255,0,.22));
+  animation: wordmark-in .7s ease both;
+}
+@keyframes wordmark-in { from { opacity: 0; transform: translateY(10px) scale(.97); } }
+
+.footer-logo-wrap { display: block; margin-bottom: 14px; }
+.footer-wordmark { width: 150px; height: auto; display: block; opacity: .92; }
+
+@media (max-width: 720px) {
+  .logo-badge    { width: 36px; height: 36px; border-radius: 9px; }
+  .hero-wordmark { width: 168px; margin-bottom: 16px; }
+  .footer-wordmark { width: 128px; }
+}
+
+/* ══════════════════════════════════════════════
+   INICIO 2026 · secciones nuevas
+   ══════════════════════════════════════════════ */
+.hero-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.hero-video + .hero-img-fallback { position: absolute; inset: 0; z-index: -1; }
+.hero-title-frase .title-solid, .hero-title-frase .title-outline { font-size: clamp(2.6rem, 7vw, 5.6rem); line-height: 1.02; }
+.hero-desc-fuerte { color: var(--prem-blanco); font-weight: 600; font-size: 1.25rem; }
+
+/* Quiénes somos */
+.nosotros-prem { padding: 110px 40px; background: var(--prem-dark2); }
+.nosotros-prem-inner { max-width: 820px; margin: 0 auto; }
+.nosotros-lead { color: var(--prem-blanco); font-size: 1.2rem; font-weight: 500; }
+.nosotros-frase { margin-top: 28px; padding-left: 20px; border-left: 3px solid var(--nf-lima); color: var(--prem-blanco); font-family: var(--prem-display); font-weight: 700; font-size: 1.45rem; letter-spacing: -0.01em; }
+
+/* Academia */
+.academia-sub { margin: 14px 0 6px; }
+.academia-niveles { color: var(--nf-lima); font-size: 0.95rem; letter-spacing: 0.04em; }
+.profs-grid-4 { grid-template-columns: repeat(4, 1fr); }
+.profs-grid-4 .prof-prem-card:nth-child(4) { transition-delay: 0.36s; }
+.profs-grid-4 .prof-prem-visual { min-height: 190px; }
+@media (max-width: 1000px) { .profs-grid-4 { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px)  { .profs-grid-4 { grid-template-columns: 1fr; } }
+
+/* La vida en el club */
+.vida-prem { padding: 110px 40px; background: var(--prem-dark); }
+.vida-prem-inner { max-width: 1200px; margin: 0 auto; }
+.vida-prem-header { max-width: 760px; margin-bottom: 44px; }
+.vida-galeria { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.vida-tile { position: relative; margin: 0; aspect-ratio: 4 / 3; border-radius: 18px; overflow: hidden; border: 1px solid var(--prem-border); background: linear-gradient(135deg, #0F1B31, #1F3A0A); }
+.vida-tile:nth-child(2) { background: linear-gradient(135deg, #1a0a30, #0F1B31); }
+.vida-tile:nth-child(3) { background: linear-gradient(135deg, #0B1B33, #2a0a0a); }
+.vida-tile:nth-child(4) { background: linear-gradient(135deg, #1F3A0A, #0B0F17); }
+.vida-tile:nth-child(5) { background: linear-gradient(135deg, #2a1a0a, #0F1B31); }
+.vida-tile:nth-child(6) { background: linear-gradient(135deg, #0F1B31, #062918); }
+.vida-tile img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .5s ease; }
+.vida-tile:hover img { transform: scale(1.05); }
+.vida-tile figcaption { position: absolute; left: 0; right: 0; bottom: 0; padding: 40px 18px 16px; color: var(--prem-blanco); font-weight: 600; font-size: 0.95rem; background: linear-gradient(0deg, rgba(5,9,15,.85), transparent); }
+.vida-ig { display: inline-block; margin-top: 28px; color: var(--nf-lima); font-weight: 600; text-decoration: none; }
+.vida-ig:hover { text-decoration: underline; }
+@media (max-width: 860px) { .vida-galeria { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 480px) { .vida-galeria { grid-template-columns: 1fr; } }
+
+/* Más que pádel */
+.mas-prem { padding: 110px 40px; background: var(--prem-dark2); }
+.mas-prem-inner { max-width: 1200px; margin: 0 auto; }
+.mas-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 44px; }
+.mas-card { padding: 30px 26px; border-radius: 18px; background: rgba(255,255,255,0.03); border: 1px solid var(--prem-border); opacity: 0; transform: translateY(14px); transition: opacity .5s ease, transform .5s ease, border-color .25s; }
+.mas-card.visible { opacity: 1; transform: none; }
+.mas-card:nth-child(2) { transition-delay: .1s; } .mas-card:nth-child(3) { transition-delay: .2s; }
+.mas-card:hover { border-color: rgba(200,255,0,0.35); }
+.mas-num { font-family: var(--prem-display); color: var(--nf-lima); font-weight: 800; font-size: 0.9rem; letter-spacing: 0.08em; }
+.mas-card h3 { color: var(--prem-blanco); font-family: var(--prem-display); font-size: 1.3rem; margin: 12px 0 8px; letter-spacing: -0.01em; }
+.mas-card p { color: var(--prem-text); margin: 0; line-height: 1.55; }
+.mas-cta { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; margin-top: 36px; }
+@media (max-width: 860px) { .mas-grid { grid-template-columns: 1fr; } }
+
+/* Cómo llegar */
+.llegar-prem { padding: 110px 40px; background: var(--prem-dark); }
+.llegar-prem-inner { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
+.llegar-dir { display: inline-flex; align-items: center; gap: 10px; margin-top: 22px; color: var(--prem-blanco); font-weight: 600; font-size: 1.05rem; text-decoration: none; }
+.llegar-dir svg { color: var(--nf-lima); flex-shrink: 0; }
+.llegar-dir:hover { color: var(--nf-lima); }
+.llegar-mapa { border-radius: 22px; overflow: hidden; border: 1px solid var(--prem-border); aspect-ratio: 4 / 3; background: var(--prem-dark3); }
+.llegar-mapa iframe { width: 100%; height: 100%; border: 0; display: block; filter: grayscale(.2) contrast(1.05); }
+@media (max-width: 860px) { .llegar-prem-inner { grid-template-columns: 1fr; gap: 32px; } }
+
+@media (max-width: 640px) {
+  .nosotros-prem, .vida-prem, .mas-prem, .llegar-prem { padding: 72px 20px; }
+  .profs-header-row .btn-prem-ghost { width: 100%; text-align: center; }
+}
+/* En celular el trazo hueco se lee mal: la segunda línea va llena, en lima */
+@media (max-width: 640px) {
+  .hero-title-frase .title-outline { -webkit-text-stroke: 0; color: var(--nf-lima); }
 }

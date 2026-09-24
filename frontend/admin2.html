@@ -6,17 +6,20 @@
   <title>Panel Admin — New Face Padel</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=9">
-  <link rel="stylesheet" href="css/admin2.css?v=9">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" sizes="64x64" href="img/favicon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="img/apple-touch-icon.png">
+  <meta name="theme-color" content="#0B0F17">
+  <link rel="stylesheet" href="css/style.css?v=37">
+  <link rel="stylesheet" href="css/admin2.css?v=37">
 </head>
 <body class="adm2-body">
 
   <!-- ══════════════════ LOGIN OVERLAY ══════════════════ -->
   <div id="login-overlay">
     <div class="login-card">
-      <div class="login-logo">PadelPro</div>
-      <div class="login-subtitle">Panel de Administración</div>
+      <img class="login-wordmark" src="img/logo-wordmark-640.png" alt="New Face Padel Club" width="200" height="175">
+      <div class="login-subtitle">Panel de administración</div>
       <form class="login-form" onsubmit="doLogin(event)">
         <div class="login-field">
           <label>Contraseña</label>
@@ -32,14 +35,12 @@
   <header class="adm2-header">
     <div class="adm2-header-top">
       <div class="adm2-header-title-block">
-        <span class="adm2-header-title">Panel Admin</span>
-        <span class="adm2-header-sub">Gestión completa de tu negocio de padel</span>
+        <img class="adm2-header-badge" src="img/logo-badge.png" alt="" width="34" height="34">
+        <span class="adm2-header-title">New Face</span>
+        <span class="adm2-header-sub" id="adm2-header-fecha"></span>
       </div>
       <div class="adm2-header-right">
-        <div class="adm2-live-badge">
-          <span class="adm2-live-dot"></span>
-          EN VIVO
-        </div>
+        <button class="adm2-btn-asistente" onclick="abrirAsistente()" title="Preguntale al sistema">Asistente</button>
         <div class="adm2-clock" id="adm2-clock">00:00</div>
         <button class="logout-btn" onclick="doLogout()" title="Cerrar sesión">Cerrar sesión</button>
       </div>
@@ -47,21 +48,77 @@
 
     <!-- Tabs -->
     <nav class="adm2-tabs">
-      <button class="adm2-tab"        onclick="adm2SwitchTab('dashboard', this)">Dashboard</button>
-      <button class="adm2-tab active" onclick="adm2SwitchTab('turnos',    this)">Turnos</button>
-      <button class="adm2-tab"        onclick="adm2SwitchTab('mensajes',  this)">Mensajes</button>
-      <button class="adm2-tab"        onclick="adm2SwitchTab('torneos',   this)">Torneos</button>
-      <button class="adm2-tab"        onclick="adm2SwitchTab('finanzas',  this)">Finanzas</button>
-      <button class="adm2-tab"        onclick="adm2SwitchTab('usuarios',  this)">Usuarios</button>
-      <button class="adm2-tab"        onclick="adm2SwitchTab('premios',   this)">Premios</button>
+      <button class="adm2-tab" data-tab="dashboard" onclick="adm2SwitchTab('dashboard', this)">Dashboard</button>
+      <button class="adm2-tab active" data-tab="turnos" onclick="adm2SwitchTab('turnos', this)">Turnos</button>
+      <button class="adm2-tab" data-tab="mensajes" onclick="adm2SwitchTab('mensajes', this)">Mensajes</button>
+      <button class="adm2-tab" data-tab="torneos" onclick="adm2SwitchTab('torneos', this)">Torneos</button>
+      <button class="adm2-tab" data-tab="fijos" onclick="adm2SwitchTab('fijos', this)">Fijos</button>
+      <button class="adm2-tab" data-tab="salon" onclick="adm2SwitchTab('salon', this)">Salón</button>
+      <button class="adm2-tab" data-tab="cocina" onclick="adm2SwitchTab('cocina', this)">Cocina<span class="adm2-tab-badge" id="tab-cocina-badge"></span></button>
+      <button class="adm2-tab" data-tab="caja" onclick="adm2SwitchTab('caja', this)">Caja</button>
+      <button class="adm2-tab" data-tab="buffet" onclick="adm2SwitchTab('buffet', this)">Productos</button>
+      <button class="adm2-tab" data-tab="finanzas" onclick="adm2SwitchTab('finanzas', this)">Finanzas</button>
+      <button class="adm2-tab" data-tab="usuarios" onclick="adm2SwitchTab('usuarios', this)">Clientes</button>
+      <button class="adm2-tab" data-tab="personal" onclick="adm2SwitchTab('personal', this)">Personal</button>
+      <button class="adm2-tab" data-tab="premios" onclick="adm2SwitchTab('premios', this)">Premios</button>
+      <button class="adm2-tab adm2-tab-asistente" onclick="abrirAsistente()">Asistente</button>
     </nav>
   </header>
+
+  <!-- Navegación de celular: cinco a mano, el resto en "Más" -->
+  <nav class="adm2-bottomnav" id="adm2-bottomnav">
+    <button class="adm2-bn-item active" data-tab="turnos" onclick="adm2SwitchTab('turnos', this)"><span>Turnos</span></button>
+    <button class="adm2-bn-item" data-tab="salon"  onclick="adm2SwitchTab('salon', this)"><span>Salón</span></button>
+    <button class="adm2-bn-item" data-tab="cocina" onclick="adm2SwitchTab('cocina', this)"><span>Cocina</span><i class="adm2-bn-badge" id="bn-cocina-badge"></i></button>
+    <button class="adm2-bn-item" data-tab="caja"   onclick="adm2SwitchTab('caja', this)"><span>Caja</span></button>
+    <button class="adm2-bn-item" id="adm2-bn-mas" onclick="adm2MasMenu()"><span>Más</span></button>
+  </nav>
+  <div class="adm2-mas-sheet" id="adm2-mas-sheet" onclick="if(event.target===this)adm2MasMenu(false)">
+    <div class="adm2-mas-card">
+      <div class="adm2-mas-tit">Más secciones</div>
+      <div class="adm2-mas-grid">
+        <button class="destacado" onclick="adm2MasMenu(false);abrirAsistente()">Asistente</button>
+        <button data-tab="dashboard" onclick="adm2SwitchTab('dashboard', this);adm2MasMenu(false)">Dashboard</button>
+        <button data-tab="fijos"     onclick="adm2SwitchTab('fijos', this);adm2MasMenu(false)">Fijos</button>
+        <button data-tab="buffet"    onclick="adm2SwitchTab('buffet', this);adm2MasMenu(false)">Productos</button>
+        <button data-tab="finanzas"  onclick="adm2SwitchTab('finanzas', this);adm2MasMenu(false)">Finanzas</button>
+        <button data-tab="personal"  onclick="adm2SwitchTab('personal', this);adm2MasMenu(false)">Personal</button>
+        <button data-tab="usuarios"  onclick="adm2SwitchTab('usuarios', this);adm2MasMenu(false)">Clientes</button>
+        <button data-tab="torneos"   onclick="adm2SwitchTab('torneos', this);adm2MasMenu(false)">Torneos</button>
+        <button data-tab="premios"   onclick="adm2SwitchTab('premios', this);adm2MasMenu(false)">Premios</button>
+        <button data-tab="mensajes"  onclick="adm2SwitchTab('mensajes', this);adm2MasMenu(false)">Mensajes</button>
+        <button class="salir" onclick="doLogout()">Cerrar sesión</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Asistente del dueño -->
+  <div class="adm2-asis-overlay" id="adm2-asis" onclick="if(event.target===this)cerrarAsistente()">
+    <div class="adm2-asis-panel">
+      <div class="adm2-asis-head">
+        <div>
+          <div class="adm2-asis-tit">Asistente</div>
+          <div class="adm2-asis-sub" id="adm2-asis-sub">Preguntale al sistema. Solo consulta, no modifica nada.</div>
+        </div>
+        <button class="adm2-panel-close" onclick="cerrarAsistente()">✕</button>
+      </div>
+      <div class="adm2-asis-chat" id="adm2-asis-chat"></div>
+      <div class="adm2-asis-sugerencias" id="adm2-asis-sug"></div>
+      <form class="adm2-asis-form" onsubmit="enviarAsistente(event)">
+        <input class="adm2-input" id="adm2-asis-input" type="text" placeholder="¿Cuánto cobramos hoy?" autocomplete="off" maxlength="1000">
+        <button class="adm2-btn-agendar" id="adm2-asis-btn" type="submit">Preguntar</button>
+      </form>
+    </div>
+  </div>
 
   <!-- ══════════════════ MAIN ══════════════════════════ -->
   <main class="adm2-main">
 
     <!-- ─── VISTA DASHBOARD ─────────────────────────── -->
     <section class="adm2-view" id="adm2-view-dashboard">
+
+      <!-- Salón y cocina en este momento -->
+      <div id="dash-salon"></div>
 
       <!-- Fila 1: stats del día -->
       <div class="adm2-stats-row">
@@ -80,7 +137,7 @@
         <div class="adm2-card adm2-stat-card adm2-stat-blue">
           <div class="adm2-stat-label"><span class="adm2-stat-icon">📅</span> Turnos hoy</div>
           <div class="adm2-stat-value" id="dash-turnos-hoy">—</div>
-          <div class="adm2-stat-sub" id="dash-canchas-con-turnos">— / 4 canchas activas</div>
+          <div class="adm2-stat-sub" id="dash-canchas-con-turnos">— canchas activas</div>
           <div class="adm2-card-accent-line"></div>
         </div>
         <div class="adm2-card adm2-stat-card adm2-stat-purple">
@@ -116,26 +173,23 @@
     <!-- ─── VISTA TURNOS (pantalla completa) ────────── -->
     <section class="adm2-view active" id="adm2-view-turnos">
 
-      <!-- Botón nuevo turno (prominente) -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <button onclick="abrirNuevoTurno()" style="padding:12px 30px;font-size:15px;border-radius:10px;background:#22c55e;color:#000;border:none;font-weight:800;cursor:pointer;letter-spacing:.3px">+ Nuevo turno</button>
+      <!-- Barra superior: nuevo turno + fecha -->
+      <div class="adm2-turnos-topbar">
+        <button class="adm2-btn-nuevo-turno" onclick="abrirNuevoTurno()">+ Nuevo turno</button>
         <div class="adm2-date-nav">
           <button class="adm2-date-nav-btn" onclick="adm2ChangeDate(-1)">◂</button>
           <span class="adm2-date-label" id="adm2-date-label-turnos">📅 —</span>
           <button class="adm2-date-nav-btn" onclick="adm2ChangeDate(1)">▸</button>
           <button class="adm2-btn-hoy" onclick="adm2GoToday()">Hoy</button>
         </div>
-        <div class="adm2-turnos-legend">
-          <div class="adm2-legend-slot">
-            <div class="adm2-legend-slot-dot" style="background:rgba(34,197,94,.4);border:1px solid rgba(34,197,94,.5)"></div>
-            Libre
-          </div>
-          <div class="adm2-legend-slot">
-            <div class="adm2-legend-slot-dot" style="background:rgba(234,179,8,.3);border:1px solid rgba(234,179,8,.4)"></div>
-            Ocupado
-          </div>
-        </div>
+        <button class="adm2-btn-bloquear" onclick="abrirBloqueo()">🚧 Bloquear cancha</button>
       </div>
+
+      <!-- Deportes del club -->
+      <div class="adm2-deporte-tabs" id="adm2-deporte-tabs"></div>
+
+      <!-- Qué significa cada color -->
+      <div class="adm2-origen-leyenda" id="adm2-origen-leyenda"></div>
 
       <!-- Panel nuevo turno (oculto por defecto) -->
       <div class="adm2-nuevo-turno-panel" id="adm2-nuevo-turno" style="display:none"></div>
@@ -212,9 +266,9 @@
           <div class="adm2-cal-nav">
             <div class="adm2-cal-legend">
               <div class="adm2-cal-legend-item"><div class="adm2-cal-legend-dot" style="background:rgba(255,255,255,.08)"></div>Sin datos</div>
-              <div class="adm2-cal-legend-item"><div class="adm2-cal-legend-dot" style="background:rgba(234,179,8,.4)"></div>Bajo</div>
-              <div class="adm2-cal-legend-item"><div class="adm2-cal-legend-dot" style="background:rgba(34,197,94,.4)"></div>Bien</div>
-              <div class="adm2-cal-legend-item"><div class="adm2-cal-legend-dot" style="background:rgba(34,197,94,.7)"></div>Excelente</div>
+              <div class="adm2-cal-legend-item"><div class="adm2-cal-legend-dot" style="background:rgba(255,197,61,.45)"></div>Bajo</div>
+              <div class="adm2-cal-legend-item"><div class="adm2-cal-legend-dot" style="background:rgba(200,255,0,.35)"></div>Bien</div>
+              <div class="adm2-cal-legend-item"><div class="adm2-cal-legend-dot" style="background:rgba(200,255,0,.7)"></div>Excelente</div>
             </div>
             <button class="adm2-cal-nav-btn" onclick="calChangeMonth(-1)">◂</button>
             <button class="adm2-cal-nav-btn" onclick="calChangeMonth(1)">▸</button>
@@ -228,6 +282,12 @@
       </div>
 
       <!-- Bloque C: Historial semanas -->
+      <!-- Consumiciones vendidas, producto por producto -->
+      <div class="adm2-fin-section" id="fin-consumo"></div>
+
+      <!-- Lo que se jugó y no se cobró -->
+      <div class="adm2-fin-section" id="fin-sincobrar"></div>
+
       <div class="adm2-fin-section">
         <div class="adm2-card-title" style="margin-bottom:12px">Semanas de <span id="fin-hist-mes-label">—</span></div>
         <div class="adm2-hist-list" id="fin-hist-list"></div>
@@ -276,6 +336,36 @@
     </section>
 
     <!-- ─── VISTA PREMIOS ────────────────────────────── -->
+    <!-- ─── TURNOS FIJOS ─────────────────────────────── -->
+    <section class="adm2-view" id="adm2-view-fijos">
+      <div id="adm2-fijos-cont"></div>
+    </section>
+
+    <!-- ─── SALÓN (mesas) ────────────────────────────── -->
+    <section class="adm2-view" id="adm2-view-salon">
+      <div id="adm2-salon-cont"></div>
+    </section>
+
+    <!-- ─── COCINA ───────────────────────────────────── -->
+    <section class="adm2-view" id="adm2-view-cocina">
+      <div id="adm2-cocina-cont"></div>
+    </section>
+
+    <!-- ─── CAJA ─────────────────────────────────────── -->
+    <section class="adm2-view" id="adm2-view-caja">
+      <div id="adm2-caja-cont"></div>
+    </section>
+
+    <!-- ─── BUFFET ───────────────────────────────────── -->
+    <section class="adm2-view" id="adm2-view-buffet">
+      <div id="adm2-buffet-cont"></div>
+    </section>
+
+    <!-- ─── PERSONAL + AUDITORÍA ─────────────────────── -->
+    <section class="adm2-view" id="adm2-view-personal">
+      <div id="adm2-personal-cont"></div>
+    </section>
+
     <section class="adm2-view" id="adm2-view-premios">
       <div class="adm2-section-header" style="margin-bottom:20px">
         <span class="adm2-section-title">Programa de puntos</span>
@@ -427,7 +517,7 @@
         <label>Ícono (emoji)</label>
         <input type="text" id="mp-icono" placeholder="🎁" maxlength="4">
       </div>
-      <div style="color:#ef4444;font-size:13px;min-height:18px;margin-bottom:8px" id="mp-error"></div>
+      <div style="color:var(--a2-red);font-size:13px;min-height:18px;margin-bottom:8px" id="mp-error"></div>
       <div class="modal-footer">
         <button class="btn btn-gris" onclick="cerrarModal('modal-premio')">Cancelar</button>
         <button class="btn btn-verde" onclick="guardarPremio()">Guardar</button>
@@ -453,7 +543,7 @@
         <label>Nota (opcional)</label>
         <input type="text" id="mpts-nota" placeholder="Ej: Reserva WhatsApp 15/05">
       </div>
-      <div style="color:#ef4444;font-size:13px;min-height:18px;margin-bottom:8px" id="mpts-error"></div>
+      <div style="color:var(--a2-red);font-size:13px;min-height:18px;margin-bottom:8px" id="mpts-error"></div>
       <div class="modal-footer">
         <button class="btn btn-gris" onclick="cerrarModal('modal-puntos')">Cancelar</button>
         <button class="btn btn-verde" onclick="guardarPuntosCustom()">Aplicar</button>
@@ -464,16 +554,17 @@
   <!-- Tooltip gráfico -->
   <div class="adm2-tooltip" id="adm2-tooltip">
     <div class="adm2-tooltip-day" id="tt-day"></div>
-    <div class="adm2-tooltip-row"><div class="adm2-tooltip-dot" style="background:#22c55e"></div>Reservas<span class="adm2-tooltip-val" id="tt-res"></span></div>
-    <div class="adm2-tooltip-row"><div class="adm2-tooltip-dot" style="background:#3b82f6"></div>Ingresos<span class="adm2-tooltip-val" id="tt-ing"></span></div>
+    <div class="adm2-tooltip-row"><div class="adm2-tooltip-dot" style="background:var(--a2-green)"></div>Reservas<span class="adm2-tooltip-val" id="tt-res"></span></div>
+    <div class="adm2-tooltip-row"><div class="adm2-tooltip-dot" style="background:var(--a2-blue)"></div>Ingresos<span class="adm2-tooltip-val" id="tt-ing"></span></div>
   </div>
 
   <!-- Toast container -->
   <div id="toast-container"></div>
   <div id="adm2-toasts"></div>
 
-  <script src="js/config.js?v=10"></script>
-  <script src="js/api.js?v=10"></script>
-  <script src="js/admin2.js?v=10"></script>
+  <script src="js/config.js?v=37"></script>
+  <script src="js/api.js?v=37"></script>
+  <script src="js/staff.js?v=37"></script>
+  <script src="js/admin2.js?v=37"></script>
 </body>
 </html>

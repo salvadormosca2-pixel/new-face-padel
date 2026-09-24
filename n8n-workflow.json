@@ -1,0 +1,754 @@
+{
+  "name": "New Face Padel · Bot WhatsApp",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "messages"
+        ]
+      },
+      "name": "WhatsApp",
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [
+        -600,
+        200
+      ],
+      "id": "trigger",
+      "webhookId": "new-face-padel-whatsapp",
+      "credentials": {
+        "whatsAppTriggerApi": {
+          "id": "REEMPLAZAR",
+          "name": "WhatsApp OAuth (New Face)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.messages?.[0]?.type }}",
+              "rightValue": "text",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Es un mensaje de texto",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -360,
+        200
+      ],
+      "id": "if"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "texto",
+              "value": "={{ $json.messages[0].text.body }}",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "telefono",
+              "value": "={{ $json.messages[0].from }}",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "nombre",
+              "value": "={{ $json.contacts?.[0]?.profile?.name || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "a4",
+              "name": "phoneNumberId",
+              "value": "={{ $json.metadata.phone_number_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Mensaje",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -120,
+        180
+      ],
+      "id": "set"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.texto }}",
+        "options": {
+          "systemMessage": "=La fecha de hoy es {{ $now.format('yyyy-MM-dd') }}\n\nSos el asistente virtual de New Face Padel Club por WhatsApp. Responde siempre en espanol argentino, breve y directo.\n\n# MENSAJE DE BIENVENIDA\nCuando el cliente saluda (hola, buenas, buen dia, etc.) responde con un mensaje calido de bienvenida. IMPORTANTE: cada opcion del menu DEBE ir en una linea separada con un salto de linea entre cada una.\n\nEjemplo exacto (respetar los saltos de linea):\n\nHola! Bienvenido/a a *New Face Padel Club*!\nMe alegra que nos escribas. Soy el asistente virtual del club y estoy aca para ayudarte.\n\nPuedo ayudarte con:\n\n- *Reservar una cancha*\n- *Ver horarios disponibles*\n- *Torneos y inscripciones*\n- *Info de profesores y clases*\n- *Consultar tus puntos y premios*\n- *Info del club* (precios, servicios, ubicacion)\n\nDecime, en que te puedo ayudar?\n\nAdapta el saludo segun la hora del dia (buen dia / buenas tardes / buenas noches). Si el cliente ya habia hablado antes, podes decir \"Hola de nuevo!\" en vez de la bienvenida completa.\n\n# CLUB\n- Nombre: New Face Padel Club\n- Direccion: Buenos Aires, Argentina\n- Horario: Lunes a Viernes 15:00-00:00 | Sabados, Domingos y Feriados 09:00-00:00\n- Canchas: 4 (Cancha 1 y 2: Cubierta $5.000/h | Cancha 3 y 4: Aire libre $4.000/h)\n- Pago: Efectivo, MercadoPago, Transferencia\n- Servicios: Estacionamiento, Vestuarios, Buffet, Pro Shop\n- Puntos: 10 puntos por cada reserva. Se canjean por premios.\n\n# PRECIOS POR DURACION\n- 1h cubierta: $5.000 | 1h aire libre: $4.000\n- 1.5h cubierta: $7.500 | 1.5h aire libre: $6.000\n- 2h cubierta: $10.000 | 2h aire libre: $8.000\n\n# PROFESORES\n1. Carlos Rodriguez - Entrenamiento competitivo - Lun-Vie 16:00-22:00 - Intermedio/Avanzado - wa.me/5491145678901\n2. Valentina Lopez - Iniciacion y tecnica - Mar/Jue/Sab 15:00-20:00 - Principiante/Intermedio - wa.me/5491156781234\n3. Javier Mendez - Tactica y juego en pareja - Lun/Mie/Vie 18:00-23:00 - Intermedio/Avanzado - wa.me/5491167891234\n\n# COMO USAR LAS TOOLS\n\n## Ver horarios disponibles\nUsa tool `disponibilidad` con fecha (YYYY-MM-DD) y duracion (60, 90 o 120).\nSiempre preguntale al cliente cuanto tiempo quiere jugar antes de mostrar horarios.\nSi no dice duracion, pregunta: \"Cuanto tiempo queres jugar? 1 hora, 1 hora y media o 2 horas?\"\nMostra los horarios agrupados, ejemplo:\n\"Turnos de 1.5h para el Jueves 5:\n15:30 a 17:00 - 4 canchas libres\n17:00 a 18:30 - 3 canchas libres...\"\n\n## Hacer una reserva - FLUJO OBLIGATORIO (seguir este orden exacto)\nPASO 1: Pregunta la DURACION - \"Cuanto tiempo queres jugar? 1 hora, 1 hora y media o 2 horas?\"\nPASO 2: Pregunta la FECHA - \"Para que dia?\" (si no la dijo, asumi hoy)\nPASO 3: Mostra HORARIOS DISPONIBLES - Usa tool `disponibilidad` con la fecha y duracion. Mostra los turnos disponibles.\nPASO 4: El cliente ELIGE UN HORARIO - Espera a que elija un turno de los que le mostraste.\nPASO 5: Pedi los DATOS PERSONALES para confirmar - \"Para confirmar tu reserva necesito: nombre completo, numero de telefono y metodo de pago (efectivo, MercadoPago o transferencia)\"\nPASO 6: Ejecuta tool `reservar` con TODOS los datos:\n{\"nombre\":\"...\",\"telefono\":\"...\",\"metodoPago\":\"efectivo|mercadopago|transferencia\",\"fecha\":\"YYYY-MM-DD\",\"hora_inicio\":\"HH:MM\",\"duracion_minutos\":60|90|120}\nPASO 7: Confirma con los datos que devolvio el tool:\n\"Listo! Tu turno:\nCancha X (tipo) - Fecha - HH:MM a HH:MM\nPrecio: $X.XXX - Pago: metodo\nClave de reserva: XXXXX\"\n\nIMPORTANTE: NUNCA pidas nombre, telefono o metodo de pago ANTES de mostrar los horarios. Los datos personales se piden DESPUES de que el cliente eligio su horario.\n\n## Consultar puntos y perfil\nSi el cliente da su telefono, usa tool `puntos` con el numero.\nResponde: \"Nombre, tenes X puntos. Proxima reserva: fecha hora.\"\n\n## Ver ranking\nUsa tool `ranking`. Mostra top 5 con posicion, nombre y puntos.\n\n## Canjear premio\nUsa tool `premios` para ver premios disponibles.\nPara canjear usa tool `canjear` con {\"telefono\":\"...\",\"premioId\":X}\n\n## Ver mis reservas\nUsa tool `mis_reservas` con el telefono del cliente.\n\n## Torneos\nUsa tool `torneos` para listar torneos activos.\nPara inscribir usa tool `inscribir_torneo` con:\n{\"torneoId\":1,\"jugador1\":{\"nombre\":\"...\",\"telefono\":\"...\"},\"jugador2\":{\"nombre\":\"...\",\"telefono\":\"...\"}}\n\n## Contexto completo\nUsa tool `contexto_bot` SOLO si necesitas multiples datos a la vez (horarios+profesores+torneos).\nNO lo uses para consultas simples - usa la tool especifica.\n\n# REGLAS\n- NUNCA inventes horarios. SIEMPRE consulta la tool de disponibilidad.\n- Si el cliente dice \"quiero un turno\" o \"quiero reservar\", pregunta primero la duracion, luego la fecha, mostra disponibilidad, que elija horario, y RECIEN AHI pedi los datos personales.\n- Si pregunta por precios, responde del cuadro de arriba sin llamar a ninguna tool.\n- Si pregunta por profesores, responde del listado de arriba sin llamar a ninguna tool.\n- Si pregunta info del club (horarios, direccion, servicios), responde de arriba sin tool.\n- Se amable pero conciso. No repitas informacion que ya dijiste.\n- Si algo falla, deci \"Hubo un error, intenta de nuevo en un momento\" y no muestres errores tecnicos.\n\n# REGLA CRITICA DE RESERVAS\n- NUNCA confirmes una reserva sin haber ejecutado el tool reservar exitosamente y recibido una respuesta con claveUnica.\n- Si el tool devuelve error, decile al cliente que hubo un problema e intente de nuevo.\n- NO inventes claves de reserva, canchas, precios ni horarios. Solo usa los datos que devuelve el tool.\n- Si no llamaste al tool reservar, NO digas \"Listo\" ni confirmes nada.\n- NUNCA pidas datos personales (nombre, telefono, metodo de pago) antes de mostrar horarios disponibles.\n- El flujo correcto es: 1) Duracion 2) Fecha 3) Mostrar horarios 4) Cliente elige horario 5) Pedir datos personales 6) Ejecutar tool reservar 7) Confirmar SOLO con los datos que devolvio el tool.\n\n## DEPORTES DEL CLUB\n\nEl club no es solo padel. Segun el deporte cambian las canchas, el precio y las\nduraciones que se pueden reservar:\n\n| Deporte      | id en la API   | Duraciones      |\n|--------------|----------------|-----------------|\n| Padel        | padel          | 60, 90, 120 min |\n| Tenis de mesa| tenis_mesa     | 30, 60, 90 min  |\n| Pickleball   | pickleball     | 60, 90, 120 min |\n| Beach voley  | beach_volley   | 60, 90, 120 min |\n\nSi el cliente no aclara, asumi padel. Consultá GET /api/deportes para ver que hay\nactivo y a que precio.\n\n## AL RESERVAR: MANDA SIEMPRE origen = \"whatsapp\"\n\nCada turno guarda de donde salio, y en el panel del club se ve con un color propio:\nmostrador, profesor, online (web), whatsapp (vos), fijo, torneo y bloqueo.\n\nCuando llames a POST /api/reservar incluí SIEMPRE `\"origen\": \"whatsapp\"`. Es lo que\nle permite al club saber cuantos turnos entran por el bot. Si te olvidas, el turno\nqueda contado como reserva de la web.\n\n## BUFFET\n\nPodes informar precios del buffet con GET /api/buffet (agua, gaseosas, comida,\nalquiler de paleta, tubos de pelotas). Las consumiciones se cargan en el club, no\npor WhatsApp: si te preguntan como se paga, avisá que se cobra todo junto al final\ndel turno y que cada uno puede pagar lo suyo, en efectivo o por transferencia.\n\n\nEl cliente escribe desde el telefono {{ $json.telefono }} y en WhatsApp figura como \"{{ $json.nombre }}\". Si necesitas su telefono para puntos, reservas o perfil, usa ese numero sin pedirlo de nuevo.",
+          "maxIterations": 10
+        }
+      },
+      "name": "Asistente New Face",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        140,
+        180
+      ],
+      "id": "agent"
+    },
+    {
+      "parameters": {
+        "model": "claude-sonnet-5",
+        "options": {
+          "temperature": 0.3,
+          "maxTokensToSample": 1024
+        }
+      },
+      "name": "Claude",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        60,
+        420
+      ],
+      "id": "llm",
+      "credentials": {
+        "anthropicApi": {
+          "id": "REEMPLAZAR",
+          "name": "Anthropic (New Face)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.telefono }}",
+        "contextWindowLength": 20
+      },
+      "name": "Memoria por telefono",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        260,
+        420
+      ],
+      "id": "memory"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Horarios libres de un dia. fecha YYYY-MM-DD; duracion en minutos (padel/pickleball/beach: 60, 90 o 120; tenis de mesa: 30, 60 o 90); deporte: padel (default), tenis_mesa, pickleball o beach_volley. Devuelve turnos con hora_inicio, hora_fin, canchas libres y precio. NUNCA inventes horarios: usá esta tool.",
+        "url": "https://backend-production-143ea.up.railway.app/api/disponibilidad/{fecha}?duracion={duracion}&deporte={deporte}&simple=1",
+        "placeholderDefinitions": {
+          "values": [
+            {
+              "name": "fecha",
+              "description": "Dia a consultar, formato YYYY-MM-DD",
+              "type": "string"
+            },
+            {
+              "name": "duracion",
+              "description": "Minutos: 30, 60, 90 o 120",
+              "type": "number"
+            },
+            {
+              "name": "deporte",
+              "description": "padel | tenis_mesa | pickleball | beach_volley",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "disponibilidad",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        -120,
+        620
+      ],
+      "id": "disponibilidad"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Crea la reserva. Usar SOLO despues de que el cliente eligio un horario de los mostrados y dio nombre, telefono y metodo de pago. Devuelve claveUnica, cancha_nombre, hora_inicio, hora_fin y precio_total: confirmá al cliente solo con esos datos.",
+        "url": "https://backend-production-143ea.up.railway.app/api/reservar",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"nombre\":\"{nombre}\",\"telefono\":\"{telefono}\",\"metodoPago\":\"{metodoPago}\",\"fecha\":\"{fecha}\",\"hora_inicio\":\"{hora_inicio}\",\"duracion_minutos\":{duracion_minutos},\"deporte\":\"{deporte}\",\"origen\":\"whatsapp\"}",
+        "placeholderDefinitions": {
+          "values": [
+            {
+              "name": "nombre",
+              "description": "Nombre completo del cliente",
+              "type": "string"
+            },
+            {
+              "name": "telefono",
+              "description": "Telefono, solo numeros",
+              "type": "string"
+            },
+            {
+              "name": "metodoPago",
+              "description": "efectivo | mercadopago | transferencia",
+              "type": "string"
+            },
+            {
+              "name": "fecha",
+              "description": "YYYY-MM-DD",
+              "type": "string"
+            },
+            {
+              "name": "hora_inicio",
+              "description": "HH:MM, uno de los horarios que devolvio disponibilidad",
+              "type": "string"
+            },
+            {
+              "name": "duracion_minutos",
+              "description": "30, 60, 90 o 120",
+              "type": "number"
+            },
+            {
+              "name": "deporte",
+              "description": "padel | tenis_mesa | pickleball | beach_volley (padel si no aclara)",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "reservar",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        80,
+        620
+      ],
+      "id": "reservar"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Lista los deportes activos del club con sus canchas/mesas, precios por hora y duraciones validas. Usar si preguntan que se puede jugar o cuanto sale algo que no sea padel.",
+        "url": "https://backend-production-143ea.up.railway.app/api/deportes",
+        "placeholderDefinitions": {
+          "values": []
+        },
+        "options": {}
+      },
+      "name": "deportes",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        280,
+        620
+      ],
+      "id": "deportes"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Precios del buffet y kiosco (bebidas, comida, alquiler de paleta, pelotas) y si hay stock.",
+        "url": "https://backend-production-143ea.up.railway.app/api/buffet",
+        "placeholderDefinitions": {
+          "values": []
+        },
+        "options": {}
+      },
+      "name": "buffet",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        480,
+        620
+      ],
+      "id": "buffet"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Puntos acumulados de un cliente por su telefono (solo numeros). Devuelve nombre, puntos y totalGastado.",
+        "url": "https://backend-production-143ea.up.railway.app/api/puntos/{telefono}",
+        "placeholderDefinitions": {
+          "values": [
+            {
+              "name": "telefono",
+              "description": "Telefono del cliente, solo numeros",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "puntos",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        680,
+        620
+      ],
+      "id": "puntos"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Ranking de socios por puntos. Mostrar top 5.",
+        "url": "https://backend-production-143ea.up.railway.app/api/ranking",
+        "placeholderDefinitions": {
+          "values": []
+        },
+        "options": {}
+      },
+      "name": "ranking",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        620
+      ],
+      "id": "ranking"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Premios canjeables por puntos: id, nombre, puntos necesarios y stock.",
+        "url": "https://backend-production-143ea.up.railway.app/api/premios",
+        "placeholderDefinitions": {
+          "values": []
+        },
+        "options": {}
+      },
+      "name": "premios",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        1080,
+        620
+      ],
+      "id": "premios"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Canjea un premio por puntos. Requiere telefono y premioId (de la tool premios). Devuelve puntosUsados y puntosRestantes.",
+        "url": "https://backend-production-143ea.up.railway.app/api/premios/canjear",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"telefono\":\"{telefono}\",\"premioId\":{premioId}}",
+        "placeholderDefinitions": {
+          "values": [
+            {
+              "name": "telefono",
+              "description": "Telefono, solo numeros",
+              "type": "string"
+            },
+            {
+              "name": "premioId",
+              "description": "id del premio",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "canjear",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        -120,
+        780
+      ],
+      "id": "canjear"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Reservas futuras de un cliente por telefono: fecha, hora, cancha, estado.",
+        "url": "https://backend-production-143ea.up.railway.app/api/mis-reservas/{telefono}",
+        "placeholderDefinitions": {
+          "values": [
+            {
+              "name": "telefono",
+              "description": "Telefono, solo numeros",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "mis_reservas",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        80,
+        780
+      ],
+      "id": "mis_reservas"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Torneos proximos con id, nombre, fecha, estado y parejas inscriptas.",
+        "url": "https://backend-production-143ea.up.railway.app/api/torneos/proximos",
+        "placeholderDefinitions": {
+          "values": []
+        },
+        "options": {}
+      },
+      "name": "torneos",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        280,
+        780
+      ],
+      "id": "torneos"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Inscribe una pareja a un torneo. torneoId va en el body. Necesita nombre y telefono de los dos jugadores.",
+        "url": "https://backend-production-143ea.up.railway.app/api/torneos/inscripcion",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"torneoId\":{torneoId},\"jugador1\":{\"nombre\":\"{nombre1}\",\"telefono\":\"{telefono1}\"},\"jugador2\":{\"nombre\":\"{nombre2}\",\"telefono\":\"{telefono2}\"}}",
+        "placeholderDefinitions": {
+          "values": [
+            {
+              "name": "torneoId",
+              "description": "id del torneo (tool torneos)",
+              "type": "number"
+            },
+            {
+              "name": "nombre1",
+              "description": "Nombre jugador 1",
+              "type": "string"
+            },
+            {
+              "name": "telefono1",
+              "description": "Telefono jugador 1",
+              "type": "string"
+            },
+            {
+              "name": "nombre2",
+              "description": "Nombre jugador 2",
+              "type": "string"
+            },
+            {
+              "name": "telefono2",
+              "description": "Telefono jugador 2",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "inscribir_torneo",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        480,
+        780
+      ],
+      "id": "inscribir_torneo"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Todo junto: club, deportes, canchas, precios, buffet, torneos, profesores, premios, ranking y horarios de hoy y manana. Usar SOLO cuando hagan falta varios datos a la vez.",
+        "url": "https://backend-production-143ea.up.railway.app/api/bot/contexto",
+        "placeholderDefinitions": {
+          "values": []
+        },
+        "options": {}
+      },
+      "name": "contexto_bot",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        680,
+        780
+      ],
+      "id": "contexto_bot"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Perfil del socio por telefono: puntos, gasto total, reservas, proxima reserva y premios que ya puede canjear.",
+        "url": "https://backend-production-143ea.up.railway.app/api/socios/{telefono}",
+        "placeholderDefinitions": {
+          "values": [
+            {
+              "name": "telefono",
+              "description": "Telefono, solo numeros",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "perfil_socio",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        780
+      ],
+      "id": "perfil_socio"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "={{ $('Mensaje').item.json.phoneNumberId }}",
+        "recipientPhoneNumber": "={{ $('Mensaje').item.json.telefono }}",
+        "textBody": "={{ $json.output }}",
+        "additionalFields": {
+          "previewUrl": false
+        }
+      },
+      "name": "Responder por WhatsApp",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        520,
+        180
+      ],
+      "id": "send",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "REEMPLAZAR",
+          "name": "WhatsApp Cloud API (New Face)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Es un mensaje de texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Es un mensaje de texto": {
+      "main": [
+        [
+          {
+            "node": "Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Mensaje": {
+      "main": [
+        [
+          {
+            "node": "Asistente New Face",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Asistente New Face": {
+      "main": [
+        [
+          {
+            "node": "Responder por WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Asistente New Face",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memoria por telefono": {
+      "ai_memory": [
+        [
+          {
+            "node": "Asistente New Face",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "disponibilidad": {
+      "ai_tool": [
+        [
+          {
+            "node": "Asistente New Face",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "reservar": {
+      "ai_tool": [
+        [
+          {
+            "node": "Asistente New Face",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "deportes": {
+      "ai_tool": [
+        [
+          {
+            "node": "Asistente New Face",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "buffet": {
+      "ai_tool": [
+        [
+          {
+            "node": "Asistente New Face",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "puntos": {
+      "ai_tool": [
+        [
+          {
+            "node": "Asistente New Face",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ranking": {
+      "ai_tool": [
+        [
+          {
+            "node": "Asistente New Face",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "premios": {
+      "ai_tool": [
+        [
+          {
+            "node": "Asistente New Face",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "canjear": {
+      "ai_tool": [
+        [
+          {
+            "node": "Asistente New Face",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "mis_reservas": {
+      "ai_tool": [
+        [
+          {
+            "node": "Asistente New Face",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "torneos": {
+      "ai_tool": [
+        [
+          {
+            "node": "Asistente New Face",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "inscribir_torneo": {
+      "ai_tool": [
+        [
+          {
+            "node": "Asistente New Face",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "contexto_bot": {
+      "ai_tool": [
+        [
+          {
+            "node": "Asistente New Face",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "perfil_socio": {
+      "ai_tool": [
+        [
+          {
+            "node": "Asistente New Face",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
