@@ -325,7 +325,7 @@ vc.on('error', (...a) => errores.push('console.error: ' + a.join(' ')));
 
   console.log('\n— Salón: mesas —');
   win.__mesasDemo = true;
-  const tabSalon = [...win.document.querySelectorAll('.adm2-tab')].find(t => t.textContent.trim() === 'Salón');
+  const tabSalon = [...win.document.querySelectorAll('.adm2-tab')].find(t => t.textContent.trim().startsWith('Salón'));
   chk(!!tabSalon, 'existe la pestaña Salón');
   chk(!!win.document.querySelector('#adm2-salon-cont'), 'existe el contenedor del salón');
   chk(typeof win.renderSalon === 'function' && typeof win.abrirMesaPanel === 'function' &&
