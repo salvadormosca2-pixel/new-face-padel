@@ -25,6 +25,13 @@ app.use(cors({
 
 app.use(express.json({ limit: '1mb' }));
 
+/* El panel avisa acá si un archivo no cargó o hubo un error de JS en el navegador: queda en los logs. */
+app.post('/api/ui-error', (req, res) => {
+  const b = req.body || {};
+  console.error('UI-ERROR', String(b.texto || '').slice(0, 300), '|', String(b.pagina || '').slice(0, 120), '|', String(b.ua || '').slice(0, 120));
+  res.status(204).end();
+});
+
 app.use('/api/admin', (req, res, next) => {
   const token = (req.headers.authorization || '').replace('Bearer ', '');
   if (!token) return res.status(401).json({ error: 'Token requerido' });

@@ -1,6 +1,35 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+  <!-- Diagnóstico: cualquier error de carga se muestra en pantalla y se avisa al servidor.
+       Va antes que todo lo demás para atrapar hasta un archivo que no llegue entero. -->
+  <script>
+    (function () {
+      var reportado = 0;
+      function mostrar(txt) {
+        var box = document.getElementById('nf-diag');
+        if (!box) {
+          box = document.createElement('div'); box.id = 'nf-diag';
+          box.style.cssText = 'position:fixed;left:12px;right:12px;bottom:12px;z-index:99999;background:#3b0a0a;color:#ffd7d7;border:1px solid #ff5a5a;border-radius:10px;padding:12px 14px;font:13px/1.4 -apple-system,system-ui,sans-serif;white-space:pre-wrap;word-break:break-word';
+          (document.body || document.documentElement).appendChild(box);
+        }
+        box.textContent += (box.textContent ? '\n' : '') + txt;
+      }
+      function avisar(txt) {
+        if (reportado++ > 4) return;
+        try {
+          var api = window.__API_URL__ || '';
+          if (api) fetch(api + '/api/ui-error', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ texto: txt, pagina: location.href, ua: navigator.userAgent }) }).catch(function () {});
+        } catch (e) {}
+      }
+      window.addEventListener('error', function (ev) {
+        var archivo = (ev.filename || '').split('/').pop() || (ev.target && ev.target.src ? 'no cargó ' + String(ev.target.src).split('/').pop() : 'página');
+        var txt = 'Error: ' + (ev.message || 'archivo no cargó') + ' — ' + archivo + (ev.lineno ? ':' + ev.lineno : '');
+        var run = function () { mostrar(txt); avisar(txt); };
+        if (document.body) run(); else document.addEventListener('DOMContentLoaded', run);
+      }, true);
+    })();
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Panel Admin — New Face Padel</title>
