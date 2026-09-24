@@ -3697,3 +3697,8 @@ body.adm2-sin-scroll { overflow: hidden; }
   .adm2-modal-card { max-height: calc(100dvh - 20px); border-radius: 14px; }
 }
 .login-conexion { margin-top: 14px; text-align: center; font-size: 11px; color: rgba(255,255,255,.35); }
+
+/* ─── Ingredientes: recuadro centrado por encima de la carta ─── */
+.adm2-ingr-overlay { position: fixed; inset: 0; z-index: 8500; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(0,0,0,.6); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+.adm2-ingr-overlay .adm2-ingr { width: 100%; max-width: 520px; max-height: calc(100dvh - 32px); overflow-y: auto; margin: 0; background: var(--a2-card); border: 1px solid rgba(200,255,0,.25); border-radius: 16px; box-shadow: 0 24px 60px rgba(0,0,0,.6); padding: 16px; animation: adm2-modal-in .16s ease-out; }
+.adm2-ingr-overlay .adm2-ingr-head { position: sticky; top: -16px; margin: -16px -16px 12px; padding: 14px 16px; background: var(--a2-card); border-bottom: 1px solid rgba(255,255,255,.06); font-weight: 600; display: flex; justify-content: space-between; align-items: center; gap: 10px; }

@@ -2017,7 +2017,9 @@ function ingredientesHTML() {
   const extra   = sel.reduce((s, n) => s + (Number((p.opciones.find(o => o.nombre === n) || {}).precio) || 0), 0);
   const unit    = p.precio + extra;
 
+  /* Se abre como recuadro centrado sobre la carta: el plato puede estar al fondo de la lista */
   return `
+    <div class="adm2-ingr-overlay" onclick="if (event.target === this) cartaCerrarIngredientes()">
     <div class="adm2-ingr">
       <div class="adm2-ingr-head">
         <span>${_esc(p.nombre)} · ${_fArs(unit)} c/u</span>
@@ -2052,6 +2054,7 @@ function ingredientesHTML() {
           Agregar ${_ingredientes.cantidad > 1 ? _ingredientes.cantidad + ' × ' : ''}${_fArs(unit * _ingredientes.cantidad)}
         </button>
       </div>
+    </div>
     </div>`;
 }
 
