@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+  <meta charset="UTF-8">
   <!-- Diagnóstico: cualquier error de carga se muestra en pantalla y se avisa al servidor.
        Va antes que todo lo demás para atrapar hasta un archivo que no llegue entero. -->
   <script>
@@ -37,7 +38,6 @@
       }, true);
     })();
   </script>
-  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Panel Admin — New Face Padel</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -46,8 +46,8 @@
   <link rel="icon" type="image/png" sizes="64x64" href="img/favicon.png">
   <link rel="apple-touch-icon" sizes="180x180" href="img/apple-touch-icon.png">
   <meta name="theme-color" content="#0B0F17">
-  <link rel="stylesheet" href="css/style.css?v=41">
-  <link rel="stylesheet" href="css/admin2.css?v=41">
+  <link rel="stylesheet" href="css/style.css?v=42">
+  <link rel="stylesheet" href="css/admin2.css?v=42">
 </head>
 <body class="adm2-body">
 
@@ -599,18 +599,18 @@
   <div id="toast-container"></div>
   <div id="adm2-toasts"></div>
 
-  <script src="js/config.js?v=41"></script>
-  <script src="js/api.js?v=41"></script>
-  <script src="js/staff.js?v=41"></script>
-  <script src="js/admin2.js?v=41"></script>
+  <script src="js/config.js?v=42"></script>
+  <script src="js/api.js?v=42"></script>
+  <script src="js/staff.js?v=42"></script>
+  <script src="js/admin2.js?v=42"></script>
   <script>
     (function () {
       const el = document.getElementById('login-conexion');
       if (!el) return;
       const api = window.__API_URL__ || (window.__DEMO_MODE__ === false ? location.origin : 'modo demo');
-      el.textContent = 'Panel v41 · conectado a ' + api.replace(/^https?:\/\//, '');
+      el.textContent = 'Panel v42 · conectado a ' + api.replace(/^https?:\/\//, '');
       /* La versión también va en el título de la pestaña: se ve aun con sesión iniciada */
-      document.title = 'Panel v41 · New Face';
+      document.title = 'Panel v42 · New Face';
     })();
   </script>
 </body>
