@@ -99,6 +99,7 @@ vc.on('error', (...a) => errores.push('console.error: ' + a.join(' ')));
       win.fetch = async (url, opts) => ({
         ok: true, status: 200,
         json: async () => respuesta(String(url), opts),
+        text: async () => JSON.stringify(await respuesta(String(url), opts)),
       });
       win.requestAnimationFrame = cb => setTimeout(cb, 0);
       win.confirm = () => true;

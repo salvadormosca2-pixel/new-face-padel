@@ -236,10 +236,10 @@ async function reservarHandler(req, res) {
       origen, creado_por: ORIGENES[origen]?.nombre || origen
     });
 
-    const [socio] = await Socio.findOrCreate({
-      where: { telefono },
-      defaults: { nombre, puntos: 0, totalGastado: 0 }
-    });
+    /* findOne + create en vez de findOrCreate: el mismo resultado, sin la función
+       plpgsql que Sequelize arma para findOrCreate (pg-mem no la entiende). */
+    const socio = (await Socio.findOne({ where: { telefono } }))
+      || (await Socio.create({ nombre, telefono, puntos: 0, totalGastado: 0 }));
     await socio.update({ ultimaReserva: new Date(), metodoPago, puntos: socio.puntos + 10 });
 
     await auditar(null, {

@@ -74,6 +74,19 @@ async function sembrarDemo() {
     { nombre: 'Mario Galletti',       especialidad: 'El profe',                                experiencia: 'Academia New Face', horarios: 'Consultá por WhatsApp', whatsapp: '5493834351935', alumnos: 40, rating: 5, niveles: ['Principiante', 'Intermedio', 'Avanzado'], gruposEdad: ['Adultos'] }
   ]);
 
+  /* Socios y torneos para que el bot tenga a quién responderle */
+  await models.Socio.bulkCreate([
+    { nombre: 'Martín Gómez',  telefono: '1145678901', puntos: 320, totalGastado: 48000, metodoPago: 'efectivo' },
+    { nombre: 'Carla Méndez',  telefono: '1134567890', puntos: 210, totalGastado: 31000, metodoPago: 'mercadopago' },
+    { nombre: 'Valeria Torres', telefono: '1145670123', puntos: 430, totalGastado: 61000, metodoPago: 'efectivo' },
+  ]);
+  const enDias = n => { const d = new Date(); d.setDate(d.getDate() + n); return d.toLocaleDateString('en-CA', { timeZone: process.env.CLUB_TZ }); };
+  await models.Torneo.bulkCreate([
+    { nombre: 'Torneo Primavera · 6ta y 7ma', fecha: enDias(10), estado: 'inscripcion', descripcion: 'Parejas mixtas, formato grupos + llave', cantidadJugadores: 16,
+      inscripciones: [{ id: 'i1', nombrePareja: 'Gómez / Torres', jugador1: { nombre: 'Martín Gómez', telefono: '1145678901' }, jugador2: { nombre: 'Valeria Torres', telefono: '1145670123' }, estadoInscripcion: 'confirmada' }] },
+    { nombre: 'Encuentro PingPonero · Principiantes', fecha: enDias(17), estado: 'inscripcion', descripcion: 'Tenis de mesa, categoría principiantes', cantidadJugadores: 8 },
+  ]);
+
   /* Un viernes a la noche: cada turno entró por un lado distinto */
   const turnos = [
     { cancha: 3, ini: '19:00', dur: 90, cliente: 'Salvador Mosca',  origen: 'whatsapp', tel: '1145678901', por: 'Lucas' },

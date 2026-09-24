@@ -118,7 +118,6 @@
       "parameters": {
         "model": "claude-sonnet-5",
         "options": {
-          "temperature": 0.3,
           "maxTokensToSample": 1024
         }
       },
